@@ -1,0 +1,25 @@
+* text=auto
+
+# Arquivos YAML da Unity: merge com UnityYAMLMerge quando configurado
+*.unity     text eol=lf merge=unityyamlmerge
+*.prefab    text eol=lf merge=unityyamlmerge
+*.asset     text eol=lf merge=unityyamlmerge
+*.mat       text eol=lf merge=unityyamlmerge
+*.anim      text eol=lf merge=unityyamlmerge
+*.controller text eol=lf merge=unityyamlmerge
+*.meta      text eol=lf
+
+*.cs        text diff=csharp
+*.asmdef    text eol=lf
+*.inputactions text eol=lf
+*.md        text
+
+# Binários
+*.png  binary
+*.jpg  binary
+*.psd  binary
+*.fbx  binary
+*.blend binary
+*.wav  binary
+*.ogg  binary
+*.mp3  binary

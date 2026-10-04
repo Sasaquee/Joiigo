@@ -1,0 +1,21 @@
+{
+    "name": "Game.Debug",
+    "rootNamespace": "Game.DevTools",
+    "references": [
+        "Game.Core",
+        "Game.Runtime",
+        "Unity.InputSystem",
+        "Unity.Netcode.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "UNITY_EDITOR || DEVELOPMENT_BUILD"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
