@@ -271,6 +271,11 @@ Registro das perguntas de design feitas ao dono durante o protótipo. A resposta
 - **Resposta literal:** "ah e ja libera na p011 ser esse kimi k3, lembra q o modelo tem que ser competente para tal"
 - **Significa:** modelagem e arte podem ser feitas pelo Opus (Claude Code) ou pelo `moonshotai/kimi-k3` (DeepSeek harness). Só modelos desse nível: nenhum modelo menor ou reserva faz arte (sem Sonnet, sem `glm-5.3`, sem flash). Se o `kimi-k3` estiver indisponível, a arte espera.
 
+### D-044 · Modos de trabalho e arte sempre no melhor modelo (substitui D-043)
+- **Pedido:** usar o Claude junto com o DeepSeek harness, de forma flexível.
+- **Resposta literal:** "boa faz isso, só n deixa apenas isso, as vezes vou usar apenas o claude, e as vezes tera tarefas mais simples, onde eu possa usar somente o harness enfim deixa bem flexivel, com a unica exceção de deixar a llm mais competente de todas para fazer artes, modelagem, graficos, e etc, pois o jogo precisa ser bonito"
+- **Significa:** três modos (só Claude, só harness, híbrido), à escolha do dono em cada tarefa. Arte, modelagem, gráficos, shaders, efeitos e UI visual ficam sempre com o modelo mais competente disponível (hoje o Claude Opus), em qualquer modo. A liberação do `kimi-k3` para arte (D-043) deixa de valer enquanto ele não for o melhor disponível.
+
 ---
 
 ## Perguntas pendentes (feitas na fase em que travarem)

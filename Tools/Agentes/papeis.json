@@ -1,0 +1,17 @@
+{
+  "_comentario": "Modelo do DeepSeek harness para cada papel, usado por dsh-tarefa.ps1. Formato do modelo: provedor/id (ex.: nvidia/z-ai/glm-5.3, google/gemini-3.8-flash, openrouter/qwen/qwen3.8-27b:free). Os provedores e modelos precisam existir em ~/.dsh/profiles/desktop/cordis.patch.yml. Explicação em Docs/Tecnico/agentes-e-modelos.md.",
+  "padrao": { "modelo": "nvidia/z-ai/glm-5.3", "esforco": "medium" },
+  "papeis": {
+    "orquestrador": { "modelo": "nvidia/z-ai/glm-5.3", "esforco": "medium", "reservas": ["openrouter/thinkingmachines/inkling:free"] },
+    "programador": { "modelo": "nvidia/z-ai/glm-5.3", "esforco": "medium", "reservas": ["openrouter/qwen/qwen3.8-27b:free", "nvidia/nvidia/nemotron-3-super-120b-a12b"] },
+    "testador": { "modelo": "nvidia/nvidia/nemotron-3-super-120b-a12b", "reservas": ["nvidia/z-ai/glm-5.3", "openrouter/poolside/laguna-s-2.1:free"] },
+    "revisor": { "modelo": "nvidia/nvidia/nemotron-3-super-120b-a12b", "reservas": ["openrouter/thinkingmachines/inkling:free"] },
+    "documentador": { "modelo": "nvidia/nvidia/nemotron-3-super-120b-a12b", "reservas": ["openrouter/cohere/north-mini-code:free"] },
+    "batedor": { "modelo": "nvidia/nvidia/nemotron-3.5-lightning-30b-a3b", "reservas": ["openrouter/poolside/laguna-s-2.1:free"] },
+    "unity": { "modelo": "nvidia/z-ai/glm-5.3", "esforco": "medium", "reservas": ["nvidia/nvidia/nemotron-3-super-120b-a12b"] },
+    "artista": {
+      "bloqueado": true,
+      "motivo": "D-044: arte, modelagem, shaders, efeitos e qualquer coisa visual só com o modelo mais competente disponível (hoje o Claude Opus). Peça ao Claude; no modo só-harness, registre a tarefa como pendente."
+    }
+  }
+}

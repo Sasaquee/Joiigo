@@ -13,7 +13,7 @@ Fonte completa: `Docs/Tecnico/agentes-e-modelos.md`. Regras do projeto: `AGENTS.
 | Papel | Modelo | Reserva | Prompt do papel |
 |---|---|---|---|
 | Orquestrador (você, sessão principal) | `moonshotai/kimi-k3` | `z-ai/glm-5.3` | — |
-| Artista | `moonshotai/kimi-k3` | **nenhuma**: espera (D-043) | `.claude/agents/artista.md` |
+| Artista | **nenhum no harness** (D-044: só o modelo mais competente, hoje Claude Opus) | — | — |
 | Programador | `z-ai/glm-5.3` | `deepseek-ai/deepseek-v4.1-flash` | `.claude/agents/programador.md` |
 | Testador | `deepseek-ai/deepseek-v4.1-flash` | `z-ai/glm-5.3` | `.claude/agents/testador.md` |
 | Revisor | modelo diferente de quem escreveu (código do GLM → `moonshotai/kimi-k3`) | `nvidia/nemotron-3-super-120b-a12b` | `.claude/agents/revisor.md` |
@@ -26,6 +26,7 @@ Só modelos com imagem (`kimi-k3`, `deepseek-v4.1-flash`, `glm-5.3-flash`, `muse
 
 ## Limite da NVIDIA (obrigatório)
 
+- Tarefa visual (arte, modelagem, shaders, efeitos, UI): não faça. Registre como pendente para o Claude (D-044).
 - No máximo **2 subagentes ao mesmo tempo** (com você, 3). Em `workflow`, use `parallel()` com no máximo 2 itens e encadeie lotes.
 - Modelo sem resposta em 2 min ou com 2 erros seguidos → cancele, espere 60 s, use o reserva.
 - Nunca dispare um agente por modelo "para testar".
@@ -43,7 +44,7 @@ Só modelos com imagem (`kimi-k3`, `deepseek-v4.1-flash`, `glm-5.3-flash`, `muse
 
 1. Você lê `AGENTS.md` e os docs, escreve o contrato (arquivos, interfaces, dados) e a lista de tarefas.
 2. Dúvida de design → **não decida**: registre como pergunta pendente em `Docs/Design/decisoes.md` e siga com o que não depende dela.
-3. Lote 1 (paralelo, 2): artista + programador, em arquivos diferentes.
+3. Lote 1 (paralelo, 2): programador + testador (testes a partir do contrato), em arquivos diferentes. Arte não entra no harness (D-044).
 4. Lote 2: testador (escreve e roda os testes) → corrige com o programador se falhar.
 5. Revisor (modelo diferente de quem escreveu) revisa o diff; você aplica ou devolve.
 6. Documentador atualiza docs e rascunha o relatório.
@@ -52,14 +53,14 @@ Só modelos com imagem (`kimi-k3`, `deepseek-v4.1-flash`, `glm-5.3-flash`, `muse
 ## Modelo de workflow
 
 ```js
-// lote 1: arte e código em paralelo (2 agentes)
-const [arte, codigo] = await parallel([
-  () => agent(promptArtista + tarefaArte, { provider: 'nvidia', model: 'moonshotai/kimi-k3' }),
+// lote 1: código e testes em paralelo (2 agentes)
+const [codigo, testesNovos] = await parallel([
   () => agent(promptProgramador + tarefaCodigo, { provider: 'nvidia', model: 'z-ai/glm-5.3' }),
+  () => agent(promptTestador + tarefaTestesDoContrato, { provider: 'nvidia', model: 'nvidia/nemotron-3-super-120b-a12b' }),
 ])
 // lote 2: testes
 const testes = await agent(promptTestador + tarefaTestes, { provider: 'nvidia', model: 'deepseek-ai/deepseek-v4.1-flash' })
 // lote 3: revisão por outro modelo
 const revisao = await agent(promptRevisor + 'Revise o diff atual.', { provider: 'nvidia', model: 'moonshotai/kimi-k3' })
-return { arte, codigo, testes, revisao }
+return { codigo, testesNovos, testes, revisao }
 ```

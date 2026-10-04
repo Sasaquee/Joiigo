@@ -9,7 +9,7 @@ O trabalho é dividido por **papel**, não por modelo. Cada papel tem um modelo 
 | Papel | O que faz | Claude Code | DeepSeek harness (NVIDIA) | Reserva NVIDIA |
 |---|---|---|---|---|
 | **Orquestrador** | Lê os docs, faz as perguntas ao dono, define contratos e arquitetura, divide as tarefas, integra, abre a Unity, depura, escreve o relatório da fase e faz o commit | Opus 5.5 (agente principal) | `kimi-k3` | `glm-5.3` |
-| **Artista** | Modelagem (`Tools/Blender/*.py`), pixel art das cartas (`Tools/Cards/*.py`), shaders, paleta, efeitos, olhar capturas e corrigir | Opus 5.5 (subagente `artista`) | `kimi-k3` (D-043) | — (espera) |
+| **Artista** | Modelagem, arte, shaders, efeitos, UI visual | Opus 5.5 (subagente `artista`) | **nenhum** (D-044: só o modelo mais competente; hoje o Opus) | — |
 | **Programador** | Código C# mecânico a partir de um contrato já definido, ScriptableObjects, ferramentas de editor | Sonnet 5.5 (subagente `programador`) | `glm-5.3` | `deepseek-v4.1-flash` |
 | **Testador** | Testes EditMode/PlayMode, teste de regressão para cada bug | Sonnet 5.5 (subagente `testador`) | `deepseek-v4.1-flash` | `glm-5.3` |
 | **Revisor** | Revisão do diff antes do commit: bugs, regras do `AGENTS.md`, números fora de SO | Sonnet 5.5 (subagente `revisor`); Opus em mudança grande | **Nunca o mesmo modelo que escreveu o código**, e de preferência de outra empresa (ex.: código do `glm-5.3`, da Z.ai → revisão do `kimi-k3`, da Moonshot), porque um modelo tende a não ver os próprios erros | `nemotron-3-super-120b-a12b` |
@@ -22,7 +22,7 @@ Regras que valem para todos os papéis:
 
 - **Só o orquestrador fala com o dono** e só ele registra decisões. Os outros papéis devolvem dúvidas de design ao orquestrador.
 - **Só o orquestrador abre a Unity** (uma instância por vez; compilar e testar é serial). Os outros escrevem código e o orquestrador integra.
-- **Arte só em modelo competente para isso** (D-042, D-043): Opus no Claude, `kimi-k3` no DeepSeek harness. Nunca Sonnet, nunca reserva ou modelo menor; sem eles, a arte espera.
+- **Arte só no modelo mais competente disponível** (D-042, D-044): hoje o Claude Opus, em qualquer modo. Nunca Sonnet, nunca modelo do harness enquanto não for o melhor disponível.
 - Quem escreve não revisa o próprio trabalho: a revisão sai de outro modelo, de preferência de outra empresa (o mesmo modelo tende a repetir os próprios erros).
 
 ## 2. Ordem de uma fase (orquestração)
@@ -103,7 +103,6 @@ O harness tem um tool `workflow` que aceita `provider` e `model` por agente e po
 
 ```js
 // Por agente: um subagente por papel — no máximo 2 rodando ao mesmo tempo (§4.2)
-await agent(promptArtista,     { provider: 'nvidia', model: 'moonshotai/kimi-k3' })            // arte: só kimi-k3 (D-043)
 await agent(promptProgramador, { provider: 'nvidia', model: 'z-ai/glm-5.3' })
 await agent(promptTestador,    { provider: 'nvidia', model: 'deepseek-ai/deepseek-v4.1-flash' })
 await agent(promptBatedor,     { provider: 'nvidia', model: 'nvidia/nemotron-3.5-lightning-30b-a3b' })
@@ -139,7 +138,7 @@ O prompt de cada papel é o texto de `.claude/agents/<papel>.md` (a parte depois
 5. **Desistir cedo de modelo travado.** Sem nenhuma resposta em **2 minutos**, ou com **2 erros seguidos** (429, timeout, servidor): cancele, aguarde 60 s e passe a tarefa ao **reserva** da tabela da §1. Não espere as 5 tentativas de 5 minutos do harness.
 6. **Erro 429:** pare tudo por **60 s** (a janela é por minuto) antes de qualquer nova chamada. Não insista em loop.
 7. **Esperar job em segundo plano:** use espera curta (até 2 min por consulta). Se o job não andou entre duas consultas, aplique a regra 5.
-8. A arte (D-043) não tem reserva: se o `kimi-k3` travar, a tarefa de arte espera e o resto da fase continua.
+8. Arte não roda no harness (D-044): vira pendência para o Claude e o resto da fase continua.
 
 Esses limites não valem para o Claude Code (outro provedor, com limites próprios da conta).
 
@@ -188,6 +187,24 @@ O teste foi feito em três partes, sempre com o harness em **acesso total** (`da
 
 **Conclusão:** o harness **consegue trabalhar no Joiigo**: lê as regras, compila e roda os testes na Unity, escreve código bom e coordena subagentes. Hoje ele é **lento** (horas para uma fase que o Claude faz em minutos) e **não é confiável para arte**. Use para tarefas bem delimitadas (testes, revisão, docs, funções de C# com contrato pronto), sempre com revisão final do Claude ou do dono antes do commit. Arte continua com o Opus até o Kimi K3 estabilizar.
 
+### 4.5 Modos de trabalho (D-044)
+
+| Modo | Como usar |
+|---|---|
+| **Só Claude** | Abra o Claude Code no projeto e peça. Ele orquestra com Opus e usa os subagentes de `.claude/agents/`. |
+| **Só harness** | Abra o DeepSeek harness no projeto (acesso total) e peça. Ele segue `AGENTS.md` e a skill `equipe-joiigo`. Tarefa visual não é feita: vira pendência para o Claude. |
+| **Híbrido** | Peça ao Claude "modo híbrido". Ele delega o mecânico com `Tools/Agentes/dsh-tarefa.ps1` (skill `.claude/skills/delegar-dsh`), revisa o diff e faz o commit. Economiza a assinatura do Claude; o harness gasta cota grátis. |
+
+`Tools/Agentes/dsh-tarefa.ps1` também pode ser usado à mão:
+
+```
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Agentes/dsh-tarefa.ps1 -Papel testador -Tarefa minha-tarefa.md
+```
+
+Ele escolhe o modelo por papel (`Tools/Agentes/papeis.json`, editável), usa a configuração do app, roda em acesso total, recusa arte, recusa uma segunda tarefa simultânea e guarda tudo em `.dsh-saida/` (ignorada pelo git).
+
+**Provedores configurados no app** (2026-10-04): NVIDIA (grátis, sem teto diário, instável), Google AI Studio (grátis, ~20 pedidos/dia no Gemini 3.8 Flash; Pro sem cota grátis) e OpenRouter (grátis 50 pedidos/dia sem créditos, 1.000/dia com US$ 10 de créditos; modelos pagos já cadastrados: DeepSeek V4 Pro, DeepSeek V4 Flash, Kimi K3, Gemini 3.8 Flash). O plano Google AI Plus do dono não dá cota de API.
+
 ## 5. Claude Code
 
 - O agente principal é Opus 5.5 e faz o papel de orquestrador.
@@ -196,4 +213,4 @@ O teste foi feito em três partes, sempre com o harness em **acesso total** (`da
 
 ## 6. Pendências
 
-Nenhuma. (P-011 resolvida em D-043.)
+Nenhuma. (P-011 resolvida em D-043, depois substituída por D-044.)

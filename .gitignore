@@ -118,3 +118,6 @@ Thumbs.db
 # Chaves de API (NVIDIA_API_KEY etc.) nunca no repositório
 .env
 .env.*
+
+# Saídas das tarefas delegadas ao DeepSeek harness (Tools/Agentes/dsh-tarefa.ps1)
+.dsh-saida/

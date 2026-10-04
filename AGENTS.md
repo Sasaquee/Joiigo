@@ -22,14 +22,27 @@ Projeto Unity 6.3 LTS (6000.3.25f1), protótipo de arena de um RPG 2.5D cooperat
 
 Fases 0–5 concluídas. **Passe visual em andamento (D-039 a D-042):** o estilo mudou para **3D pixelado** (render em ~640x360 com ampliação Point, contorno e luz em faixas — `Camera/PixelCamera.cs`, `Art/Shaders/PixelPost.shader`, `Editor/PixelRenderSetup.cs`, paleta chapada em `Editor/PixelPalette.cs`; regras em `Docs/Design/arte-pixel.md`). Já integrados: andarilho encapuzado (`Tools/Blender/build_character.py`), cartas em pixel art (`Tools/Cards/card_pixel.py`), efeitos de combate/skills/revelação, componentes de vida da cidade (`Arena/Life`). **Falta (ver `Docs/Tecnico/passe-visual-pendente.md`):** a cidade steampunk em volta da arena (`Tools/Blender/build_city.py` + `Editor/CityBuilder.cs`, ligar com `CityBuilder.Build(arena)` no ArenaBuilder), ajuste final de luz, rodar os testes e fechar o passe com relatório. Depois: **Fase 6 — carta no chão e D20** (perguntar P-008, P-009 e a tabela do D20 antes). O coop (Fase 3) está guardado: o jogo entra direto solo (D-018), F9 volta à tela de conexão. Abertas para quando o coop voltar: P-003, P-004.
 
+## Modos de trabalho
+
+O dono escolhe o modo a cada tarefa; todos seguem as mesmas regras deste arquivo.
+
+| Modo | Quem orquestra | Quem executa | Quando |
+|---|---|---|---|
+| **Só Claude** | Claude Opus (Claude Code) | Opus e subagentes Sonnet (`.claude/agents/`) | Tarefas complexas, fases inteiras, qualquer coisa visual |
+| **Só harness** | DeepSeek harness (app) | Modelos NVIDIA / OpenRouter / Gemini da skill `equipe-joiigo` | Tarefas simples e bem delimitadas, sem arte |
+| **Híbrido** | Claude Opus | Claude delega o mecânico ao harness com `Tools/Agentes/dsh-tarefa.ps1` (skill `delegar-dsh`) e revisa tudo | Economizar o uso do Claude em fases grandes |
+
+**Arte é exceção em todos os modos (D-044):** modelagem, arte, shaders, efeitos, UI visual e qualquer coisa que mude como o jogo parece são feitas **só pelo modelo mais competente disponível** — hoje o Claude Opus. No modo só-harness, tarefa visual não é feita: vira pendência para o Claude. O jogo precisa ser bonito.
+
 ## Equipe de agentes
 
 Detalhes em `Docs/Tecnico/agentes-e-modelos.md`. Resumo:
 
-- **Orquestrador** (Claude: Opus · NVIDIA: `kimi-k3`): arquitetura, contratos, perguntas ao dono, integração, Unity, depuração, relatório e commit. Só ele fala com o dono e só ele abre a Unity.
-- **Artista** (Claude: só Opus, vários em paralelo se quiser — D-042 · NVIDIA: só `kimi-k3` — D-043): modelagem e arte. Só modelo competente para isso; sem ele, a arte espera.
-- **Programador / Testador / Revisor / Documentador** (Claude: Sonnet · NVIDIA: `glm-5.3`, `deepseek-v4.1-flash`): código mecânico, testes, revisão e docs. A revisão sai de um modelo diferente do que escreveu.
+- **Orquestrador** (Claude: Opus · harness: `z-ai/glm-5.3` enquanto o `kimi-k3` estiver instável): arquitetura, contratos, perguntas ao dono, integração, Unity, depuração, relatório e commit. Só ele fala com o dono e só ele abre a Unity.
+- **Artista** — D-044: só o modelo mais competente disponível (hoje Opus, vários em paralelo se quiser — D-042).
+- **Programador / Testador / Revisor / Documentador / Batedor** (Claude: Sonnet · harness: `Tools/Agentes/papeis.json`): código mecânico, testes, revisão, docs e varreduras. A revisão sai de um modelo diferente do que escreveu.
 - Prompts dos papéis em `.claude/agents/*.md` (servem para qualquer harness).
+- O harness roda sempre em **acesso total**; o modo seguro marca a pasta e quebra build/testes (`agentes-e-modelos.md` §4.4). Ele **nunca faz commit** no modo híbrido.
 - **API gratuita da NVIDIA (~40 requisições/min por chave, compartilhadas):** no máximo **3 agentes ao mesmo tempo** (subagentes em lotes de 2), uma sessão do harness por vez, nunca testar todos os modelos em paralelo. Modelo sem resposta em 2 min ou com 2 erros seguidos → cancele, espere 60 s e use o reserva. Regras completas em `Docs/Tecnico/agentes-e-modelos.md` §4.2.
 - Só uma Unity abre o projeto por vez, então compilar e testar é serial. Só um harness trabalha no repositório por vez; ao parar no meio, deixe `Docs/Tecnico/<tarefa>-pendente.md` (passagem de bastão).
 
@@ -42,7 +55,8 @@ Detalhes em `Docs/Tecnico/agentes-e-modelos.md`. Resumo:
 - `InputActionAsset` é compartilhado entre instâncias; o `PlayerInputReader` clona por instância.
 - `NetworkObject` criado por script fica com `GlobalObjectIdHash` 0; o `ArenaBuilder` chama o `OnValidate` (ver `EnsureNetworkObjectHash`).
 - Em batchmode, `Start-Process -Wait` trava esperando o cliente de licença da Unity; espere só o processo principal (`$p.WaitForExit()`).
-- Testes em batchmode só rodam com o editor fechado.
+- Testes em batchmode só rodam com o editor fechado. Use `-runTests -testPlatform EditMode -testResults <xml>` **sem `-quit`** (com `-quit` a Unity fecha antes de rodar os testes) e não abra uma segunda Unity enquanto a primeira roda.
+- **Nunca mate processos da Unity, do Unity Hub ou do harness.** `unity.exe serve` e `Unity.Licensing.Client` são do Hub, não são o editor. Se achar que o editor está aberto, pare e avise.
 - Se a Unity sair com "Library/ArtifactDB is corrupted", apague `Library/ArtifactDB*` e `Library/Artifacts` (é cache) e rode de novo.
 - Dentro de `Game.Core.*`, `Math` resolve para o namespace `Game.Core.Math`; use `System.Math` / `MathF`.
 - No editor, objetos devolvidos de um passo anterior do build podem virar referência morta após reimportações; recarregue assets pelo caminho antes de ligar referências na cena.
