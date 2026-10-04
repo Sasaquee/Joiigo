@@ -89,6 +89,7 @@ namespace Game.EditorTools
             BuildCardAlcove(arena);
             BuildLampPosts(arena);
             BuildBoilers(arena);
+            CityBuilder.Build(arena); // cidade steampunk em volta da praça (D-042)
             SetupLighting();
             AmbienceBuilder.Build(arena); // noite arcana com fornalhas (D-017); sobrescreve a luz acima
 

@@ -180,7 +180,8 @@ namespace Game.Player
                 // O arco corre da direita (+meia-abertura) para a esquerda.
                 float angle = Mathf.Lerp(halfAngle, -halfAngle, u) * Mathf.Deg2Rad;
                 // Grosso no meio do arco e fino nas pontas; o rastro afina na cauda e engrossa na ponta.
-                float profile = Mathf.Max(0.15f, Mathf.Pow(Mathf.Sin(Mathf.PI * Mathf.Clamp01(u)), 0.6f));
+                // sin(PI) sai levemente negativo (-8e-8) e Pow(negativo, 0.6) dá NaN: a base fica >= 0.
+                float profile = Mathf.Max(0.15f, Mathf.Pow(Mathf.Max(0f, Mathf.Sin(Mathf.PI * Mathf.Clamp01(u))), 0.6f));
                 float taper = Mathf.Lerp(0.25f, 1f, f);
                 float width = Mathf.Min(0.95f, layer.Thickness * profile * taper);
                 Vector3 dir = new Vector3(Mathf.Sin(angle), 0f, Mathf.Cos(angle));

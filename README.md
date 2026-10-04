@@ -12,6 +12,7 @@ RPG de ação 2.5D cooperativo (2 a 4 jogadores em LAN) em Unity 6. Este reposit
 | 3 | Coop LAN (Hospedar / Entrar com IP, previsão local, largada por alavanca) | ✅ código e testes · ⏳ **falta playtest humano** |
 | 4 | Combate (golpe em arco, dano mecânico/arcano), 3 inimigos com IA no host, ondas, morte que desmonta; ambientação semi-realista noturna (texturas CC0, fornalhas, vapor) | ✅ |
 | 5 | Cartas de tarô (14, arte dourada), loadout por tiragem (Tab), skills 1–4, cinto Q/E/R, energia, efeitos mecânico-arcanos | ✅ |
+| — | Passe visual: 3D pixelado, andarilho, cartas em pixel art, efeitos e cidade steampunk | ✅ |
 | 6 | Carta no chão e D20 | próxima |
 | 7–8 | Aura, ciclo completo e playtest | — |
 
@@ -42,4 +43,4 @@ Guia completo em [`Docs/Tecnico/rede-lan.md`](Docs/Tecnico/rede-lan.md). Resumo:
 
 ## Testes
 
-Unity: **Window → General → Test Runner** → Run All (EditMode e PlayMode). Na Fase 5: 101 EditMode + 48 PlayMode passando.
+Unity: **Window → General → Test Runner** → Run All (EditMode e PlayMode). Depois do passe visual: 117 EditMode + 51 PlayMode passando.

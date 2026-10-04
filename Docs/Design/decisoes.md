@@ -276,6 +276,12 @@ Registro das perguntas de design feitas ao dono durante o protótipo. A resposta
 - **Resposta literal:** "boa faz isso, só n deixa apenas isso, as vezes vou usar apenas o claude, e as vezes tera tarefas mais simples, onde eu possa usar somente o harness enfim deixa bem flexivel, com a unica exceção de deixar a llm mais competente de todas para fazer artes, modelagem, graficos, e etc, pois o jogo precisa ser bonito"
 - **Significa:** três modos (só Claude, só harness, híbrido), à escolha do dono em cada tarefa. Arte, modelagem, gráficos, shaders, efeitos e UI visual ficam sempre com o modelo mais competente disponível (hoje o Claude Opus), em qualquer modo. A liberação do `kimi-k3` para arte (D-043) deixa de valer enquanto ele não for o melhor disponível.
 
+### D-045 · Luz da arena com a cidade
+- **Pergunta:** Qual luz a arena deve ter? (antes, mais sombrio e azul × depois, mais legível; imagem em `Docs/Capturas/passe-visual/luz_antes_depois.png`)
+- **Opções:** Depois, mais legível · Antes, mais sombrio · Meio-termo
+- **Resposta literal:** "Depois, mais legível (Recomendado)"
+- **Significa:** mantém a noite arcana com fornalhas (D-017), com o chão, os postes e a cidade legíveis; janelas em âmbar e cristais em ciano, sem estourar em branco.
+
 ---
 
 ## Perguntas pendentes (feitas na fase em que travarem)

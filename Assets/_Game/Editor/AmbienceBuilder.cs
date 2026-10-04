@@ -28,22 +28,22 @@ namespace Game.EditorTools
         private const float BloomIntensity = 0.8f;
         private const float BloomScatter = 0.7f;
         private const float Saturation = -10f;
-        private const float PostExposure = 0.8f;
+        private const float PostExposure = 1.0f;
         private const float VignetteIntensity = 0.3f;
         private const float VignetteSmoothness = 0.4f;
-        private const float WhiteBalanceTemperature = -8f;
-        private static readonly Vector4 CoolShadows = new Vector4(0.9f, 0.97f, 1.1f, 0f);
+        private const float WhiteBalanceTemperature = -3f;
+        private static readonly Vector4 CoolShadows = new Vector4(0.96f, 0.99f, 1.05f, 0f);
 
         // Ambiente, neblina e câmera
-        private static readonly Color AmbientSky = new Color(0.34f, 0.40f, 0.58f);
-        private static readonly Color AmbientEquator = new Color(0.26f, 0.25f, 0.30f);
-        private static readonly Color AmbientGround = new Color(0.16f, 0.13f, 0.12f);
+        private static readonly Color AmbientSky = new Color(0.32f, 0.36f, 0.50f);
+        private static readonly Color AmbientEquator = new Color(0.30f, 0.28f, 0.29f);
+        private static readonly Color AmbientGround = new Color(0.22f, 0.18f, 0.15f);
         private static readonly Color FogColor = new Color(0.10f, 0.12f, 0.19f);
-        private const float FogDensity = 0.006f;
+        private const float FogDensity = 0.0045f;
 
         // Luar frio
-        private static readonly Color MoonColor = new Color(0.55f, 0.65f, 1f);
-        private const float MoonIntensity = 1.1f;
+        private static readonly Color MoonColor = new Color(0.66f, 0.72f, 0.95f);
+        private const float MoonIntensity = 1.5f;
         private static readonly Vector3 MoonRotation = new Vector3(50f, -30f, 0f);
 
         // Fornalhas: ângulo (graus a partir de +Z) livre entre portões, caldeiras, alcova e spawn.

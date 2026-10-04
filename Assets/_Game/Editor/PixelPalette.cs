@@ -49,8 +49,8 @@ namespace Game.EditorTools
             ["TecidoEscuro"] = new Entry("#2F2C2A", 0f, 0.1f),
             ["Couro"] = new Entry("#6E4A32", 0f, 0.25f),
             ["Bandeira"] = new Entry("#7C2F3A", 0f, 0.15f),
-            ["JanelaQuente"] = new Entry("#FFC070", 0f, 0.6f, "#FFB060", 2.2f),
-            ["CristalArcano"] = new Entry("#6FF0FF", 0f, 0.8f, "#55E8FF", 3.2f),
+            ["JanelaQuente"] = new Entry("#FFC070", 0f, 0.6f, "#FFA040", 1.25f), // mais forte que isso estoura em branco com o bloom
+            ["CristalArcano"] = new Entry("#6FF0FF", 0f, 0.8f, "#40E0FF", 1.6f), // acima disso o ciano estoura em branco
             ["CristalArcanoFraco"] = new Entry("#2E6E78", 0f, 0.7f, "#1A8FA0", 0.9f),
             ["CristalApagado"] = new Entry("#1E2A2E", 0f, 0.6f),
             ["BrasaFornalha"] = new Entry("#FF7A20", 0f, 0.3f, "#FF6A10", 3.5f),
