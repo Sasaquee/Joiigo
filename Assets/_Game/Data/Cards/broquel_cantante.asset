@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 858f2323b15ed5d4f9b917b9ee2db399, type: 3}
+  m_Name: broquel_cantante
+  m_EditorClassIdentifier: Game.Runtime::Game.Cards.CardData
+  id: broquel_cantante
+  displayName: Broquel Cantante
+  arcana: 0
+  suit: 1
+  number: 11
+  kind: 0
+  tags:
+  - engrenagem
+  - cristal
+  rarity: 1
+  cursed: 0
+  energyCost: 20
+  cooldown: 7
+  healthCostOnUse: 0
+  effects:
+  - {fileID: 11400000, guid: 1bdf27f964c8c2a49b3442563dfb4675, type: 2}
+  modifiers: []
+  face: {fileID: 2800000, guid: 48b101c3c9009bc479e61a837a8476fb, type: 3}

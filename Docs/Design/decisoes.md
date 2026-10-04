@@ -174,17 +174,82 @@ Registro das perguntas de design feitas ao Thiago durante o protótipo. A respos
 
 ---
 
+## Fase 5 · 2026-10-04
+
+### D-027 · Tela de loadout
+- **Pergunta:** Como o jogador vê e troca as cartas equipadas?
+- **Opções:** Tela de tiragem · Só na mesa da alcova · Equipa ao pegar
+- **Resposta literal:** "Tela de tirágem (Recomendado)"
+- **Significa:** uma tecla abre as cartas dispostas como uma tiragem de tarô. O jogador arrasta as cartas entre os espaços e o jogo continua rodando por trás. Não há texto longo, só a ilustração e um nome curto.
+
+### D-028 · Skills na tela durante o combate
+- **Pergunta:** Como você sabe quais skills tem e quando voltam da recarga?
+- **Opções:** 4 cartas pequenas no canto · Nada na tela · Ícones mínimos
+- **Resposta literal:** "4 cartas pequenas no canto (Recomendado)"
+- **Significa:** a recarga aparece como uma sombra que desce sobre a ilustração, sem número.
+
+### D-029 · Cinto de consumíveis (resolve P-001 e P-002)
+- **Pergunta:** Quantos espaços tem o cinto e quais teclas?
+- **Opções:** 2 espaços, Q e R · 3 espaços, Q, R e F · 2 espaços, 5 e 6
+- **Resposta literal:** "3 espaços Q, E, R"
+
+### D-030 · Recuperação de energia (resolve P-007)
+- **Pergunta:** Como a energia se recupera?
+- **Opções:** Golpes carregam + lenta · Só com o tempo · Só por golpes
+- **Resposta literal:** "Golpes carregam + lenta (Recomendado)"
+
+### D-031 · Conflito da tecla E
+- **Pergunta:** O E era "interagir" e passou a ser do cinto. Como resolvemos?
+- **Opções:** Interagir vai para F · E faz os dois por contexto · Cinto com Q, R e F
+- **Resposta literal:** "Interagir vai para F (Recomendado)"
+- **Significa:** Q, E e R são só do cinto. F pega cartas e aciona a alavanca e a mesa.
+
+### D-032 · Tecla da tiragem
+- **Resposta literal:** "Tab (Recomendado)"
+
+### D-033 · Cartas iniciais
+- **Pergunta:** Com que cartas o personagem começa?
+- **Opções:** Nenhuma, só o golpe · Uma skill neutra
+- **Resposta literal:** "Nenhuma, só o golpe (Recomendado)"
+- **Significa:** todas as cartas vêm do chão (Fase 6). Até lá, os testes usam a tecla de debug "dar carta".
+
+### D-034 · Visual das cartas
+- **Pergunta:** Como as cartas de tarô devem parecer?
+- **Opções:** Ilustração 3D em moldura · Símbolo gráfico
+- **Resposta literal:** "Ilustração 3D em moldura (Recomendado)"
+- **Significa:** cada carta mostra um objeto modelado e renderizado no Blender, numa moldura de latão gasto, com numeral romano e nome curto.
+
+### D-035 · Conteúdo das cartas
+- **Pergunta:** Aprova o conjunto de 14 cartas de `Docs/Design/cartas-prototipo.md`?
+- **Resposta literal:** "Aprovo como está (Recomendado)"
+
+### D-036 · Naipes → tipos
+- **Pergunta:** Espadas = skill, Copas = consumível, Paus = passiva, Ouros = equipamento?
+- **Resposta literal:** "Aprovo (Recomendado)"
+
+### D-037 · Novo estilo das cartas (substitui D-034)
+- **Origem:** o Thiago mandou uma imagem de referência (cartas pretas com traço dourado) depois de ver a primeira versão em 3D.
+- **Resposta literal:** "refaça o modelo das cartas nesse estilo, a carta da mto feia"
+- **Significa:** faces 2D de traço dourado sobre preto, com moldura ornamentada (cantos com arcos e contas, faixas de título e nome), estrelas, constelações e raios atrás do objeto. O objeto de cada carta é desenhado em linha. Os cristais levam um toque ciano (violeta na amaldiçoada) como assinatura arcana (Pilar 4). Os arcanos maiores têm cristais nos cantos. Os símbolos da referência não foram copiados (§1: identidade própria). Gerado por `Tools/Cards/card_art.py`.
+
+### D-038 · Custo de vida da carta amaldiçoada
+- **Pergunta:** A Lâmina Sedenta cobra 8 de vida a cada uso. O que acontece se o jogador usar com pouca vida?
+- **Opções:** Pode derrubar · Não deixa usar · Deixa com 1 de vida
+- **Resposta literal:** "Pode derrubar (Recomendado)"
+
+---
+
 ## Perguntas pendentes (feitas na fase em que travarem)
 
 | Id | Pergunta | Fase |
 |---|---|---|
-| P-001 | Quantos slots tem o cinto de consumíveis | 5 |
-| P-002 | Teclas do cinto e dos demais atalhos fora do prompt | 5 |
+| ~~P-001~~ | Slots do cinto | resolvida em D-029 |
+| ~~P-002~~ | Teclas do cinto | resolvida em D-029, D-031, D-032 |
 | P-003 | Como o aliado levanta quem caiu (chegar perto, segurar uma tecla, tempo) | quando o coop voltar |
 | P-004 | O que acontece se todos os jogadores caírem | quando o coop voltar |
 | ~~P-005~~ | Tempo caído: número provisório 5 s em `CombatSettings` (para aprovar) | resolvida como número |
 | P-006 | Nomes finais dos 3 inimigos (comportamentos decididos em D-023 a D-026; ids internos provisórios: automato, drone, constructo) | antes do conteúdo final |
-| P-007 | Como a energia se recupera | 5 |
+| ~~P-007~~ | Recuperação da energia | resolvida em D-030 |
 | P-008 | Como a carta do chão se mostra no mundo antes de ser pega | 6 |
 | P-009 | Efeito temporário do 20 no coop | 6 |
 | P-010 | Forma e linguagem visual da aura | 7 |

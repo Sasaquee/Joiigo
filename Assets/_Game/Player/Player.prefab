@@ -17,6 +17,8 @@ GameObject:
   - component: {fileID: 5312211245891967273}
   - component: {fileID: 2978018711652690751}
   - component: {fileID: 9020386312553478034}
+  - component: {fileID: 715880359161521078}
+  - component: {fileID: 3313168489311961528}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -179,6 +181,34 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   settings: {fileID: 11400000, guid: c87cf1f5a73cc7b449aa338d8790e2fe, type: 2}
   body: {fileID: 3323622554486228175}
+--- !u!114 &715880359161521078
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4850298204558110084}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 78e9179a80c16f74d85ae46779710a9c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Runtime::Game.Cards.PlayerCards
+  ShowTopMostFoldoutHeaderGroup: 1
+  database: {fileID: 11400000, guid: 423cdb76b8d74ea419fcc18decf4fd54, type: 2}
+  settings: {fileID: 11400000, guid: 04975e7e71906bb458e507633ab58921, type: 2}
+  visualLibrary: {fileID: 11400000, guid: 0532e2dd7d21c87439bf7fe532d47224, type: 2}
+--- !u!114 &3313168489311961528
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4850298204558110084}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9052fb936ffd7ce458f49130b8208d66, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Runtime::Game.Cards.PlayerShield
 --- !u!1 &6858826105344678434
 GameObject:
   m_ObjectHideFlags: 0

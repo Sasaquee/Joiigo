@@ -1,6 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
+using Game.Cards;
 using Game.Combat;
+using Game.Core.Cards;
 using Game.Core.Combat;
 using Game.Core.Math;
 using Unity.Netcode;
@@ -25,6 +27,7 @@ namespace Game.Player
         private readonly List<IDamageable> hits = new List<IDamageable>();
         private PlayerLife life;
         private PlayerInputReader reader;
+        private PlayerCards cards; // pode faltar: sem cartas o golpe usa só o CombatSettings
 
         public CombatSettings Settings
         {
@@ -36,7 +39,12 @@ namespace Game.Player
         {
             life = GetComponent<PlayerLife>();
             reader = GetComponent<PlayerInputReader>();
+            cards = GetComponent<PlayerCards>();
         }
+
+        /// <summary>Alcance do golpe com os modificadores das cartas (Manopla Pistonada).</summary>
+        private float CurrentRange() =>
+            Mathf.Max(0.1f, settings.basicRange + (cards != null ? cards.Modifiers.Get(ModifierKind.BasicRange) : 0f));
 
         public override void OnNetworkSpawn()
         {
@@ -93,7 +101,7 @@ namespace Game.Player
             dir.y = 0f;
             dir.Normalize();
 
-            SwingRpc(dir);
+            SwingRpc(dir, CurrentRange());
             StartCoroutine(HitAfterDelay(dir));
         }
 
@@ -112,7 +120,8 @@ namespace Game.Player
             var origin = new Float2(p.x, p.z);
             var facing = new Float2(dir.x, dir.z);
 
-            int count = Physics.OverlapSphereNonAlloc(p, settings.basicRange + MaxTargetRadius, overlap, ~0,
+            float range = CurrentRange();
+            int count = Physics.OverlapSphereNonAlloc(p, range + MaxTargetRadius, overlap, ~0,
                 QueryTriggerInteraction.Collide);
 
             hits.Clear();
@@ -125,25 +134,50 @@ namespace Game.Player
                     continue; // jogador (ele mesmo ou aliado)
 
                 Vector3 t = target.Transform.position;
-                if (!ArcHit.IsInArc(origin, facing, new Float2(t.x, t.z), settings.basicRange,
+                if (!ArcHit.IsInArc(origin, facing, new Float2(t.x, t.z), range,
                         settings.basicHalfAngle, target.Radius))
                     continue;
 
                 hits.Add(target);
             }
 
-            var packet = new DamagePacket(settings.basicDamage, settings.basicArcaneFraction);
+            DamagePacket packet = BuildPacket();
             foreach (IDamageable target in hits)
                 target.ServerApplyDamage(packet, OwnerClientId);
+
+            // Uma vez por golpe que acertou: energia (D-030) e gasto do reforço da Mola de Recuo.
+            if (hits.Count > 0 && cards != null)
+                cards.ServerOnBasicHit();
             hits.Clear();
         }
 
+        /// <summary>
+        /// Dano do golpe com as cartas: o deslocamento arcano (Lente) vale para o dano base; o dano extra
+        /// (Manopla) é mecânico; a Mola de Recuo multiplica o total.
+        /// </summary>
+        private DamagePacket BuildPacket()
+        {
+            float baseDamage = settings.basicDamage;
+            float arcane = settings.basicArcaneFraction;
+            if (cards == null)
+                return new DamagePacket(baseDamage, arcane);
+
+            ModifierSet mods = cards.Modifiers;
+            arcane = Mathf.Clamp01(arcane + mods.Get(ModifierKind.BasicArcaneShift));
+            float extra = mods.Get(ModifierKind.BasicDamage);
+            float total = Mathf.Max(0f, baseDamage + extra);
+            float arcaneAmount = baseDamage * arcane;
+            total *= 1f + cards.ServerHurtBonus;
+            arcaneAmount *= 1f + cards.ServerHurtBonus;
+            return new DamagePacket(total, total > 0f ? arcaneAmount / total : arcane);
+        }
+
         [Rpc(SendTo.Everyone)]
-        private void SwingRpc(Vector3 dir)
+        private void SwingRpc(Vector3 dir, float range)
         {
             if (settings == null)
                 return;
-            SwingVisual.Play(transform.position, dir, settings.basicRange, settings.basicHalfAngle);
+            SwingVisual.Play(transform.position, dir, range, settings.basicHalfAngle);
         }
 
         private static bool IsFinite(Vector3 v) => float.IsFinite(v.x) && float.IsFinite(v.y) && float.IsFinite(v.z);

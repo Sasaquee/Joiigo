@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b414b26de6f79d342b33860431977f03, type: 3}
+  m_Name: CardVisualLibrary
+  m_EditorClassIdentifier: Game.Runtime::Game.Cards.CardVisualLibrary
+  steam: {fileID: 2100000, guid: f1c0ee3bcc785124880b81673eec57ff, type: 2}
+  ember: {fileID: 2100000, guid: a8d58f9d76caca945a3d62c33faa71c0, type: 2}
+  arcane: {fileID: 2100000, guid: 0cdb1add24adf5c4d889ed9c4d5b29c1, type: 2}
+  brass: {fileID: 2100000, guid: dda9990cf76b5814eaf654ff9c809613, type: 2}
+  crystal: {fileID: 2100000, guid: 4967d4ce2140e1947a3791233b95d756, type: 2}

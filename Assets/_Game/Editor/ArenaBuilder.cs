@@ -65,7 +65,8 @@ namespace Game.EditorTools
             var netSettings = LoadOrCreate<NetSettings>($"{DataFolder}/Net/NetSettings.asset");
             var waves = EnemyPrefabBuilder.BuildAll(crystal, crystalOff); // inimigos e ondas (D-023 a D-026)
             var combatSettings = LoadOrCreate<CombatSettings>($"{DataFolder}/Combat/CombatSettings.asset");
-            var playerPrefab = CreatePlayerPrefab(movement, interaction, netSettings, combatSettings);
+            var cardDb = CardAssetsBuilder.BuildAll(); // 14 cartas aprovadas (D-035)
+            var playerPrefab = CreatePlayerPrefab(movement, interaction, netSettings, combatSettings, cardDb);
 
             var scene = EditorSceneManager.OpenScene(ArenaSceneSetup.ArenaScenePath, OpenSceneMode.Single);
             foreach (var root in scene.GetRootGameObjects())
@@ -92,6 +93,7 @@ namespace Game.EditorTools
 
             var netSession = BuildNetworkManager(playerPrefab, netSettings, spawnPoints, matchState);
             NetworkUiBuilder.Build(netSession);
+            CardUiBuilder.Build(); // tiragem (Tab) e barra de cartas (D-027, D-028)
             PlayerCombatSetup.AddSoloBootstrap(netSession, matchState); // entra direto, solo (D-018)
             EnemyPrefabBuilder.AddWaveSpawner(matchState, waves);
 
@@ -349,7 +351,7 @@ namespace Game.EditorTools
         // ---------- Player ----------
 
         private static GameObject CreatePlayerPrefab(MovementSettings movement, InteractionSettings interaction,
-            NetSettings netSettings, CombatSettings combatSettings)
+            NetSettings netSettings, CombatSettings combatSettings, Game.Cards.CardDatabase cardDb)
         {
             var root = new GameObject("Player");
             root.AddComponent<NetworkObject>();
@@ -385,6 +387,7 @@ namespace Game.EditorTools
             nso.ApplyModifiedPropertiesWithoutUndo();
 
             PlayerCombatSetup.ConfigurePlayerPrefab(root, combatSettings);
+            CardAssetsBuilder.ConfigurePlayerPrefab(root, cardDb);
 
             var prefab = PrefabUtility.SaveAsPrefabAsset(root, PlayerPrefabPath);
             Object.DestroyImmediate(root);

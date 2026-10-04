@@ -17,7 +17,7 @@ Projeto Unity 6.3 LTS (6000.3.25f1), protótipo de arena de um RPG 2.5D cooperat
 
 ## Onde o projeto está
 
-Fases 0–4 concluídas. O coop (Fase 3) está guardado: o jogo entra direto solo como host (D-018), e F9 (debug) volta à tela de conexão. Desde a Fase 4, cada fase entrega mecânica + visual final (D-015), no estilo semi-realista sombrio (D-016) com noite arcana e fornalhas (D-017). A próxima é a **Fase 5 — cartas e loadout**; antes de codar, perguntar P-001, P-002 e P-007 de `decisoes.md`. Ainda abertas para quando o coop voltar: P-003 (como levantar aliado) e P-004 (todos caídos).
+Fases 0–5 concluídas. O coop (Fase 3) está guardado: o jogo entra direto solo como host (D-018), e F9 (debug) volta à tela de conexão. Desde a Fase 4, cada fase entrega mecânica + visual final (D-015), no estilo semi-realista sombrio (D-016) com noite arcana e fornalhas (D-017). A próxima é a **Fase 6 — carta no chão e D20**; antes de codar, perguntar P-008 e P-009 de `decisoes.md` e como a tabela do D20 distribui raridade/qualidade/quantidade. Ainda abertas para quando o coop voltar: P-003 (como levantar aliado) e P-004 (todos caídos).
 
 Divisão de trabalho que o dono pediu: tarefas mecânicas, docs, testes e revisão vão para subagentes Sonnet em paralelo; o agente principal fica com arquitetura, contratos do Core, modelagem no Blender, integração e depuração. Só uma Unity abre o projeto por vez, então compilar e testar é serial.
 
@@ -34,4 +34,5 @@ Divisão de trabalho que o dono pediu: tarefas mecânicas, docs, testes e revis�
 - Se a Unity sair com "Library/ArtifactDB is corrupted", apague `Library/ArtifactDB*` e `Library/Artifacts` (é cache) e rode de novo.
 - Dentro de `Game.Core.*`, `Math` resolve para o namespace `Game.Core.Math`; use `System.Math` / `MathF`.
 - No editor, objetos devolvidos de um passo anterior do build podem virar referência morta após reimportações; recarregue assets pelo caminho antes de ligar referências na cena.
+- Faces das cartas: `Tools/Cards/card_art.py` (Python + Pillow, fontes do Windows) → `Assets/_Game/Art/Cards/<id>.png` (D-037). Cartas novas: CardData + entrada no script.
 - Inimigos vêm de `Tools/Blender/build_enemies.py`: peças separadas sob um Empty (`Corpo`, `Parte_*`, `Cristal`, `Arma`), frente em -Y no Blender.

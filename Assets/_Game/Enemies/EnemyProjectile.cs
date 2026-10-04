@@ -1,3 +1,4 @@
+using Game.Cards;
 using Game.Combat;
 using Game.Core.Combat;
 using Unity.Netcode;
@@ -49,7 +50,8 @@ namespace Game.Enemies
             age += dt;
             transform.position += direction * (speed * dt);
 
-            if (age >= lifetime || HitPlayer() || HitGeometry())
+            // Broquel Cantante: o escudo de um jogador à frente absorve o orbe (e devolve o pulso).
+            if (age >= lifetime || PlayerShield.TryBlock(transform.position, radius) || HitPlayer() || HitGeometry())
             {
                 finished = true;
                 NetworkObject.Despawn(true);

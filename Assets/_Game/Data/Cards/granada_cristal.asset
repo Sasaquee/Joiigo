@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 858f2323b15ed5d4f9b917b9ee2db399, type: 3}
+  m_Name: granada_cristal
+  m_EditorClassIdentifier: Game.Runtime::Game.Cards.CardData
+  id: granada_cristal
+  displayName: Granada de Cristal Rachado
+  arcana: 0
+  suit: 2
+  number: 4
+  kind: 1
+  tags:
+  - cristal
+  - faisca
+  rarity: 1
+  cursed: 0
+  energyCost: 0
+  cooldown: 0
+  healthCostOnUse: 0
+  effects:
+  - {fileID: 11400000, guid: e0d45ce58a5e08a4fb2925d980e293eb, type: 2}
+  modifiers: []
+  face: {fileID: 2800000, guid: 98fcf4e0d53de2a4fbfef114e7bc506d, type: 3}
