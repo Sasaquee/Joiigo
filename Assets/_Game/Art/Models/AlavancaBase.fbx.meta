@@ -7,6 +7,11 @@ ModelImporter:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
+      name: BrasaFornalha
+    second: {fileID: 2100000, guid: 22b7f69e4cfdc3246853be28c992055a, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
       name: Cobre
     second: {fileID: 2100000, guid: 059cec9c1e965ef4aaab11144b5891ed, type: 2}
   - first:

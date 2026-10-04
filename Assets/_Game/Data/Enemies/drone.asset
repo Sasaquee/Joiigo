@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6db4f882776b6434eb1b531b87c20b9c, type: 3}
+  m_Name: drone
+  m_EditorClassIdentifier: Game.Runtime::Game.Enemies.EnemyDefinition
+  id: drone
+  prefab: {fileID: 7881682110428648357, guid: d22c93daace8b134a9f251eb8c8b1f7a, type: 3}
+  maxHealth: 35
+  bodyRadius: 0.5
+  resistances:
+    mechanical: 0
+    arcane: 0.2
+  moveSpeed: 3
+  turnSpeed: 360
+  attackRange: 9
+  minRange: 5
+  windupTime: 0.8
+  recoverTime: 1.2
+  damage: 10
+  arcaneFraction: 0.8
+  meleeHalfAngle: 50
+  usesProjectile: 1
+  projectileSpeed: 7
+  projectileRadius: 0.35
+  projectileLifetime: 3
+  debrisLifetime: 4

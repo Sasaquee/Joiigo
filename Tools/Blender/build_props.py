@@ -32,6 +32,7 @@ MATERIALS = {
     "CristalArcano": ((0.30, 0.90, 0.95, 1), 0.0, 0.1, (0.2, 1.0, 1.0, 1)),
     "PersonagemNeutro": ((0.55, 0.56, 0.60, 1), 0.1, 0.6, None),
     "MarcadorLocal": ((0.92, 0.88, 0.78, 1), 0.0, 0.5, None),
+    "BrasaFornalha": ((0.35, 0.08, 0.02, 1), 0.0, 0.8, (1.0, 0.35, 0.05, 1)),
 }
 
 
@@ -272,7 +273,47 @@ def anel_marcador():
     save_and_export("AnelMarcador")
 
 
+def fornalha():
+    """
+    Fornalha com bocas dos dois lados (simétrica). O fogo é alimentado por um cristal no topo,
+    engaiolado em latão, com canos de cobre descendo até a câmara: a chama é arcana e mecânica.
+    """
+    reset_scene()
+    box("FerroEscuro", (2.3, 1.7, 0.3), (0, 0, 0.15), bevel=0.04)
+    box("FerroEscuro", (2.0, 1.4, 1.9), (0, 0, 1.25), bevel=0.06)
+    for z in (0.62, 1.95):
+        box("Latao", (2.06, 1.46, 0.08), (0, 0, z), bevel=0.015)
+    for y in (-0.71, 0.71):
+        # Boca: brasas atrás de uma grade de latão, numa moldura de cobre.
+        box("BrasaFornalha", (1.0, 0.04, 0.72), (0, y, 1.08))
+        box("Cobre", (1.24, 0.06, 0.1), (0, y * 1.02, 1.5), bevel=0.01)
+        box("Cobre", (1.24, 0.06, 0.1), (0, y * 1.02, 0.68), bevel=0.01)
+        for x in (-0.6, 0.6):
+            box("Cobre", (0.1, 0.06, 0.92), (x, y * 1.02, 1.09), bevel=0.01)
+        for i in range(5):
+            cyl("Latao", 0.025, 0.74, (-0.4 + i * 0.2, y * 1.05, 1.08), verts=8)
+    # Rebites nas faixas.
+    for x in (-0.9, -0.45, 0.0, 0.45, 0.9):
+        for y in (-0.73, 0.73):
+            sphere("Latao", 0.03, (x, y, 1.95))
+    # Chaminé atrás do cristal.
+    cyl("FerroEscuro", 0.28, 1.7, (0.6, 0, 3.0), verts=16)
+    cyl("Cobre", 0.34, 0.12, (0.6, 0, 3.86), verts=16)
+    # Cristal alimentador no topo, em gaiola de latão, com canos descendo até a câmara.
+    cyl("Latao", 0.36, 0.1, (-0.35, 0, 2.25), verts=20)
+    for i in range(6):
+        a = i * math.tau / 6
+        cyl("Latao", 0.02, 0.6, (-0.35 + math.cos(a) * 0.3, math.sin(a) * 0.3, 2.58), verts=6)
+    cyl("Latao", 0.34, 0.06, (-0.35, 0, 2.9), verts=20)
+    gem(0.18, (-0.35, 0, 2.58), scale=(1, 1, 1.6))
+    for y in (-0.5, 0.5):
+        cyl("Cobre", 0.06, 0.6, (-0.75, y, 2.05), verts=10)
+        cyl("Cobre", 0.06, 0.45, (-0.55, y, 2.35), rot=(0, math.pi / 2, 0), verts=10)
+    save_and_export("Fornalha")
+
+
 if __name__ == "__main__":
+    fornalha()
     alavanca_base()
     alavanca_braco()
     anel_marcador()

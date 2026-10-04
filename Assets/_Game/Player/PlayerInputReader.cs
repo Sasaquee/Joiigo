@@ -1,3 +1,4 @@
+using System;
 using Game.Core.Math;
 using Game.Core.Movement;
 using Game.Net;
@@ -22,8 +23,12 @@ namespace Game.Player
         private InputAction moveAction;
         private InputAction aimAction;
         private InputAction interactAction;
+        private InputAction attackAction;
         private PlayerMotor motor;
         private NetworkPlayer networkPlayer;
+
+        /// <summary>Clique de ataque (D-002): leva o ponto de mira no chão. Só dispara no dono, com a mira válida.</summary>
+        public event Action<Vector3> AttackPressed;
 
         /// <summary>Mapa de input ligado (usado em testes).</summary>
         public bool InputEnabled => playerMap != null && playerMap.enabled;
@@ -44,6 +49,7 @@ namespace Game.Player
             moveAction = playerMap.FindAction("Move", throwIfNotFound: true);
             aimAction = playerMap.FindAction("Aim", throwIfNotFound: true);
             interactAction = playerMap.FindAction("Interact", throwIfNotFound: true);
+            attackAction = playerMap.FindAction("Attack", throwIfNotFound: true);
         }
 
         private void OnEnable() => playerMap.Enable();
@@ -75,6 +81,8 @@ namespace Game.Player
                 networkPlayer.SubmitLocalIntent(move, aim);
                 if (interactAction.WasPressedThisFrame())
                     networkPlayer.RequestInteract();
+                if (attackAction.WasPressedThisFrame() && aim.HasValue)
+                    AttackPressed?.Invoke(aim.Value);
             }
             else
             {

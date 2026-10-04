@@ -102,16 +102,88 @@ Registro das perguntas de design feitas ao Thiago durante o protótipo. A respos
 
 ---
 
+## Mudança de rumo + Fase 4 · 2026-10-04
+
+### D-015 · Ordem de trabalho
+- **Pergunta:** Em que ordem vamos avançar agora que o coop ficou de lado?
+- **Opções:** Mecânicas + visual juntos · Ambientação primeiro · Mecânicas primeiro
+- **Resposta literal:** "Mecânicas + visual juntos (Recomendado)"
+- **Significa:** as Fases 4 a 7 seguem na ordem, e cada uma entrega o visual final do que toca. O coop fica guardado, sem ser removido.
+
+### D-016 · Estilo visual
+- **Pergunta:** Qual estilo visual a ambientação deve seguir?
+- **Opções:** Estilizado low-poly · Toon com contorno · Semi-realista sombrio
+- **Resposta literal:** "o semi realista sombrio ficaria bom, mas se tiver dificuldade para fazer por script abra o blender pelo meu pc e use meu pc para modelar ou alguma ferramenta q preferir"
+- **Significa:** semi-realista sombrio. A ferramenta escolhida foi script no Blender com texturas PBR CC0 (Poly Haven) e pós-processamento na Unity.
+
+### D-017 · Clima de luz
+- **Pergunta:** Qual clima de luz a instalação deve ter?
+- **Opções:** Noite arcana com fornalhas · Entardecer âmbar · Subsolo industrial
+- **Resposta literal:** "Noite arcana com fornalhas (Recomendado)"
+- **Significa:** ambiente escuro, com a luz vindo dos cristais (ciano) e das fornalhas e brasas (laranja), e vapor no ar.
+
+### D-018 · Início do jogo com o coop de lado
+- **Pergunta:** Com o coop de lado, o que acontece quando você dá Play ou abre o jogo?
+- **Opções:** Entra direto, solo · Mantém a tela de conexão
+- **Resposta literal:** "Entra direto, solo (Recomendado)"
+- **Significa:** o jogo começa na arena com o jogador como host sozinho e a partida já iniciada. A tela de conexão só aparece com uma tecla de debug.
+
+### D-019 · Texturas
+- **Pergunta:** Posso baixar texturas PBR CC0 do Poly Haven?
+- **Resposta literal:** "Pode baixar 1K (Recomendado)"
+
+### D-020 · Ataque básico
+- **Pergunta:** Qual é o ataque básico do personagem?
+- **Opções:** Golpe curto em arco · Disparo leve · Os dois
+- **Resposta literal:** "Golpe curto em arco (Recomendado)"
+- **Significa:** golpe corpo a corpo num arco à frente, na direção do mouse. O ataque à distância fica para as cartas.
+
+### D-021 · Tipo de dano
+- **Pergunta:** Como funciona o tipo de dano?
+- **Opções:** Mistura mecânico/arcano · Dois tipos separados · Tipo único
+- **Resposta literal:** "Mistura mecânico/arcano (Recomendado)"
+- **Significa:** todo ataque tem uma proporção mecânico/arcano, e cada inimigo resiste a uma parte. O constructo corta a parte arcana.
+
+### D-022 · HP zero jogando sozinho
+- **Pergunta:** Jogando sozinho, o que acontece quando o seu HP chega a zero?
+- **Opções:** Cai e volta no spawn · Reinicia a arena
+- **Resposta literal:** "Cai e volta no spawn (Recomendado)"
+- **Significa:** é a mesma regra do coop (D-003): o jogador fica caído alguns segundos e, sem ninguém para levantar, volta no spawn.
+
+### D-023 · Aparição dos inimigos
+- **Pergunta:** Como os inimigos aparecem na arena depois da largada?
+- **Opções:** Ondas com pausa · Fluxo contínuo · Só por debug
+- **Resposta literal:** "Ondas com pausa (Recomendado)"
+
+### D-024 · Aviso antes do ataque
+- **Pergunta:** Os inimigos avisam antes de atacar?
+- **Opções:** Aviso curto visual · Sem aviso
+- **Resposta literal:** "Aviso curto visual (Recomendado)"
+- **Significa:** o inimigo carrega por um instante antes de atacar, com o cristal brilhando e a peça recuando.
+
+### D-025 · Ataque do drone
+- **Pergunta:** Como é o ataque do drone à distância?
+- **Opções:** Projétil lento esquivável · Raio instantâneo com mira
+- **Resposta literal:** "Projétil lento esquivável (Recomendado)"
+
+### D-026 · Morte do inimigo
+- **Pergunta:** O que acontece com o inimigo quando ele morre?
+- **Opções:** Desmonta e o cristal apaga · Explode em vapor · Some com brilho
+- **Resposta literal:** "Desmonta e o cristal apaga (Recomendado)"
+- **Significa:** as peças se soltam com faíscas e vapor, o cristal escurece e os restos somem depois de alguns segundos.
+
+---
+
 ## Perguntas pendentes (feitas na fase em que travarem)
 
 | Id | Pergunta | Fase |
 |---|---|---|
 | P-001 | Quantos slots tem o cinto de consumíveis | 5 |
 | P-002 | Teclas do cinto e dos demais atalhos fora do prompt | 5 |
-| P-003 | Como o aliado levanta quem caiu (chegar perto, segurar uma tecla, tempo) | 4 |
-| P-004 | O que acontece se todos os jogadores caírem | 4 |
-| P-005 | Quanto tempo o jogador fica caído antes de voltar ao spawn | 4 (número, em SO) |
-| P-006 | Nomes e comportamentos dos 3 inimigos | 4 |
+| P-003 | Como o aliado levanta quem caiu (chegar perto, segurar uma tecla, tempo) | quando o coop voltar |
+| P-004 | O que acontece se todos os jogadores caírem | quando o coop voltar |
+| ~~P-005~~ | Tempo caído: número provisório 5 s em `CombatSettings` (para aprovar) | resolvida como número |
+| P-006 | Nomes finais dos 3 inimigos (comportamentos decididos em D-023 a D-026; ids internos provisórios: automato, drone, constructo) | antes do conteúdo final |
 | P-007 | Como a energia se recupera | 5 |
 | P-008 | Como a carta do chão se mostra no mundo antes de ser pega | 6 |
 | P-009 | Efeito temporário do 20 no coop | 6 |

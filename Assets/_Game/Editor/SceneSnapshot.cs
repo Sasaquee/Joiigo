@@ -42,6 +42,30 @@ namespace Game.EditorTools
                 Render(cam, Path.Combine(dir, "arena_alcova.png"));
                 follow.Apply(new Vector3(0f, 0f, -19f));
                 Render(cam, Path.Combine(dir, "arena_spawn.png"));
+
+                // Inimigos colocados só para a foto (não são salvos na cena).
+                var temp = new System.Collections.Generic.List<GameObject>();
+                string[] enemies = { "Automato", "Drone", "Constructo" };
+                for (int i = 0; i < enemies.Length; i++)
+                {
+                    var prefab = AssetDatabase.LoadAssetAtPath<GameObject>($"Assets/_Game/Enemies/Prefabs/{enemies[i]}.prefab");
+                    if (prefab == null)
+                        continue;
+                    var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+                    go.transform.SetPositionAndRotation(new Vector3(-2.5f + i * 2.5f, 0f, 2f), Quaternion.Euler(0f, 200f, 0f));
+                    temp.Add(go);
+                }
+                if (temp.Count > 0)
+                {
+                    follow.Apply(new Vector3(0f, 0f, 1f));
+                    float distance = follow.Settings.distance;
+                    follow.Settings.distance = 7f; // mais perto, só para a foto
+                    follow.Apply(new Vector3(0f, 0f, 1.5f));
+                    Render(cam, Path.Combine(dir, "inimigos.png"));
+                    follow.Settings.distance = distance;
+                    foreach (var go in temp)
+                        UnityEngine.Object.DestroyImmediate(go);
+                }
             }
 
             Vector3 pos = cam.transform.position;

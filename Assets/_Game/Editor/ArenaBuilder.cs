@@ -1,6 +1,7 @@
 using System.IO;
 using Game.Arena;
 using Game.Cameras;
+using Game.Combat;
 using Game.Net;
 using Game.Player;
 using Unity.Netcode;
@@ -40,9 +41,9 @@ namespace Game.EditorTools
         private const float CardAlcoveRadius = 19f;
 
         // Nomes iguais aos materiais do Blender, para o remapeamento na importação.
-        private static readonly string[] SharedMaterialNames = { "Cobre", "Latao", "FerroEscuro", "CristalArcano", "PersonagemNeutro", "MarcadorLocal" };
+        private static readonly string[] SharedMaterialNames = { "Cobre", "Latao", "FerroEscuro", "CristalArcano", "PersonagemNeutro", "MarcadorLocal", "BrasaFornalha" };
 
-        private static Material copper, brass, darkIron, floorStone, crystal, crystalDim, crystalOff, playerBody;
+        private static Material copper, brass, darkIron, floorStone, crystal, crystalDim, crystalOff, playerBody, grate, corrugated;
 
         // Objetos de cena gerados que são substituídos a cada reconstrução.
         private static readonly string[] GeneratedRoots = { RootName, "Player", "NetworkManager", "Sessao", "UI", "EventSystem" };
@@ -54,12 +55,17 @@ namespace Game.EditorTools
             PlayerSettings.runInBackground = true; // várias janelas na LAN / Multiplayer Play Mode
 
             CreateMaterials();
+            SurfaceMaterials.Apply(); // texturas PBR (D-016, D-019)
+            grate = AssetDatabase.LoadAssetAtPath<Material>($"{MaterialsFolder}/PisoGrade.mat") ?? darkIron;
+            corrugated = AssetDatabase.LoadAssetAtPath<Material>($"{MaterialsFolder}/FerroCorrugado.mat") ?? darkIron;
             ConfigureModelImports();
             var movement = LoadOrCreate<MovementSettings>($"{DataFolder}/Player/MovementSettings.asset");
             var interaction = LoadOrCreate<InteractionSettings>($"{DataFolder}/Player/InteractionSettings.asset");
             var cameraSettings = LoadOrCreate<CameraSettings>($"{DataFolder}/Camera/CameraSettings.asset");
             var netSettings = LoadOrCreate<NetSettings>($"{DataFolder}/Net/NetSettings.asset");
-            var playerPrefab = CreatePlayerPrefab(movement, interaction, netSettings);
+            var waves = EnemyPrefabBuilder.BuildAll(crystal, crystalOff); // inimigos e ondas (D-023 a D-026)
+            var combatSettings = LoadOrCreate<CombatSettings>($"{DataFolder}/Combat/CombatSettings.asset");
+            var playerPrefab = CreatePlayerPrefab(movement, interaction, netSettings, combatSettings);
 
             var scene = EditorSceneManager.OpenScene(ArenaSceneSetup.ArenaScenePath, OpenSceneMode.Single);
             foreach (var root in scene.GetRootGameObjects())
@@ -82,9 +88,12 @@ namespace Game.EditorTools
             BuildLampPosts(arena);
             BuildBoilers(arena);
             SetupLighting();
+            AmbienceBuilder.Build(arena); // noite arcana com fornalhas (D-017); sobrescreve a luz acima
 
             var netSession = BuildNetworkManager(playerPrefab, netSettings, spawnPoints, matchState);
             NetworkUiBuilder.Build(netSession);
+            PlayerCombatSetup.AddSoloBootstrap(netSession, matchState); // entra direto, solo (D-018)
+            EnemyPrefabBuilder.AddWaveSpawner(matchState, waves);
 
             SetupCamera(cameraSettings, spawnPoints.transform);
 
@@ -105,7 +114,7 @@ namespace Game.EditorTools
             Marker(center, ArenaMarkerKind.CombatCenter, PlatformRadius);
             // Anel arcano embutido na borda de metal da plataforma.
             Disc("AnelArcano", center, new Vector3(0f, 0.01f, 0f), PlatformRadius + 0.35f, 0.04f, crystalDim);
-            Disc("Plataforma", center, new Vector3(0f, 0.03f, 0f), PlatformRadius, 0.06f, darkIron);
+            Disc("Plataforma", center, new Vector3(0f, 0.03f, 0f), PlatformRadius, 0.06f, grate);
             Disc("NucleoArcano", center, new Vector3(0f, 0.065f, 0f), 1.4f, 0.02f, crystal);
             // Trilhos de cobre que levam a energia do núcleo até cada portão.
             foreach (float angle in GateAngles)
@@ -130,7 +139,7 @@ namespace Game.EditorTools
                 seg.position = Polar(angle, WallRadius);
                 seg.rotation = Quaternion.Euler(0f, angle, 0f); // +Z local aponta para fora
 
-                Box("Parede", seg, new Vector3(0f, 1.5f, 0.6f), new Vector3(segmentLength, 3f, 0.6f), darkIron);
+                Box("Parede", seg, new Vector3(0f, 1.5f, 0.6f), new Vector3(segmentLength, 3f, 0.6f), corrugated);
                 for (int p = -1; p <= 1; p++)
                 {
                     // O cristal fica dentro do cano, não ao lado dele (Pilar 4).
@@ -249,8 +258,8 @@ namespace Game.EditorTools
                 var lamp = lightGo.AddComponent<Light>();
                 lamp.type = LightType.Point;
                 lamp.color = new Color(0.35f, 0.9f, 1f);
-                lamp.range = 9f;
-                lamp.intensity = 6f;
+                lamp.range = 12f;
+                lamp.intensity = 10f;
                 if (i == 4)
                     lightGo.AddComponent<LightFlicker>();
             }
@@ -339,7 +348,8 @@ namespace Game.EditorTools
 
         // ---------- Player ----------
 
-        private static GameObject CreatePlayerPrefab(MovementSettings movement, InteractionSettings interaction, NetSettings netSettings)
+        private static GameObject CreatePlayerPrefab(MovementSettings movement, InteractionSettings interaction,
+            NetSettings netSettings, CombatSettings combatSettings)
         {
             var root = new GameObject("Player");
             root.AddComponent<NetworkObject>();
@@ -374,6 +384,8 @@ namespace Game.EditorTools
             nso.FindProperty("localMarker").objectReferenceValue = marker;
             nso.ApplyModifiedPropertiesWithoutUndo();
 
+            PlayerCombatSetup.ConfigurePlayerPrefab(root, combatSettings);
+
             var prefab = PrefabUtility.SaveAsPrefabAsset(root, PlayerPrefabPath);
             Object.DestroyImmediate(root);
             EnsureNetworkObjectHash(prefab);
@@ -403,10 +415,12 @@ namespace Game.EditorTools
             darkIron = Mat("FerroEscuro", new Color(0.18f, 0.18f, 0.2f), 0.7f, 0.35f);
             floorStone = Mat("PisoPedra", new Color(0.28f, 0.27f, 0.26f), 0f, 0.2f);
             crystal = Mat("CristalArcano", new Color(0.3f, 0.9f, 0.95f), 0f, 0.9f, new Color(0.2f, 1.4f, 1.6f));
-            crystalDim = Mat("CristalArcanoFraco", new Color(0.15f, 0.45f, 0.5f), 0f, 0.8f, new Color(0.05f, 0.45f, 0.55f));
+            crystalDim = Mat("CristalArcanoFraco", new Color(0.08f, 0.22f, 0.25f), 0f, 0.8f, new Color(0.02f, 0.2f, 0.26f));
             crystalOff = Mat("CristalApagado", new Color(0.08f, 0.14f, 0.16f), 0f, 0.85f, new Color(0f, 0.03f, 0.04f));
             playerBody = Mat("PersonagemNeutro", new Color(0.55f, 0.56f, 0.6f), 0.1f, 0.4f);
             Mat("MarcadorLocal", new Color(0.92f, 0.88f, 0.78f), 0f, 0.5f);
+            // Criado aqui para existir antes da importação dos modelos (remapeamento pelo nome).
+            Mat("BrasaFornalha", new Color(0.35f, 0.08f, 0.02f), 0f, 0.2f, new Color(4f, 1.2f, 0.2f));
             AssetDatabase.SaveAssets();
         }
 

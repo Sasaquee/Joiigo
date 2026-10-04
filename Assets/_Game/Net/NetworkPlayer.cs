@@ -28,6 +28,7 @@ namespace Game.Net
         private PlayerMotor motor;
         private PlayerInputReader reader;
         private CharacterController controller;
+        private PlayerLife life;
 
         private Vector3 localMove;
         private Vector3? localAim;
@@ -51,6 +52,7 @@ namespace Game.Net
             motor = GetComponent<PlayerMotor>();
             reader = GetComponent<PlayerInputReader>();
             controller = GetComponent<CharacterController>();
+            life = GetComponent<PlayerLife>();
         }
 
         public override void OnNetworkSpawn()
@@ -79,6 +81,8 @@ namespace Game.Net
         /// <summary>Chamado pelo leitor de input do dono.</summary>
         public void SubmitLocalIntent(Vector3 worldMove, Vector3? worldAim)
         {
+            if (life != null && !life.CanAct)
+                worldMove = Vector3.zero; // caído não anda (D-003)
             localMove = worldMove;
             localAim = worldAim;
             motor.SetIntent(worldMove, worldAim); // no host é o real; no cliente é a previsão
@@ -162,6 +166,8 @@ namespace Game.Net
             serverAckPosition = transform.position;
 
             Vector2 move = Vector2.ClampMagnitude(intent.Move, 1f);
+            if (life != null && !life.CanAct)
+                move = Vector2.zero; // o host ignora a intenção de quem está caído (D-003)
             motor.SetIntent(new Vector3(move.x, 0f, move.y), intent.HasAim ? intent.Aim : (Vector3?)null);
         }
 

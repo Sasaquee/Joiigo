@@ -14,6 +14,9 @@ GameObject:
   - component: {fileID: 2668044641881009210}
   - component: {fileID: 3695880528813910798}
   - component: {fileID: 6310004253670154446}
+  - component: {fileID: 5312211245891967273}
+  - component: {fileID: 2978018711652690751}
+  - component: {fileID: 9020386312553478034}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -35,7 +38,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 3323622554486228175}
-  - {fileID: 2382832030965902022}
   - {fileID: 6665561405786544938}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -134,6 +136,49 @@ MonoBehaviour:
   netSettings: {fileID: 11400000, guid: 6e0c451b2a1280f479fd2398cd890bf5, type: 2}
   interaction: {fileID: 11400000, guid: a70acd87513115f48b01fef23c6e04de, type: 2}
   localMarker: {fileID: 6326154933255373200}
+--- !u!114 &5312211245891967273
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4850298204558110084}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8ef7875f164c7d46918b78c723cadc1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Runtime::Game.Combat.NetworkHealth
+  ShowTopMostFoldoutHeaderGroup: 1
+  radius: 0.45
+--- !u!114 &2978018711652690751
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4850298204558110084}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9d4d3ecdbbfb58b43a2fde02268b67c1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Runtime::Game.Player.PlayerCombat
+  ShowTopMostFoldoutHeaderGroup: 1
+  settings: {fileID: 11400000, guid: c87cf1f5a73cc7b449aa338d8790e2fe, type: 2}
+--- !u!114 &9020386312553478034
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4850298204558110084}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 002eb1f4d4bdb984591e13ad5e884009, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Runtime::Game.Player.PlayerLife
+  ShowTopMostFoldoutHeaderGroup: 1
+  settings: {fileID: 11400000, guid: c87cf1f5a73cc7b449aa338d8790e2fe, type: 2}
+  body: {fileID: 3323622554486228175}
 --- !u!1 &6858826105344678434
 GameObject:
   m_ObjectHideFlags: 0
@@ -160,12 +205,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6858826105344678434}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 1.42, z: 0.2}
   m_LocalScale: {x: 0.3, y: 0.12, z: 0.08}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 7465819836632979677}
+  m_Father: {fileID: 3323622554486228175}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &6466861272489445071
 MeshFilter:
@@ -278,7 +323,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 838a61fb20cc9f143b919f3331f6aa96, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2382832030965902022}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 838a61fb20cc9f143b919f3331f6aa96, type: 3}
 --- !u!4 &3323622554486228175 stripped

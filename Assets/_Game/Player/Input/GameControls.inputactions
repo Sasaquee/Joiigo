@@ -279,6 +279,15 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "ToggleConnectionScreen",
+                    "type": "Button",
+                    "id": "5d1f6b1e-3c7a-4e0b-9a52-7c4e8b2f1a90",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -356,6 +365,17 @@
                     "processors": "",
                     "groups": "Keyboard&Mouse",
                     "action": "ToggleAuraPalette",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "e8a4c0d2-96b3-4f17-8d5e-2b7a1c3f9046",
+                    "path": "<Keyboard>/f9",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "ToggleConnectionScreen",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

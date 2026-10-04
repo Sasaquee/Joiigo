@@ -1,4 +1,5 @@
 using System.Collections;
+using Game.Net;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -10,6 +11,8 @@ namespace Game.Tests.PlayMode
     {
         public static IEnumerator Load()
         {
+            // Os testes sobem o host por conta própria; o início solo (D-018) não pode competir com eles.
+            SoloBootstrap.SuppressAutoStart = true;
             yield return Cleanup();
             yield return SceneManager.LoadSceneAsync("Arena", LoadSceneMode.Single);
         }
