@@ -62,6 +62,22 @@ A API da NVIDIA é compatível com OpenAI:
 | Chave | variável de ambiente `NVIDIA_API_KEY` (gerada em build.nvidia.com → Get API Key). **Nunca no repositório** (`.env` está no `.gitignore`). |
 | Instruções do projeto | `AGENTS.md` na raiz. Se o harness não ler `AGENTS.md` sozinho, aponte o arquivo de instruções/system prompt dele para ele. |
 | Prompts dos papéis | `.claude/agents/<papel>.md` — o texto depois do cabeçalho `---` serve como prompt de papel em qualquer harness. |
+| Skill da equipe | `.agents/skills/equipe-joiigo/SKILL.md` — o harness acha sozinho; diz qual modelo faz cada papel e como montar o `workflow` em lotes de 2. |
+| Regras globais | `~/.dsh/AGENTS.md` (fora do repo) — limite da NVIDIA e segurança das chaves, valem em qualquer pasta. |
+
+**Configuração do app desktop** (`~/.dsh/profiles/desktop/cordis.patch.yml`, backup em `~/.dsh/backups/`), feita em 2026-10-04:
+
+| Item | Valor | Por quê |
+|---|---|---|
+| Modelo padrão | `z-ai/glm-5.3`, raciocínio `medium` | Seria o `kimi-k3`, mas ele estava instável em 2026-10-04 (ver §4.4); em `high` o GLM levava 10–25 min por passo |
+| `input` de cada modelo | `[text, image]` em `kimi-k3`, `deepseek-v4.1-flash`, `glm-5.3-flash`, `muse-glimmer-30b`; `[text]` nos outros | Sem isso o harness recusa imagem ao modelo |
+| `streamIdleTimeoutMs` (provedor `nvidia`) | 120000 (padrão 300000) | Desistir de modelo mudo em 2 min |
+| `retryPolicy` | `normal`, 2 tentativas, espera de 15 s a 60 s | Padrão era 5 tentativas; com 5 min cada, um modelo travado prendia a sessão por 30 min |
+| `subagent.maxActiveSubagents` | 2 (padrão 8) | Limite da §4.2 |
+| `workflow-ptc.maxConcurrentAgents` | 2 (padrão 0 = sem limite) | Foi o que deixou disparar 11 agentes de uma vez |
+| Compactação de resultados de ferramentas | já vem ligada (corta acima de 8 KB) | — |
+
+Plugins externos: nenhum instalado. Ver §4.3.
 
 IDs dos modelos na API (conferidos na linha `model` do código de exemplo de cada página de build.nvidia.com em 2026-10-04 — atenção: o ID nem sempre é igual à URL, ex.: a página `z-ai/glm-5-3` usa o ID `z-ai/glm-5.3`):
 
@@ -125,6 +141,45 @@ O prompt de cada papel é o texto de `.claude/agents/<papel>.md` (a parte depois
 8. A arte (D-043) não tem reserva: se o `kimi-k3` travar, a tarefa de arte espera e o resto da fase continua.
 
 Esses limites não valem para o Claude Code (outro provedor, com limites próprios da conta).
+
+### 4.3 Plugins externos
+
+Auditados em 2026-10-04, nenhum instalado:
+
+- Os plugins "oficiais" `dsh-external/*` citados em listas da internet **não existem** (a organização tem 0 repositórios públicos). Buscas por eles levam a cópias de desconhecidos e até a um repositório-isca ("hacks-para-krunker"). Não instale plugin de lista "awesome" sem abrir o código.
+- `CheshireJCat/blender` (MIT, 39 estrelas): código limpo (sem rede, sem script de instalação, só roda o Blender com `--disable-autoexec`), mas declara compatibilidade com o harness 0.1.x e o instalado é 0.2.0-rc.2, então o harness recusa sem exceção manual. O projeto já gera modelos por `Tools/Blender/*.py`, então ele não é necessário.
+- O que os plugins de "plan-execute" e "contexto" prometiam já vem no harness: `workflow` com modelo por agente, subagentes e compactação.
+
+Antes de instalar qualquer plugin: ler o código, procurar rede/`child_process`/scripts de instalação, conferir a compatibilidade de versão, e instalar primeiro num perfil de teste (`dsh plugin --profile <teste> add <pacote>`), nunca no `desktop`.
+
+### 4.4 Teste de capacidade (2026-10-04)
+
+Um mini projeto com as mesmas regras do Joiigo foi rodado pelo harness em modo seguro (`workspace-write`), com subagentes. O projeto fica em `Documents/Codes/dsh-teste-capacidade`: D20 em C# com NUnit, dado modelado no Blender, um bug plantado e uma pergunta de design em aberto.
+
+**Estado dos modelos na NVIDIA gratuita naquele dia** (cada um testado sozinho):
+
+| Modelo | Resultado |
+|---|---|
+| `z-ai/glm-5.3` | Funciona, mas é lento: ~21 tokens/s. Em `high`, um passo de planejamento gerou 32 mil tokens (25 min). Em alguns momentos nem o 1º passo saiu em 8 min. |
+| `moonshotai/kimi-k3` | Instável: às vezes responde "!!!!" (32 tokens de lixo) ou erro 429. Funcionou 1 vez em 3 como artista. |
+| `deepseek-ai/deepseek-v4.1-flash` | Travou (5 min sem resposta por tentativa) e não aceita `reasoningEffort: high`. |
+| `z-ai/glm-5.3-flash` | Lento demais (>150 s numa tarefa mínima). |
+| `nvidia/nemotron-3-super-120b-a12b`, `nvidia/nemotron-3.5-lightning-30b-a3b`, `meta/muse-glimmer-30b` | Rápidos (12–20 s numa tarefa mínima). O Lightning escreve código fraco: aninhamento excessivo, chave fora do lugar, e chegou a quebrar um arquivo do NuGet. |
+
+**O que o harness fez bem:**
+- Leu `AGENTS.md` e `~/.dsh/AGENTS.md` e carregou a skill da equipe sozinho.
+- Seguiu as regras do projeto: achou a causa do bug, registrou a dúvida de design como pergunta pendente (com opções e recomendação) em vez de decidir, e manteve os números em arquivo de dados.
+- Respeitou o limite: no máximo 2 subagentes, consultas a cada 2 min, cancelou agente parado e trocou para um modelo que funcionava. Não passou a arte para outro modelo quando o Kimi falhou (D-043).
+- O "olho" (`muse-glimmer-30b`) reprovou corretamente um render ruim (câmera perto demais, números invisíveis).
+- O artista (`kimi-k3`) escreveu e rodou sozinho o script do Blender (icosaedro, FBX e render).
+- O orquestrador depurou com método e pegou o erro de sintaxe do programador.
+
+**O que impede usar no Joiigo hoje:**
+1. **O modo seguro bloqueia ferramentas de build e teste no Windows.** O `dotnet build` só funciona com `-m:1 -nr:false -p:UseSharedCompilation=false`, e o `dotnet test` trava, porque o executor de testes conversa por rede local, que fica bloqueada. A Unity em batchmode (licença, processos auxiliares) deve esbarrar no mesmo. Liberar exige `danger-full-access`, que deixa o agente ler e mudar qualquer arquivo do PC.
+2. **Velocidade:** em 2h40 o pipeline chegou só ao código compilando, sem testes, revisão, docs nem commit.
+3. **Titulares instáveis:** os 3 modelos principais da §1 falharam no dia. A equipe que funcionou foi GLM-5.3 (orquestrador), Nemotron Lightning (programador) e Muse Glimmer (olho).
+
+**Conclusão:** o harness está pronto para tarefas de **texto e planejamento**, como docs, análise, revisão e scripts do Blender sem rodar a Unity. Ele **não está pronto para fases do Joiigo** que exigem compilar e testar na Unity. Vale refazer o teste quando os modelos estabilizarem e se o harness ganhar um jeito seguro de liberar só os processos de build e teste.
 
 ## 5. Claude Code
 
