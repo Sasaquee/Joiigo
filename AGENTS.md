@@ -12,7 +12,7 @@ Projeto Unity 6.3 LTS (6000.3.25f1), protótipo de arena de um RPG 2.5D cooperat
 
 ## Regras que não mudam
 
-- **Design é decisão do Thiago (dono).** Tudo que muda o que o jogador sente ou vê vira pergunta de múltipla escolha (1–2 frases de contexto, 2–4 opções com consequência, recomendação com motivo e pilar, no máximo 4 por rodada). Registrar a resposta literal em `decisoes.md`. Nunca decidir "provisoriamente".
+- **Design é decisão do dono.** Tudo que muda o que o jogador sente ou vê vira pergunta de múltipla escolha (1–2 frases de contexto, 2–4 opções com consequência, recomendação com motivo e pilar, no máximo 4 por rodada). Registrar a resposta literal em `decisoes.md`. Nunca decidir "provisoriamente".
 - **Números de jogo só em ScriptableObjects** (`Assets/_Game/Data/`), listados no relatório da fase.
 - **Escopo fechado por fase.** Ideias novas vão para `Docs/Design/estacionamento.md`.
 - **Um commit por fase.** Push só quando pedido. Parar ao fim de cada fase com o relatório (§7 do prompt) e esperar OK.
@@ -26,7 +26,7 @@ Fases 0–5 concluídas. **Passe visual em andamento (D-039 a D-042):** o estilo
 
 Detalhes em `Docs/Tecnico/agentes-e-modelos.md`. Resumo:
 
-- **Orquestrador** (Claude: Opus · NVIDIA: `kimi-k3`): arquitetura, contratos, perguntas ao Thiago, integração, Unity, depuração, relatório e commit. Só ele fala com o Thiago e só ele abre a Unity.
+- **Orquestrador** (Claude: Opus · NVIDIA: `kimi-k3`): arquitetura, contratos, perguntas ao dono, integração, Unity, depuração, relatório e commit. Só ele fala com o dono e só ele abre a Unity.
 - **Artista** (Claude: só Opus, vários em paralelo se quiser — D-042 · NVIDIA: `kimi-k3`, pendente P-011): modelagem e arte.
 - **Programador / Testador / Revisor / Documentador** (Claude: Sonnet · NVIDIA: `glm-5.3`, `deepseek-v4.1-flash`): código mecânico, testes, revisão e docs. A revisão sai de um modelo diferente do que escreveu.
 - Prompts dos papéis em `.claude/agents/*.md` (servem para qualquer harness).

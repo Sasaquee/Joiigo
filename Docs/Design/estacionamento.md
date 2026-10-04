@@ -1,6 +1,6 @@
 # Estacionamento de ideias
 
-Ideias que surgem durante o protótipo e ficam fora do escopo da fase atual. Elas não entram no código sem decisão do Thiago.
+Ideias que surgem durante o protótipo e ficam fora do escopo da fase atual. Elas não entram no código sem decisão do dono.
 
 | Data | Ideia | Origem | Pilar |
 |---|---|---|---|

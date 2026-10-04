@@ -1,6 +1,6 @@
 # Decisões de design
 
-Registro das perguntas de design feitas ao Thiago durante o protótipo. A resposta aparece literal, como foi dada. O documento de autoridade é `visao-e-pilares.md`.
+Registro das perguntas de design feitas ao dono durante o protótipo. A resposta aparece literal, como foi dada. O documento de autoridade é `visao-e-pilares.md`.
 
 ---
 
@@ -228,7 +228,7 @@ Registro das perguntas de design feitas ao Thiago durante o protótipo. A respos
 - **Resposta literal:** "Aprovo (Recomendado)"
 
 ### D-037 · Novo estilo das cartas (substitui D-034)
-- **Origem:** o Thiago mandou uma imagem de referência (cartas pretas com traço dourado) depois de ver a primeira versão em 3D.
+- **Origem:** o dono mandou uma imagem de referência (cartas pretas com traço dourado) depois de ver a primeira versão em 3D.
 - **Resposta literal:** "refaça o modelo das cartas nesse estilo, a carta da mto feia"
 - **Significa:** faces 2D de traço dourado sobre preto, com moldura ornamentada (cantos com arcos e contas, faixas de título e nome), estrelas, constelações e raios atrás do objeto. O objeto de cada carta é desenhado em linha. Os cristais levam um toque ciano (violeta na amaldiçoada) como assinatura arcana (Pilar 4). Os arcanos maiores têm cristais nos cantos. Os símbolos da referência não foram copiados (§1: identidade própria). Gerado por `Tools/Cards/card_art.py`.
 

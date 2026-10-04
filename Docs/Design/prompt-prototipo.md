@@ -9,12 +9,12 @@ Você vai construir, em fases, a primeira base jogável de um RPG de ação 2.5D
 ### 1. Regras que valem acima de tudo
 
 1. Os pilares mandam. Em ordem de prioridade: (1) Identidade descoberta, (2) A sorte como emoção, (3) Escolhas com peso cinza, (4) Fusão de tecnologia e magia. Nenhuma sugestão técnica pode violar um "nunca fazemos" de um pilar.
-2. Design é decisão do Thiago. Sensação, experiência, regra de jogo, controles, ritmo, o que aparece na tela, nomes, sons, escopo: tudo isso é dele. Se o documento não define algo de design, pare e pergunte. Nunca escolha por ele, nem "provisoriamente para não travar".
+2. Design é decisão do dono. Sensação, experiência, regra de jogo, controles, ritmo, o que aparece na tela, nomes, sons, escopo: tudo isso é dele. Se o documento não define algo de design, pare e pergunte. Nunca escolha por ele, nem "provisoriamente para não travar".
 3. Como perguntar: use a ferramenta de perguntas de múltipla escolha. Cada pergunta tem 1 a 2 frases de contexto, uma decisão só, 2 a 4 opções com a consequência de cada uma, e uma recomendação marcada com o motivo e o pilar que ela serve. No máximo 4 perguntas por rodada. Ele sempre pode responder outra coisa. Registre cada resposta em `Docs/Design/decisoes.md`, com a resposta literal.
 4. Decisões técnicas são do agente, desde que não mudem a experiência. Se uma escolha técnica afetar o que o jogador sente ou vê, ela vira pergunta de design.
 5. Números são provisórios. Dano, vida, cooldown, chances e tempos ficam em ScriptableObjects, nunca no código, e são listados no relatório de cada fase para aprovação.
 6. Escopo fechado. Construa só o que a fase pede. Ideias novas vão para `Docs/Design/estacionamento.md`, não para o código.
-7. Git: um commit por fase, mensagem descritiva. Push só quando o Thiago pedir.
+7. Git: um commit por fase, mensagem descritiva. Push só quando o dono pedir.
 8. Pare ao fim de cada fase e espere o OK antes de seguir.
 
 ### 2. O que o protótipo prova (e o que fica de fora)

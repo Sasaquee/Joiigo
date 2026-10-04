@@ -1,12 +1,12 @@
 # Visão e Pilares de Design — RPG Steampunk Mágico (nome provisório: a definir)
 
-> Versão 1.2 · 2026-10-03 · Dono: Thiago
-> Construído por entrevista. Tudo marcado `[DECIDIDO]` veio de respostas do Thiago. Não há trechos `[PROPOSTA]` pendentes nesta versão.
+> Versão 1.2 · 2026-10-03
+> Construído por entrevista. Tudo marcado `[DECIDIDO]` veio de respostas do dono. Não há trechos `[PROPOSTA]` pendentes nesta versão.
 > Este documento é a base de design. Toda spec de feature deve declarar quais pilares serve e responder à pergunta-teste de cada um.
 
 ---
 
-## 1. Visão `[DECIDIDO · Thiago · 2026-10-03]`
+## 1. Visão `[DECIDIDO · dono · 2026-10-03]`
 
 **Em uma frase**
 Um RPG de ação 2.5D cooperativo num mundo onde engrenagem e feitiço são a mesma coisa, em que cada jogador descobre quem seu personagem é por meio de dilemas sem resposta certa e da sorte de cartas de tarô.
@@ -40,7 +40,7 @@ A filosofia de progressão de classes do Ragnarok Online, com identidade própri
 
 ---
 
-## 2. Pilares (em ordem de prioridade) `[DECIDIDO · Thiago · 2026-10-03]`
+## 2. Pilares (em ordem de prioridade) `[DECIDIDO · dono · 2026-10-03]`
 
 Em conflito entre pilares, vence o de número menor.
 
@@ -122,7 +122,7 @@ Em conflito entre pilares, vence o de número menor.
 
 ---
 
-## 3. Sistemas decididos `[DECIDIDO · Thiago · 2026-10-03]`
+## 3. Sistemas decididos `[DECIDIDO · dono · 2026-10-03]`
 
 ### 3.1 Comunicação e números
 - **Mostrar pelo mundo** é a regra de comunicação (classificado como detalhe, não pilar): mundo, NPCs, descrições e aura no lugar de menus.
@@ -170,7 +170,7 @@ Meio-termo: tempo real, com a build pesando tanto quanto o reflexo.
 
 ---
 
-## 4. O dilema inicial `[DECIDIDO · Thiago · 2026-10-03]`
+## 4. O dilema inicial `[DECIDIDO · dono · 2026-10-03]`
 
 Serve aos Pilares 3 (escolhas cinza), 1 (identidade), 2 (a carta é uma aposta de poder) e 4 (a carta é um objeto do mundo).
 
@@ -219,7 +219,7 @@ As perguntas de design abertas na versão 1.1 foram respondidas e incorporadas n
 3. **Solo:** se o jogador e o mentor aceitarem a carta, eles viram cúmplices como no coop?
 4. **Missões da carta:** até onde elas podem prejudicar o grupo?
 
-Novas perguntas vão surgir no desenvolvimento. Elas são feitas ao Thiago, nunca decididas pelo agente (§7.3).
+Novas perguntas vão surgir no desenvolvimento. Elas são feitas ao dono, nunca decididas pelo agente (§7.3).
 
 ---
 
@@ -242,7 +242,7 @@ As decisões de hoje mudam vários pontos do documento inicial para a Unity. Iss
 
 ---
 
-## 7. Primeiro protótipo: a arena `[DECIDIDO · Thiago · 2026-10-03]`
+## 7. Primeiro protótipo: a arena `[DECIDIDO · dono · 2026-10-03]`
 
 ### 7.1 Objetivo
 Uma **arena de testes** para ir decidindo mecânicas e interações. Não é o mundo do jogo: é a base sobre a qual o jogo será construído.
@@ -257,14 +257,14 @@ Uma **arena de testes** para ir decidindo mecânicas e interações. Não é o m
 
 ### 7.3 Regras de trabalho do protótipo
 - Os pilares e as decisões deste documento valem acima de qualquer sugestão técnica.
-- **Design é decisão do Thiago.** Qualquer dúvida sobre sensação, experiência, regra de jogo ou escopo é perguntada a ele, com opções e uma recomendação; nunca decidida pelo agente.
+- **Design é decisão do dono.** Qualquer dúvida sobre sensação, experiência, regra de jogo ou escopo é perguntada a ele, com opções e uma recomendação; nunca decidida pelo agente.
 - Números de balanceamento do protótipo são provisórios, ficam em dados (ScriptableObjects) e são listados para aprovação.
 
 ---
 
 ## 8. Registro da entrevista (2026-10-03)
 
-Respostas do Thiago em ordem, para consulta.
+Respostas do dono em ordem, para consulta.
 
 1. **Classe:** "não seleciona a classe… vamos seguindo os caminhos que o jogo vai disponibilizando… no início, umas três rotas… uma ação inicial muito impactante… do bem, do mal… o jogo vai revelando a classe com o passar do tempo, mas não tem um nome fixo para a classe."
 2. **Cartas:** "uma carta de tarot onde através dela pegamos skills, itens e passivas."

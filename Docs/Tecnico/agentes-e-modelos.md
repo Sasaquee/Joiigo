@@ -8,8 +8,8 @@ O trabalho é dividido por **papel**, não por modelo. Cada papel tem um modelo 
 
 | Papel | O que faz | Claude Code | DeepSeek harness (NVIDIA) | Reserva NVIDIA |
 |---|---|---|---|---|
-| **Orquestrador** | Lê os docs, faz as perguntas ao Thiago, define contratos e arquitetura, divide as tarefas, integra, abre a Unity, depura, escreve o relatório da fase e faz o commit | Opus 5.5 (agente principal) | `kimi-k3` | `glm-5.3` |
-| **Artista** | Modelagem (`Tools/Blender/*.py`), pixel art das cartas (`Tools/Cards/*.py`), shaders, paleta, efeitos, olhar capturas e corrigir | Opus 5.5 (subagente `artista`) | `kimi-k3`, **só depois que o Thiago responder P-011** (até lá, arte espera um Opus) | — (espera) |
+| **Orquestrador** | Lê os docs, faz as perguntas ao dono, define contratos e arquitetura, divide as tarefas, integra, abre a Unity, depura, escreve o relatório da fase e faz o commit | Opus 5.5 (agente principal) | `kimi-k3` | `glm-5.3` |
+| **Artista** | Modelagem (`Tools/Blender/*.py`), pixel art das cartas (`Tools/Cards/*.py`), shaders, paleta, efeitos, olhar capturas e corrigir | Opus 5.5 (subagente `artista`) | `kimi-k3`, **só depois que o dono responder P-011** (até lá, arte espera um Opus) | — (espera) |
 | **Programador** | Código C# mecânico a partir de um contrato já definido, ScriptableObjects, ferramentas de editor | Sonnet 5.5 (subagente `programador`) | `glm-5.3` | `deepseek-v4.1-flash` |
 | **Testador** | Testes EditMode/PlayMode, teste de regressão para cada bug | Sonnet 5.5 (subagente `testador`) | `deepseek-v4.1-flash` | `glm-5.3` |
 | **Revisor** | Revisão do diff antes do commit: bugs, regras do `AGENTS.md`, números fora de SO | Sonnet 5.5 (subagente `revisor`); Opus em mudança grande | **Nunca o mesmo modelo que escreveu o código**, e de preferência de outra empresa (ex.: código do `glm-5.3`, da Z.ai → revisão do `kimi-k3`, da Moonshot), porque um modelo tende a não ver os próprios erros | `nemotron-3-super-120b-a12b` |
@@ -20,7 +20,7 @@ O trabalho é dividido por **papel**, não por modelo. Cada papel tem um modelo 
 
 Regras que valem para todos os papéis:
 
-- **Só o orquestrador fala com o Thiago** e só ele registra decisões. Os outros papéis devolvem dúvidas de design ao orquestrador.
+- **Só o orquestrador fala com o dono** e só ele registra decisões. Os outros papéis devolvem dúvidas de design ao orquestrador.
 - **Só o orquestrador abre a Unity** (uma instância por vez; compilar e testar é serial). Os outros escrevem código e o orquestrador integra.
 - **Arte só no tier mais alto** (D-042): no Claude, só Opus. Nunca Sonnet, nunca modelo pequeno.
 - Quem escreve não revisa o próprio trabalho: a revisão sai de outro modelo, de preferência de outra empresa (o mesmo modelo tende a repetir os próprios erros).
@@ -29,7 +29,7 @@ Regras que valem para todos os papéis:
 
 ```
 1. Orquestrador   lê AGENTS.md + docs, levanta o estado (git log, passe pendente)
-2. Orquestrador   faz as perguntas de design da fase ao Thiago → registra em decisoes.md
+2. Orquestrador   faz as perguntas de design da fase ao dono → registra em decisoes.md
 3. Orquestrador   escreve o plano curto: contratos (interfaces, SOs, nomes de arquivos) e lista de tarefas
 4. Em paralelo:   Artista(s)    → modelos/arte por script (pode ser vários, um por peça)
                   Programador(es) → código por contrato (cada um em arquivos diferentes)
@@ -38,7 +38,7 @@ Regras que valem para todos os papéis:
 6. Testador       roda os testes (batchmode, editor fechado) e corrige o que for teste
 7. Revisor        revisa o diff inteiro da fase
 8. Documentador   atualiza docs e rascunha o relatório (§7 do prompt-prototipo)
-9. Orquestrador   confere, faz o commit único da fase, para e espera o OK do Thiago
+9. Orquestrador   confere, faz o commit único da fase, para e espera o OK do dono
 ```
 
 Paralelismo só no passo 4, e só com arquivos separados. Dois agentes nunca editam o mesmo arquivo ao mesmo tempo.
@@ -49,7 +49,7 @@ O limite de uso de uma conta pode acabar no meio de uma tarefa (aconteceu no pas
 
 1. **Um harness por vez no repositório.** Antes de começar, `git status` e `git log -3`: se há arquivos não commitados de outro agente, leia antes de mexer.
 2. **Passagem de bastão:** ao parar no meio de uma fase, o agente escreve `Docs/Tecnico/<tarefa>-pendente.md` (modelo: `passe-visual-pendente.md`) com estado, o que falta e como terminar, e atualiza a seção "Onde o projeto está" do `AGENTS.md`. Código não compilado vai para `Docs/Tecnico/wip/*.txt` para não quebrar a Unity de quem pegar depois.
-3. O commit continua sendo **um por fase**. Commit de passagem de bastão só se o Thiago pedir.
+3. O commit continua sendo **um por fase**. Commit de passagem de bastão só se o dono pedir.
 4. Quem assume lê o `-pendente.md` primeiro e apaga ele no commit que fecha a fase.
 
 ## 4. Configurar o DeepSeek harness com a NVIDIA
@@ -101,7 +101,7 @@ phases: [
 ]
 ```
 
-O prompt de cada papel é o texto de `.claude/agents/<papel>.md` (a parte depois do cabeçalho `---`). As perguntas ao Thiago, a Unity e o commit ficam com o orquestrador (o próprio agente principal do harness, em `kimi-k3`), fora das fases. Exemplos que o harness der com modelos que não estão nesta lista (ex.: `deepseek-r1`, `llama-3.3-70b`) não valem para este projeto.
+O prompt de cada papel é o texto de `.claude/agents/<papel>.md` (a parte depois do cabeçalho `---`). As perguntas ao dono, a Unity e o commit ficam com o orquestrador (o próprio agente principal do harness, em `kimi-k3`), fora das fases. Exemplos que o harness der com modelos que não estão nesta lista (ex.: `deepseek-r1`, `llama-3.3-70b`) não valem para este projeto.
 
 Os endpoints gratuitos têm limite de requisições por minuto. Se um modelo começar a recusar por limite, passe a tarefa para o reserva da tabela da §1 em vez de insistir.
 
