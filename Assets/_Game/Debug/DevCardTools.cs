@@ -58,16 +58,36 @@ namespace Game.DevTools
             if (Keyboard.current != null && Keyboard.current.shiftKey.isPressed)
             {
                 for (int id = 0; id < count; id++)
-                    cards.ServerGiveCard(id);
+                    GiveAndEquip(cards, id);
                 Debug.Log($"[DevCardTools] Todas as cartas ({count}) entregues.");
                 return;
             }
 
             nextCard %= count;
-            cards.ServerGiveCard(nextCard);
+            GiveAndEquip(cards, nextCard);
             var given = cards.Database.Get(nextCard);
             Debug.Log($"[DevCardTools] Carta entregue: {(given != null ? given.displayName : "?")} (id {nextCard}).");
             nextCard = (nextCard + 1) % count;
+        }
+
+        /// <summary>
+        /// Dá a carta e, para testar mais rápido, equipa no primeiro espaço livre do tipo dela
+        /// (no cinto, empilha sobre o mesmo consumível). Sem espaço, ela fica no inventário (Tab).
+        /// </summary>
+        private static void GiveAndEquip(PlayerCards cards, int id)
+        {
+            cards.ServerGiveCard(id);
+            Game.Core.Cards.SlotType slot = Game.Core.Cards.CardRules.SlotFor(cards.Database.KindOf(id));
+            int slots = Game.Core.Cards.CardRules.SlotCount(slot);
+            for (int i = 0; i < slots; i++)
+            {
+                int current = cards.GetSlot(slot, i);
+                if (current < 0 || (slot == Game.Core.Cards.SlotType.Belt && current == id))
+                {
+                    cards.RequestEquip(id, slot, i);
+                    return;
+                }
+            }
         }
     }
 }
