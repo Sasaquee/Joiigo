@@ -29,3 +29,4 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 5471f1a402541e94e8162916df43925d, type: 2}
   modifiers: []
   face: {fileID: 2800000, guid: 7a3f180b72393f448894129d0d5decf2, type: 3}
+  glow: {fileID: 2800000, guid: 02dd2cf7551c2e743add768b86d83a1a, type: 3}

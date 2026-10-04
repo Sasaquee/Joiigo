@@ -55,7 +55,8 @@ namespace Game.EditorTools
             PlayerSettings.runInBackground = true; // várias janelas na LAN / Multiplayer Play Mode
 
             CreateMaterials();
-            SurfaceMaterials.Apply(); // texturas PBR (D-016, D-019)
+            PixelPalette.Apply();      // cores chapadas do 3D pixelado (D-039), no lugar das texturas PBR
+            PixelRenderSetup.Apply();  // contorno, faixas e ampliação sem filtro
             grate = AssetDatabase.LoadAssetAtPath<Material>($"{MaterialsFolder}/PisoGrade.mat") ?? darkIron;
             corrugated = AssetDatabase.LoadAssetAtPath<Material>($"{MaterialsFolder}/FerroCorrugado.mat") ?? darkIron;
             ConfigureModelImports();
@@ -342,6 +343,8 @@ namespace Game.EditorTools
             var follow = cam.GetComponent<CameraFollow>();
             if (follow == null)
                 follow = cam.gameObject.AddComponent<CameraFollow>();
+            if (cam.GetComponent<PixelCamera>() == null)
+                cam.gameObject.AddComponent<PixelCamera>(); // 3D pixelado (D-039)
             follow.Settings = settings;
             follow.Target = target;
             follow.Apply(target.position);
@@ -368,11 +371,8 @@ namespace Game.EditorTools
             so.FindProperty("actions").objectReferenceValue = AssetDatabase.LoadAssetAtPath<InputActionAsset>(InputActionsPath);
             so.ApplyModifiedPropertiesWithoutUndo();
 
-            var body = Model("Manequim", root.transform, Vector3.zero, Quaternion.identity, Vector3.one, isStatic: false);
-            body.name = "Corpo";
-
-            // Placa de latão no peito: mostra para onde o personagem olha (D-005).
-            Box("Frente", root.transform, new Vector3(0f, 1.42f, 0.2f), new Vector3(0.3f, 0.12f, 0.08f), brass, collider: false, isStatic: false);
+            // Andarilho encapuzado (D-040). A máscara mostra para onde ele olha (D-005).
+            CharacterModelSetup.CreateBody(root.transform);
 
             // Anel visível só para o dono (D-010). O NetworkPlayer liga no spawn.
             var marker = Model("AnelMarcador", root.transform, Vector3.zero, Quaternion.identity, Vector3.one, isStatic: false);
@@ -468,7 +468,7 @@ namespace Game.EditorTools
                 importer.useFileScale = true;
                 importer.globalScale = 1f;
                 importer.materialImportMode = ModelImporterMaterialImportMode.ImportViaMaterialDescription;
-                foreach (string name in SharedMaterialNames)
+                foreach (string name in System.Linq.Enumerable.Distinct(System.Linq.Enumerable.Concat(SharedMaterialNames, PixelPalette.Names)))
                 {
                     var mat = AssetDatabase.LoadAssetAtPath<Material>($"{MaterialsFolder}/{name}.mat");
                     importer.AddRemap(new AssetImporter.SourceAssetIdentifier(typeof(Material), name), mat);

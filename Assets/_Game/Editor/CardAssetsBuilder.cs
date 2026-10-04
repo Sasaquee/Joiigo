@@ -233,6 +233,7 @@ namespace Game.EditorTools
                 card.effects.Add(effect);
             card.modifiers = new List<ModifierEntry>(modifiers);
             card.face = AssetDatabase.LoadAssetAtPath<Texture2D>($"{CardArtFolder}/{id}.png");
+            card.glow = AssetDatabase.LoadAssetAtPath<Texture2D>($"{CardArtFolder}/{id}_brilho.png"); // brilho do cristal (D-041)
             EditorUtility.SetDirty(card);
             AssetDatabase.SaveAssetIfDirty(card);
             return AssetDatabase.LoadAssetAtPath<CardData>(path);

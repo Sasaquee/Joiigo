@@ -52,6 +52,8 @@ namespace Game.Cards
         [Header("Visual")]
         [Tooltip("Carta pronta (moldura + ilustração), renderizada no Blender (D-034).")]
         public Texture2D face;
+        [Tooltip("Máscara do brilho do cristal (D-041): branco com alfa onde o cristal brilha (Art/Cards/<id>_brilho.png). O CardView pisca um tom ciano por cima, devagar.")]
+        public Texture2D glow;
 
         /// <summary>Tipo efetivo: nos menores vem do naipe, nos maiores do campo kind.</summary>
         public CardKind Kind => arcana == Arcana.Minor ? CardRules.KindOf(suit) : kind;

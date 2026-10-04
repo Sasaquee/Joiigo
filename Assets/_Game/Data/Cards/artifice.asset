@@ -31,3 +31,4 @@ MonoBehaviour:
   - kind: 4
     value: -0.25
   face: {fileID: 2800000, guid: b56e1a7c275d90949bb7882717ad1673, type: 3}
+  glow: {fileID: 2800000, guid: 2de22ed28bb200a44a023f5b3f800e2b, type: 3}

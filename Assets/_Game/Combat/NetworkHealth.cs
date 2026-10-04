@@ -43,6 +43,12 @@ namespace Game.Combat
         /// <summary>Em todos: dano recebido (quantidade efetiva). Para flash de acerto e som.</summary>
         public event Action<float> Damaged;
 
+        /// <summary>
+        /// Em todos e estático: qualquer NetworkHealth levou dano (vítima, quantidade efetiva, parte arcana do golpe de 0 a 1,
+        /// id do cliente que causou). Usado pelo HitFeedback (faíscas, tremor, hit-stop), sem precisar ligar objeto por objeto.
+        /// </summary>
+        public static event Action<NetworkHealth, float, float, ulong> AnyDamaged;
+
         /// <summary>Só no host: a vida chegou a zero.</summary>
         public event Action Depleted;
 
@@ -82,7 +88,7 @@ namespace Game.Combat
                 return 0f;
 
             Publish();
-            DamagedRpc(applied);
+            DamagedRpc(applied, packet.ArcaneFraction, attackerClientId);
             if (model.IsDepleted)
                 Depleted?.Invoke();
             return applied;
@@ -111,9 +117,10 @@ namespace Game.Combat
         }
 
         [Rpc(SendTo.Everyone)]
-        private void DamagedRpc(float applied)
+        private void DamagedRpc(float applied, float arcaneFraction, ulong attackerClientId)
         {
             Damaged?.Invoke(applied);
+            AnyDamaged?.Invoke(this, applied, arcaneFraction, attackerClientId);
         }
     }
 }

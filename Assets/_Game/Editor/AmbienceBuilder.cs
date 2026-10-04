@@ -28,22 +28,22 @@ namespace Game.EditorTools
         private const float BloomIntensity = 0.8f;
         private const float BloomScatter = 0.7f;
         private const float Saturation = -10f;
-        private const float PostExposure = 0.35f;
+        private const float PostExposure = 0.8f;
         private const float VignetteIntensity = 0.3f;
         private const float VignetteSmoothness = 0.4f;
         private const float WhiteBalanceTemperature = -8f;
         private static readonly Vector4 CoolShadows = new Vector4(0.9f, 0.97f, 1.1f, 0f);
 
         // Ambiente, neblina e câmera
-        private static readonly Color AmbientSky = new Color(0.16f, 0.19f, 0.27f);
-        private static readonly Color AmbientEquator = new Color(0.12f, 0.11f, 0.12f);
-        private static readonly Color AmbientGround = new Color(0.07f, 0.055f, 0.05f);
-        private static readonly Color FogColor = new Color(0.04f, 0.05f, 0.07f);
-        private const float FogDensity = 0.009f;
+        private static readonly Color AmbientSky = new Color(0.34f, 0.40f, 0.58f);
+        private static readonly Color AmbientEquator = new Color(0.26f, 0.25f, 0.30f);
+        private static readonly Color AmbientGround = new Color(0.16f, 0.13f, 0.12f);
+        private static readonly Color FogColor = new Color(0.10f, 0.12f, 0.19f);
+        private const float FogDensity = 0.006f;
 
         // Luar frio
         private static readonly Color MoonColor = new Color(0.55f, 0.65f, 1f);
-        private const float MoonIntensity = 0.55f;
+        private const float MoonIntensity = 1.1f;
         private static readonly Vector3 MoonRotation = new Vector3(50f, -30f, 0f);
 
         // Fornalhas: ângulo (graus a partir de +Z) livre entre portões, caldeiras, alcova e spawn.

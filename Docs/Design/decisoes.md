@@ -239,6 +239,33 @@ Registro das perguntas de design feitas ao Thiago durante o protótipo. A respos
 
 ---
 
+## Passe visual · 2026-10-04
+
+### D-039 · Estilo pixelado (substitui o semi-realista de D-016)
+- **Pergunta:** Qual "pixelado" você quer?
+- **Opções:** 3D pixelado · HD-2D (sprites em cenário 3D) · 2D pixel art puro
+- **Resposta literal:** "3D pixelado (Recomendado)"
+- **Significa:** o jogo continua 3D com a câmera diagonal, renderizado em baixa resolução com pixels nítidos, contorno, paleta limitada e luz em faixas. A interface continua nítida.
+
+### D-040 · Personagem
+- **Pergunta:** Como deve ser o personagem?
+- **Opções:** Andarilho encapuzado · Operário da instalação · Autômato vazio
+- **Resposta literal:** "Andarilho encapuzado (Recomendado)"
+- **Significa:** manto gasto, capuz, máscara simples de latão, bolsas e cinto de ferramentas. É neutro e igual para todos (Pilar 1).
+
+### D-041 · Cartas em pixel art
+- **Pergunta:** As cartas devem seguir o pixel também?
+- **Opções:** Pixel art dourada · Traço fino mais elaborado
+- **Resposta literal:** "Pixel art dourada (Recomendado)"
+- **Significa:** o estilo dourado sobre preto de D-037, redesenhado em pixel art mais elaborada, com brilho animado no cristal.
+
+### D-042 · Efeitos e ambientação
+- **Pergunta:** Onde você quer mais efeito primeiro?
+- **Resposta literal:** "faça em tudo pai, principalmente na ambientação, deixe mais vivo, parecendo uma cidade steampunk com magia, não é para nenhum agente do sonnet modelar, se quiser criar agentes do opus para modelar varios elementos e peças ao mesmo tempo fique a vontade"
+- **Significa:** efeitos de combate, de skills, de ambiente e de revelação de carta. A arena passa a ser uma praça cercada por uma cidade steampunk-mágica viva (prédios, chaminés, canos, vapor, luzes, movimento no céu). Modelagem só por agentes Opus; código pode ser Sonnet.
+
+---
+
 ## Perguntas pendentes (feitas na fase em que travarem)
 
 | Id | Pergunta | Fase |

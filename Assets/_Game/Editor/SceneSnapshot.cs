@@ -83,8 +83,8 @@ namespace Game.EditorTools
 
         private static void Render(Camera cam, string path)
         {
-            const int width = 1600, height = 900;
-            var rt = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32) { antiAliasing = 4 };
+            const int width = 640, height = 360; // mesma resolução do jogo pixelado (D-039)
+            var rt = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32) { antiAliasing = 1, filterMode = FilterMode.Point };
             var previous = cam.targetTexture;
             cam.targetTexture = rt;
             cam.Render();

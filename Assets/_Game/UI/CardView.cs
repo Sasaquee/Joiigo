@@ -31,11 +31,13 @@ namespace Game.UI
         private static readonly Color BackFill = new Color(0.13f, 0.10f, 0.08f, 1f);
         private static readonly Color BackInner = new Color(0.22f, 0.17f, 0.11f, 1f);
         private static readonly Color ShadowColor = new Color(0.01f, 0.01f, 0.02f, 0.72f);
+        private static readonly Color ShimmerTint = new Color(0.55f, 1f, 1f, 1f);
 
         [SerializeField] private RectTransform[] backs = new RectTransform[2];
         [SerializeField] private Image frame;
         [SerializeField] private Outline frameOutline;
         [SerializeField] private RawImage face;
+        [SerializeField] private RawImage shimmer;
         [SerializeField] private Text label;
         [SerializeField] private RectTransform shadow;
         [SerializeField] private Image glow;
@@ -98,6 +100,14 @@ namespace Game.UI
             view.face.raycastTarget = false;
             view.face.enabled = false;
 
+            // Brilho do cristal (D-041): máscara ciano por cima da ilustração, com alfa pulsando devagar. Só liga se a carta tiver máscara.
+            var shimmerRect = UiFactory.MakeRect("BrilhoCristal", root);
+            UiFactory.Stretch(shimmerRect);
+            view.shimmer = shimmerRect.gameObject.AddComponent<RawImage>();
+            view.shimmer.raycastTarget = false;
+            view.shimmer.color = new Color(ShimmerTint.r, ShimmerTint.g, ShimmerTint.b, 0f);
+            view.shimmer.enabled = false;
+
             view.label = UiFactory.MakeText("Rotulo", root, string.Empty, 20, UiFactory.Parchment);
             UiFactory.Stretch(view.label.rectTransform, Mathf.Max(3f, size.x * 0.06f));
             view.label.resizeTextForBestFit = true;
@@ -155,6 +165,15 @@ namespace Game.UI
             if (hasFace)
                 face.texture = data.face;
 
+            // Brilho animado do cristal, se a carta tem máscara (CardData.glow).
+            bool hasShimmer = hasFace && data.glow != null && shimmer != null;
+            if (shimmer != null)
+            {
+                shimmer.enabled = hasShimmer;
+                if (hasShimmer)
+                    shimmer.texture = data.glow;
+            }
+
             // Sem imagem pronta, a moldura na cor do naipe e o nome de tarô seguram o lugar.
             frame.enabled = !hasFace;
             frame.color = FillColor(data);
@@ -178,6 +197,8 @@ namespace Game.UI
             copies = 0;
 
             face.enabled = false;
+            if (shimmer != null)
+                shimmer.enabled = false;
             label.gameObject.SetActive(false);
             frame.enabled = true;
             frame.color = EmptyFill;
@@ -222,12 +243,28 @@ namespace Game.UI
 
         private void Update()
         {
+            UpdateShimmer();
+
             if (glowState == CardGlow.None)
                 return;
 
             // Pulsa devagar, usando o tempo real: o jogo roda por trás, mas a tela não depende de Time.timeScale.
             float pulse = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 5f);
             ApplyGlowAlpha(GlowBase(glowState) + (glowState == CardGlow.Target ? 0.20f : 0.08f) * pulse);
+        }
+
+        /// <summary>Cristal respirando: alfa sobe e desce devagar, com um cintilar mais rápido por cima. Tempo real (não depende do timeScale).</summary>
+        private void UpdateShimmer()
+        {
+            if (shimmer == null || !shimmer.enabled)
+                return;
+
+            float time = Time.unscaledTime + (GetInstanceID() & 0xFF) * 0.37f; // cada carta num ponto diferente do ciclo
+            float slow = 0.5f + 0.5f * Mathf.Sin(time * 2.2f);
+            float spark = Mathf.Max(0f, Mathf.Sin(time * 7.3f)) * 0.12f;
+            Color c = shimmer.color;
+            c.a = Mathf.Clamp01(0.15f + 0.4f * slow + spark);
+            shimmer.color = c;
         }
 
         private static float GlowBase(CardGlow state) => state == CardGlow.Target ? 0.24f : 0.06f;

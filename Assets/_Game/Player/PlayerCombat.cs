@@ -35,6 +35,9 @@ namespace Game.Player
             set => settings = value;
         }
 
+        /// <summary>Disparado em todos os clientes quando o golpe aparece (só visual). Direção no mundo (XZ).</summary>
+        public event System.Action<Vector3> SwingPlayed;
+
         private void Awake()
         {
             life = GetComponent<PlayerLife>();
@@ -178,6 +181,7 @@ namespace Game.Player
             if (settings == null)
                 return;
             SwingVisual.Play(transform.position, dir, range, settings.basicHalfAngle);
+            SwingPlayed?.Invoke(dir);
         }
 
         private static bool IsFinite(Vector3 v) => float.IsFinite(v.x) && float.IsFinite(v.y) && float.IsFinite(v.z);

@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using Game.Cameras;
+using Game.Cards;
 using Game.Combat;
 using Game.Core.AI;
 using Game.Core.Combat;
@@ -130,6 +132,13 @@ namespace Game.Enemies
         private float flashTimer;
         private bool flashApplied;
         private bool dismantled;
+
+        // Aviso do ataque legível em pixel (D-024, D-042): leque no chão (corpo a corpo), orbe e luz de carga.
+        private Transform warnRoot;
+        private MeshRenderer warnFill, warnProgress, warnEdge, chargeOrb;
+        private Light chargeLight;
+        private MaterialPropertyBlock warnBlock;
+        private float releaseFlash;
 
         public EnemyDefinition Definition => definition;
 
@@ -458,9 +467,15 @@ namespace Game.Enemies
             if (next == EnemyPhase.Windup)
                 windupStart = Time.time;
             else if (next == EnemyPhase.Recover && (EnemyPhase)previous == EnemyPhase.Windup)
+            {
                 recoil = -lungeDistance / Mathf.Max(0.01f, recoilDistance); // a peça dá o golpe para a frente
+                releaseFlash = 1f;                                          // o aviso estoura em branco ao soltar
+            }
             else if (next == EnemyPhase.Dead)
+            {
                 Dismantle();
+                CameraShake.AddAt(transform.position, CameraShake.Small * 1.3f, 0.2f); // morte por perto: tremor pequeno
+            }
         }
 
         private void OnDamaged(float applied)
@@ -484,12 +499,15 @@ namespace Game.Enemies
 
             UpdateGlow(windup, windupT, dt);
             UpdateRecoil(windup, windupT, dt);
+            UpdateTelegraph(windup, windupT, dt);
             UpdateFlash(dt);
         }
 
         private void UpdateGlow(bool windup, float windupT, float dt)
         {
-            float target = windup ? Mathf.Lerp(1f, glowMultiplier, windupT * windupT) : 1f;
+            // O cristal sobe até ficar estourado e, na reta final, pisca: dá para ler o ataque chegando em 640x360.
+            float pulse = windup && windupT > 0.65f && ((int)(Time.time * 16f) & 1) == 0 ? 1.4f : 1f;
+            float target = windup ? Mathf.Lerp(1f, glowMultiplier * 1.6f, windupT * windupT) * pulse : 1f;
             float next = windup ? target : Mathf.MoveTowards(glow, 1f, 12f * dt);
             if (Mathf.Approximately(next, glow))
                 return;
@@ -526,19 +544,131 @@ namespace Game.Enemies
             weapon.localPosition = weaponBaseLocal + back * (recoil * recoilDistance);
         }
 
+        /// <summary>Cria, uma vez, os elementos do aviso: leque no chão (corpo a corpo), orbe de carga e luz. Ficam filhos do inimigo.</summary>
+        private void EnsureTelegraph()
+        {
+            if (warnRoot != null || definition == null || FxKit.FlatAlpha == null || FxKit.FlatAdditive == null)
+                return;
+
+            warnRoot = new GameObject("AvisoAtaque").transform;
+            warnRoot.SetParent(transform, false);
+            warnBlock = new MaterialPropertyBlock();
+
+            if (!definition.usesProjectile)
+            {
+                float half = Mathf.Clamp(definition.meleeHalfAngle, 5f, 180f);
+                warnFill = FxKit.MeshChild(warnRoot, "Area", FxKit.Fan(half), FxKit.FlatAlpha);
+                warnProgress = FxKit.MeshChild(warnRoot, "Progresso", FxKit.Fan(half), FxKit.FlatAlpha);
+                warnEdge = FxKit.MeshChild(warnRoot, "Borda", FxKit.FanBand(half, 0.9f), FxKit.FlatAdditive);
+                warnProgress.transform.localPosition = new Vector3(0f, 0.01f, 0f);
+                warnEdge.transform.localPosition = new Vector3(0f, 0.02f, 0f);
+            }
+
+            chargeOrb = FxKit.MeshChild(warnRoot, "Carga", FxKit.Sphere, FxKit.FlatAdditive);
+            var lightGo = new GameObject("LuzCarga");
+            lightGo.transform.SetParent(warnRoot, false);
+            chargeLight = lightGo.AddComponent<Light>();
+            chargeLight.type = LightType.Point;
+            chargeLight.range = 4f;
+            chargeLight.intensity = 0f;
+            chargeLight.shadows = LightShadows.None;
+
+            warnRoot.gameObject.SetActive(false);
+        }
+
+        /// <summary>
+        /// Aviso do ataque legível em pixel (D-024, D-042). Corpo a corpo: leque laranja no chão com a área do golpe,
+        /// um miolo que cresce até encher e uma borda que acende; na reta final tudo pisca. Todos: orbe de carga que cresce no
+        /// cristal (ou no cano do drone) com luz. Ao soltar o golpe, um estouro branco curto.
+        /// </summary>
+        private void UpdateTelegraph(bool windup, float windupT, float dt)
+        {
+            if (releaseFlash > 0f)
+                releaseFlash = Mathf.Max(0f, releaseFlash - dt / 0.12f);
+
+            bool show = windup || releaseFlash > 0f;
+            if (!show)
+            {
+                if (warnRoot != null && warnRoot.gameObject.activeSelf)
+                    warnRoot.gameObject.SetActive(false);
+                return;
+            }
+
+            EnsureTelegraph();
+            if (warnRoot == null)
+                return;
+            if (!warnRoot.gameObject.activeSelf)
+                warnRoot.gameObject.SetActive(true);
+
+            // O aviso é filho do inimigo: anula a escala dele e fica rente ao chão.
+            Vector3 ls = transform.lossyScale;
+            warnRoot.localScale = new Vector3(Mathf.Abs(ls.x) > 0.0001f ? 1f / ls.x : 1f,
+                Mathf.Abs(ls.y) > 0.0001f ? 1f / ls.y : 1f, Mathf.Abs(ls.z) > 0.0001f ? 1f / ls.z : 1f);
+            warnRoot.localPosition = new Vector3(0f, 0.07f / Mathf.Max(0.0001f, Mathf.Abs(ls.y)), 0f);
+            warnRoot.localRotation = Quaternion.identity;
+
+            float t = windup ? windupT : 1f;
+            float blink = windup && windupT > 0.65f && ((int)(Time.time * 16f) & 1) == 0 ? 0.45f : 1f;
+            float release = releaseFlash;
+
+            if (warnFill != null)
+            {
+                float range = Mathf.Max(0.3f, definition.attackRange);
+                float progress = windup ? Mathf.Lerp(0.12f, 1f, windupT) : 1f;
+                warnFill.transform.localScale = new Vector3(range, 1f, range);
+                warnProgress.transform.localScale = new Vector3(range * progress, 1f, range * progress);
+                warnEdge.transform.localScale = new Vector3(range, 1f, range);
+
+                Color hotColor = Color.Lerp(FxKit.EmberOrange, FxKit.EmberHot, t * t);
+                FxKit.Paint(warnFill, warnBlock, Color.Lerp(FxKit.EmberOrange, Color.white, release), (0.16f + 0.1f * t) * Mathf.Max(blink, release) + release * 0.5f);
+                FxKit.Paint(warnProgress, warnBlock, Color.Lerp(hotColor, Color.white, release), (0.3f + 0.3f * t) * blink + release * 0.4f);
+                FxKit.Paint(warnEdge, warnBlock, Color.Lerp(FxKit.EmberHot, Color.white, release), Mathf.Clamp01((0.5f + 0.5f * t) * blink + release));
+            }
+
+            // Orbe de carga: no cristal (corpo a corpo) ou no cano (drone, onde sai o projétil).
+            Vector3 point;
+            if (definition.usesProjectile)
+            {
+                point = hasMuzzle ? transform.TransformPoint(muzzleLocal) : transform.position + Vector3.up * 1.2f;
+                point += transform.forward * 0.4f;
+                point.y = Mathf.Max(point.y, 0.9f);
+            }
+            else
+            {
+                point = crystalRoot != null ? crystalRoot.position : transform.position + Vector3.up * 1.4f;
+            }
+
+            float orbSize = Mathf.Lerp(0.08f, definition.usesProjectile ? 0.5f : 0.6f, t * t);
+            orbSize *= 1f + (windup && windupT > 0.65f ? 0.15f * Mathf.Sin(Time.time * 40f) : 0f);
+            orbSize += release * 0.35f;
+            chargeOrb.transform.SetPositionAndRotation(point, Quaternion.identity);
+            chargeOrb.transform.localScale = Vector3.one * orbSize; // o aviso tem escala 1 no mundo, então local = mundo
+            FxKit.Paint(chargeOrb, warnBlock, Color.Lerp(FxKit.CyanBright, Color.white, Mathf.Max(release, t * t)),
+                Mathf.Clamp01((0.4f + 0.6f * t) * (windup ? 1f : release)));
+
+            chargeLight.transform.position = point;
+            chargeLight.color = Color.Lerp(FxKit.CyanBright, Color.white, release);
+            chargeLight.intensity = 4f * t * t * blink + 6f * release;
+        }
+
         private void UpdateFlash(float dt)
         {
             if (flashTimer > 0f)
             {
                 flashTimer -= dt;
-                float f = Mathf.Clamp01(flashTimer / flashDuration);
+                // Branco cheio e estourado nos primeiros quadros (~0,05 s) e só depois some: em pixel o acerto precisa ler na hora.
+                float elapsed = flashDuration - flashTimer;
+                float hold = Mathf.Min(0.05f, flashDuration * 0.5f);
+                float f = elapsed < hold ? 1f : Mathf.Clamp01(flashTimer / Mathf.Max(0.001f, flashDuration - hold));
+                Color hot = Color.Lerp(flashColor, Color.white, 0.85f) * 1.6f;
+                hot.a = 1f;
                 block ??= new MaterialPropertyBlock();
                 foreach (var s in bodySlots)
                 {
                     if (!s.HasBaseColor || s.Renderer == null)
                         continue;
                     s.Renderer.GetPropertyBlock(block, s.Index);
-                    block.SetColor("_BaseColor", Color.Lerp(s.BaseColor, flashColor, f));
+                    block.SetColor("_BaseColor", Color.Lerp(s.BaseColor, hot, f));
                     s.Renderer.SetPropertyBlock(block, s.Index);
                 }
                 flashApplied = true;
@@ -668,13 +798,20 @@ namespace Game.Enemies
                     material = new Material(shader);
             }
 
+            // Pixel (D-042): quadrados opacos e grandes para as faíscas, blocos para o vapor.
+            Material sparksMaterial = FxKit.SolidParticle != null ? FxKit.SolidParticle : material;
+            Material steamMaterial = FxKit.PuffParticle != null ? FxKit.PuffParticle : material;
+
             var root = new GameObject("RestosFx");
             root.transform.position = position;
-            ConfigureSparks(root.AddComponent<ParticleSystem>(), material);
+            ConfigureSparks(root.AddComponent<ParticleSystem>(), sparksMaterial);
 
             var steam = new GameObject("Vapor");
             steam.transform.SetParent(root.transform, false);
-            ConfigureSteam(steam.AddComponent<ParticleSystem>(), material);
+            ConfigureSteam(steam.AddComponent<ParticleSystem>(), steamMaterial);
+
+            // Estouro branco-ciano no cristal que apaga.
+            FxKit.Pop(position, FxKit.CyanWhite, 0.6f, 0.16f);
 
             Destroy(root, Mathf.Max(3f, life));
         }
@@ -688,8 +825,8 @@ namespace Game.Enemies
             main.playOnAwake = false;
             main.startLifetime = new ParticleSystem.MinMaxCurve(0.4f, 0.9f);
             main.startSpeed = new ParticleSystem.MinMaxCurve(3f, 7f);
-            main.startSize = new ParticleSystem.MinMaxCurve(0.04f, 0.09f);
-            main.startColor = new ParticleSystem.MinMaxGradient(new Color(1f, 0.85f, 0.4f), new Color(1f, 0.45f, 0.1f));
+            main.startSize = new ParticleSystem.MinMaxCurve(0.1f, 0.2f);
+            main.startColor = new ParticleSystem.MinMaxGradient(new Color(1f, 0.92f, 0.55f), new Color(1f, 0.45f, 0.1f));
             main.gravityModifier = 1.2f;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
 
@@ -700,6 +837,8 @@ namespace Game.Enemies
             var shape = ps.shape;
             shape.shapeType = ParticleSystemShapeType.Sphere;
             shape.radius = 0.3f;
+
+            FxKit.Shrink(ps); // opaco: encolhe em vez de apagar
 
             var renderer = ps.GetComponent<ParticleSystemRenderer>();
             renderer.sharedMaterial = material;
@@ -715,14 +854,14 @@ namespace Game.Enemies
             main.playOnAwake = false;
             main.startLifetime = new ParticleSystem.MinMaxCurve(1f, 1.8f);
             main.startSpeed = new ParticleSystem.MinMaxCurve(0.4f, 1.4f);
-            main.startSize = new ParticleSystem.MinMaxCurve(0.3f, 0.6f);
-            main.startColor = new Color(0.55f, 0.6f, 0.65f, 0.35f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.5f, 0.9f);
+            main.startColor = new Color(0.7f, 0.74f, 0.78f, 0.7f);
             main.gravityModifier = -0.12f;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
 
             var emission = ps.emission;
             emission.rateOverTime = 0f;
-            emission.SetBursts(new[] { new ParticleSystem.Burst(0f, 10) });
+            emission.SetBursts(new[] { new ParticleSystem.Burst(0f, 8) });
 
             var shape = ps.shape;
             shape.shapeType = ParticleSystemShapeType.Sphere;
