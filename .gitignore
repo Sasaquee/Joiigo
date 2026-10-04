@@ -114,3 +114,7 @@ InitTestScene*.unity*
 *.blend1
 .DS_Store
 Thumbs.db
+
+# Chaves de API (NVIDIA_API_KEY etc.) nunca no repositório
+.env
+.env.*

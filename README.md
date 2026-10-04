@@ -37,6 +37,7 @@ Guia completo em [`Docs/Tecnico/rede-lan.md`](Docs/Tecnico/rede-lan.md). Resumo:
 | [`Docs/Design/estacionamento.md`](Docs/Design/estacionamento.md) | Ideias fora do escopo atual. |
 | [`Docs/Tecnico/arquitetura.md`](Docs/Tecnico/arquitetura.md) | Pastas, assemblies, rede, Blender, ferramentas de editor. |
 | [`Docs/Tecnico/versoes.md`](Docs/Tecnico/versoes.md) | Versões exatas da Unity e dos pacotes. |
+| [`Docs/Tecnico/agentes-e-modelos.md`](Docs/Tecnico/agentes-e-modelos.md) | Papéis dos agentes de IA, modelos no Claude Code e no DeepSeek harness (NVIDIA) e ordem de trabalho. Regras para qualquer IA em [`AGENTS.md`](AGENTS.md). |
 | `Docs/Capturas/` | Capturas de cada fase. |
 
 ## Testes

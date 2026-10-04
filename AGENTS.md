@@ -1,4 +1,6 @@
-# Instruções para o agente
+# Instruções para agentes (qualquer IA)
+
+> Fonte única das regras do projeto para qualquer harness (Claude Code, DeepSeek harness com a API da NVIDIA ou outro). `CLAUDE.md` só importa este arquivo. Quem faz o quê está em `Docs/Tecnico/agentes-e-modelos.md`.
 
 Projeto Unity 6.3 LTS (6000.3.25f1), protótipo de arena de um RPG 2.5D cooperativo. Antes de qualquer trabalho, leia:
 
@@ -6,6 +8,7 @@ Projeto Unity 6.3 LTS (6000.3.25f1), protótipo de arena de um RPG 2.5D cooperat
 2. `Docs/Design/prompt-prototipo.md` — regras de trabalho, sistemas e fases.
 3. `Docs/Design/decisoes.md` — decisões já tomadas e perguntas pendentes.
 4. `Docs/Tecnico/arquitetura.md` — como o código está organizado.
+5. `Docs/Tecnico/agentes-e-modelos.md` — papéis, modelos de cada harness e ordem de trabalho.
 
 ## Regras que não mudam
 
@@ -19,7 +22,15 @@ Projeto Unity 6.3 LTS (6000.3.25f1), protótipo de arena de um RPG 2.5D cooperat
 
 Fases 0–5 concluídas. **Passe visual em andamento (D-039 a D-042):** o estilo mudou para **3D pixelado** (render em ~640x360 com ampliação Point, contorno e luz em faixas — `Camera/PixelCamera.cs`, `Art/Shaders/PixelPost.shader`, `Editor/PixelRenderSetup.cs`, paleta chapada em `Editor/PixelPalette.cs`; regras em `Docs/Design/arte-pixel.md`). Já integrados: andarilho encapuzado (`Tools/Blender/build_character.py`), cartas em pixel art (`Tools/Cards/card_pixel.py`), efeitos de combate/skills/revelação, componentes de vida da cidade (`Arena/Life`). **Falta (ver `Docs/Tecnico/passe-visual-pendente.md`):** a cidade steampunk em volta da arena (`Tools/Blender/build_city.py` + `Editor/CityBuilder.cs`, ligar com `CityBuilder.Build(arena)` no ArenaBuilder), ajuste final de luz, rodar os testes e fechar o passe com relatório. Depois: **Fase 6 — carta no chão e D20** (perguntar P-008, P-009 e a tabela do D20 antes). O coop (Fase 3) está guardado: o jogo entra direto solo (D-018), F9 volta à tela de conexão. Abertas para quando o coop voltar: P-003, P-004.
 
-Divisão de trabalho que o dono pediu: **modelagem e arte só por Opus** (pode usar vários agentes Opus em paralelo); código mecânico, docs, testes e revisão podem ir para Sonnet; o agente principal fica com arquitetura, contratos, integração e depuração. Só uma Unity abre o projeto por vez, então compilar e testar é serial.
+## Equipe de agentes
+
+Detalhes em `Docs/Tecnico/agentes-e-modelos.md`. Resumo:
+
+- **Orquestrador** (Claude: Opus · NVIDIA: `kimi-k3`): arquitetura, contratos, perguntas ao Thiago, integração, Unity, depuração, relatório e commit. Só ele fala com o Thiago e só ele abre a Unity.
+- **Artista** (Claude: só Opus, vários em paralelo se quiser — D-042 · NVIDIA: `kimi-k3`, pendente P-011): modelagem e arte.
+- **Programador / Testador / Revisor / Documentador** (Claude: Sonnet · NVIDIA: `glm-5-3`, `deepseek-v4.1-flash`): código mecânico, testes, revisão e docs. A revisão sai de um modelo diferente do que escreveu.
+- Prompts dos papéis em `.claude/agents/*.md` (servem para qualquer harness).
+- Só uma Unity abre o projeto por vez, então compilar e testar é serial. Só um harness trabalha no repositório por vez; ao parar no meio, deixe `Docs/Tecnico/<tarefa>-pendente.md` (passagem de bastão).
 
 ## Armadilhas já conhecidas
 

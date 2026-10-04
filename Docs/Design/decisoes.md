@@ -280,3 +280,4 @@ Registro das perguntas de design feitas ao Thiago durante o protótipo. A respos
 | P-008 | Como a carta do chão se mostra no mundo antes de ser pega | 6 |
 | P-009 | Efeito temporário do 20 no coop | 6 |
 | P-010 | Forma e linguagem visual da aura | 7 |
+| P-011 | No DeepSeek harness (API NVIDIA), o `kimi-k3` pode modelar e fazer arte no lugar do Opus (D-042 fala só de Opus)? Até a resposta, arte nova espera um Opus. Ver `Docs/Tecnico/agentes-e-modelos.md` | antes de usar o DeepSeek harness para arte |
