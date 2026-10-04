@@ -28,7 +28,7 @@ Detalhes em `Docs/Tecnico/agentes-e-modelos.md`. Resumo:
 
 - **Orquestrador** (Claude: Opus · NVIDIA: `kimi-k3`): arquitetura, contratos, perguntas ao Thiago, integração, Unity, depuração, relatório e commit. Só ele fala com o Thiago e só ele abre a Unity.
 - **Artista** (Claude: só Opus, vários em paralelo se quiser — D-042 · NVIDIA: `kimi-k3`, pendente P-011): modelagem e arte.
-- **Programador / Testador / Revisor / Documentador** (Claude: Sonnet · NVIDIA: `glm-5-3`, `deepseek-v4.1-flash`): código mecânico, testes, revisão e docs. A revisão sai de um modelo diferente do que escreveu.
+- **Programador / Testador / Revisor / Documentador** (Claude: Sonnet · NVIDIA: `glm-5.3`, `deepseek-v4.1-flash`): código mecânico, testes, revisão e docs. A revisão sai de um modelo diferente do que escreveu.
 - Prompts dos papéis em `.claude/agents/*.md` (servem para qualquer harness).
 - Só uma Unity abre o projeto por vez, então compilar e testar é serial. Só um harness trabalha no repositório por vez; ao parar no meio, deixe `Docs/Tecnico/<tarefa>-pendente.md` (passagem de bastão).
 
