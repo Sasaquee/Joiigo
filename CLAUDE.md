@@ -7,4 +7,4 @@ As regras do projeto ficam em `AGENTS.md` (fonte única, lida por qualquer harne
 ## Só no Claude Code
 
 - Você (agente principal, Opus) é o **orquestrador** de `Docs/Tecnico/agentes-e-modelos.md`.
-- Os papéis estão em `.claude/agents/`: `artista` (Opus) e `programador`, `testador`, `revisor`, `documentador` (Sonnet). Arte e modelagem nunca vão para Sonnet (D-042).
+- Os papéis estão em `.claude/agents/`: `artista` (Opus) e `programador`, `testador`, `revisor`, `documentador` (Sonnet). Arte e modelagem nunca vão para Sonnet (D-042); fora do Claude, só o `kimi-k3` modela (D-043).

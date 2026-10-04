@@ -264,6 +264,13 @@ Registro das perguntas de design feitas ao dono durante o protótipo. A resposta
 - **Resposta literal:** "faça em tudo pai, principalmente na ambientação, deixe mais vivo, parecendo uma cidade steampunk com magia, não é para nenhum agente do sonnet modelar, se quiser criar agentes do opus para modelar varios elementos e peças ao mesmo tempo fique a vontade"
 - **Significa:** efeitos de combate, de skills, de ambiente e de revelação de carta. A arena passa a ser uma praça cercada por uma cidade steampunk-mágica viva (prédios, chaminés, canos, vapor, luzes, movimento no céu). Modelagem só por agentes Opus; código pode ser Sonnet.
 
+## Equipe de agentes · 2026-10-04
+
+### D-043 · Arte no DeepSeek harness (resolve P-011)
+- **Pergunta:** No DeepSeek harness (API NVIDIA), o `kimi-k3` pode modelar e fazer arte no lugar do Opus?
+- **Resposta literal:** "ah e ja libera na p011 ser esse kimi k3, lembra q o modelo tem que ser competente para tal"
+- **Significa:** modelagem e arte podem ser feitas pelo Opus (Claude Code) ou pelo `moonshotai/kimi-k3` (DeepSeek harness). Só modelos desse nível: nenhum modelo menor ou reserva faz arte (sem Sonnet, sem `glm-5.3`, sem flash). Se o `kimi-k3` estiver indisponível, a arte espera.
+
 ---
 
 ## Perguntas pendentes (feitas na fase em que travarem)
@@ -280,4 +287,4 @@ Registro das perguntas de design feitas ao dono durante o protótipo. A resposta
 | P-008 | Como a carta do chão se mostra no mundo antes de ser pega | 6 |
 | P-009 | Efeito temporário do 20 no coop | 6 |
 | P-010 | Forma e linguagem visual da aura | 7 |
-| P-011 | No DeepSeek harness (API NVIDIA), o `kimi-k3` pode modelar e fazer arte no lugar do Opus (D-042 fala só de Opus)? Até a resposta, arte nova espera um Opus. Ver `Docs/Tecnico/agentes-e-modelos.md` | antes de usar o DeepSeek harness para arte |
+| ~~P-011~~ | Arte com `kimi-k3` no DeepSeek harness | resolvida em D-043 |

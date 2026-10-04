@@ -9,7 +9,7 @@ O trabalho é dividido por **papel**, não por modelo. Cada papel tem um modelo 
 | Papel | O que faz | Claude Code | DeepSeek harness (NVIDIA) | Reserva NVIDIA |
 |---|---|---|---|---|
 | **Orquestrador** | Lê os docs, faz as perguntas ao dono, define contratos e arquitetura, divide as tarefas, integra, abre a Unity, depura, escreve o relatório da fase e faz o commit | Opus 5.5 (agente principal) | `kimi-k3` | `glm-5.3` |
-| **Artista** | Modelagem (`Tools/Blender/*.py`), pixel art das cartas (`Tools/Cards/*.py`), shaders, paleta, efeitos, olhar capturas e corrigir | Opus 5.5 (subagente `artista`) | `kimi-k3`, **só depois que o dono responder P-011** (até lá, arte espera um Opus) | — (espera) |
+| **Artista** | Modelagem (`Tools/Blender/*.py`), pixel art das cartas (`Tools/Cards/*.py`), shaders, paleta, efeitos, olhar capturas e corrigir | Opus 5.5 (subagente `artista`) | `kimi-k3` (D-043) | — (espera) |
 | **Programador** | Código C# mecânico a partir de um contrato já definido, ScriptableObjects, ferramentas de editor | Sonnet 5.5 (subagente `programador`) | `glm-5.3` | `deepseek-v4.1-flash` |
 | **Testador** | Testes EditMode/PlayMode, teste de regressão para cada bug | Sonnet 5.5 (subagente `testador`) | `deepseek-v4.1-flash` | `glm-5.3` |
 | **Revisor** | Revisão do diff antes do commit: bugs, regras do `AGENTS.md`, números fora de SO | Sonnet 5.5 (subagente `revisor`); Opus em mudança grande | **Nunca o mesmo modelo que escreveu o código**, e de preferência de outra empresa (ex.: código do `glm-5.3`, da Z.ai → revisão do `kimi-k3`, da Moonshot), porque um modelo tende a não ver os próprios erros | `nemotron-3-super-120b-a12b` |
@@ -22,7 +22,7 @@ Regras que valem para todos os papéis:
 
 - **Só o orquestrador fala com o dono** e só ele registra decisões. Os outros papéis devolvem dúvidas de design ao orquestrador.
 - **Só o orquestrador abre a Unity** (uma instância por vez; compilar e testar é serial). Os outros escrevem código e o orquestrador integra.
-- **Arte só no tier mais alto** (D-042): no Claude, só Opus. Nunca Sonnet, nunca modelo pequeno.
+- **Arte só em modelo competente para isso** (D-042, D-043): Opus no Claude, `kimi-k3` no DeepSeek harness. Nunca Sonnet, nunca reserva ou modelo menor; sem eles, a arte espera.
 - Quem escreve não revisa o próprio trabalho: a revisão sai de outro modelo, de preferência de outra empresa (o mesmo modelo tende a repetir os próprios erros).
 
 ## 2. Ordem de uma fase (orquestração)
@@ -63,7 +63,7 @@ A API da NVIDIA é compatível com OpenAI:
 | Instruções do projeto | `AGENTS.md` na raiz. Se o harness não ler `AGENTS.md` sozinho, aponte o arquivo de instruções/system prompt dele para ele. |
 | Prompts dos papéis | `.claude/agents/<papel>.md` — o texto depois do cabeçalho `---` serve como prompt de papel em qualquer harness. |
 
-IDs dos modelos na API (conferidos nas páginas de build.nvidia.com em 2026-10-04 — atenção: o ID nem sempre é igual à URL, ex.: a página `z-ai/glm-5-3` usa o ID `z-ai/glm-5.3`):
+IDs dos modelos na API (conferidos na linha `model` do código de exemplo de cada página de build.nvidia.com em 2026-10-04 — atenção: o ID nem sempre é igual à URL, ex.: a página `z-ai/glm-5-3` usa o ID `z-ai/glm-5.3`):
 
 | Modelo | ID | Por que está na equipe |
 |---|---|---|
@@ -86,7 +86,7 @@ O harness tem um tool `workflow` que aceita `provider` e `model` por agente e po
 
 ```js
 // Por agente: um subagente por papel
-await agent(promptArtista,     { provider: 'nvidia', model: 'moonshotai/kimi-k3' })            // só após P-011
+await agent(promptArtista,     { provider: 'nvidia', model: 'moonshotai/kimi-k3' })            // arte: só kimi-k3 (D-043)
 await agent(promptProgramador, { provider: 'nvidia', model: 'z-ai/glm-5.3' })
 await agent(promptTestador,    { provider: 'nvidia', model: 'deepseek-ai/deepseek-v4.1-flash' })
 await agent(promptBatedor,     { provider: 'nvidia', model: 'nvidia/nemotron-3.5-lightning-30b-a3b' })
@@ -113,4 +113,4 @@ Os endpoints gratuitos têm limite de requisições por minuto. Se um modelo com
 
 ## 6. Pendências
 
-- **P-011** (em `decisoes.md`): no DeepSeek harness, o `kimi-k3` pode modelar e fazer arte no lugar do Opus? Até a resposta, arte nova no DeepSeek harness espera um Opus.
+Nenhuma. (P-011 resolvida em D-043.)

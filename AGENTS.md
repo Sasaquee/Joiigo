@@ -27,7 +27,7 @@ Fases 0–5 concluídas. **Passe visual em andamento (D-039 a D-042):** o estilo
 Detalhes em `Docs/Tecnico/agentes-e-modelos.md`. Resumo:
 
 - **Orquestrador** (Claude: Opus · NVIDIA: `kimi-k3`): arquitetura, contratos, perguntas ao dono, integração, Unity, depuração, relatório e commit. Só ele fala com o dono e só ele abre a Unity.
-- **Artista** (Claude: só Opus, vários em paralelo se quiser — D-042 · NVIDIA: `kimi-k3`, pendente P-011): modelagem e arte.
+- **Artista** (Claude: só Opus, vários em paralelo se quiser — D-042 · NVIDIA: só `kimi-k3` — D-043): modelagem e arte. Só modelo competente para isso; sem ele, a arte espera.
 - **Programador / Testador / Revisor / Documentador** (Claude: Sonnet · NVIDIA: `glm-5.3`, `deepseek-v4.1-flash`): código mecânico, testes, revisão e docs. A revisão sai de um modelo diferente do que escreveu.
 - Prompts dos papéis em `.claude/agents/*.md` (servem para qualquer harness).
 - Só uma Unity abre o projeto por vez, então compilar e testar é serial. Só um harness trabalha no repositório por vez; ao parar no meio, deixe `Docs/Tecnico/<tarefa>-pendente.md` (passagem de bastão).
