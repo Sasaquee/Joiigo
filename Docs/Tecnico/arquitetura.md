@@ -25,6 +25,19 @@ Dependências: `Core` ← `Runtime` ← `Debug` / `Editor`. O `Core` não conhec
 - O cliente envia intenções, e o host valida, aplica e replica.
 - D20, dano, vida e cartas existem só no host.
 
+## Rede (Fase 3)
+
+Como testar: `Docs/Tecnico/rede-lan.md`.
+
+- `NetSession`: liga o `NetworkManager` às regras do jogo (hospedar, entrar por IP, aprovar conexões, vaga de spawn).
+- `NetworkPlayer`: jogador em rede; o dono prevê o movimento e envia intenções, o host aplica e publica o estado.
+- `MatchState`: estado compartilhado da partida (largada), só o host escreve. Foi nomeada assim para não colidir com `UnityEditor.SessionState`.
+- `StartLever`: alavanca-máquina do spawn; só o host puxa (D-013).
+- `GateActivation`: portão-máquina parado e apagado até a largada.
+- `ConnectionScreen`: tela de Hospedar/Entrar, mensagens de status e IP do host.
+- `SessionRoster` (Core): regras de quem entra e quem volta, por token (D-011, D-014).
+- `ReconciliationBuffer` (Core): previsão local do movimento e correção pelo estado do host (D-009).
+
 ## Regras de código
 
 - Conteúdo por dados: cartas, efeitos, inimigos e a tabela do D20 são ScriptableObjects.
@@ -63,6 +76,7 @@ O mapa `Debug` só é lido pelo assembly `Game.Debug`, que não existe em build 
 |---|---|---|
 | Game → Setup → Criar cena Arena | Cria a cena e registra no Build Settings | `Game.EditorTools.ArenaSceneSetup.CreateArenaScene` |
 | Game → Setup → Construir Arena | Reconstrói arena, prefab do jogador, materiais e settings | `Game.EditorTools.ArenaBuilder.Build` |
+| Game → Build → Development Build (Windows) | Gera `Builds/Dev/Joiigo.exe` (`-buildPath <pasta>`) | `Game.EditorTools.DevBuild.BuildWindows` |
 | Game → Debug → Capturar vistas da Arena | Salva PNGs pela câmera do jogo (`-snapshotDir <pasta>`) | `Game.EditorTools.SceneSnapshot.CaptureArena` |
 
 A arena é gerada pelo `ArenaBuilder`. Mudanças feitas à mão na cena se perdem ao rodar o construtor de novo.

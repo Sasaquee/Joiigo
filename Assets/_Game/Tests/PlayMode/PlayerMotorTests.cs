@@ -58,6 +58,40 @@ namespace Game.Tests.PlayMode
             Assert.AreEqual(90f, player.transform.eulerAngles.y, 5f, "O corpo olha para a mira (D-005).");
         }
 
+        /// <summary>
+        /// Regressão (Fase 3): o Netcode move o transform depois de instanciar. Sem ressincronizar o
+        /// CharacterController, o primeiro Move puxava o jogador de volta para a posição antiga.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator Motor_RespeitaTransformMovidoPorFora()
+        {
+            yield return null; // motor já rodou com o controller na origem
+            player.transform.position = new Vector3(10f, 0f, 10f);
+
+            yield return null;
+            yield return null;
+
+            Assert.AreEqual(10f, player.transform.position.x, 0.05f);
+            Assert.AreEqual(10f, player.transform.position.z, 0.05f);
+        }
+
+        [UnityTest]
+        public IEnumerator Motor_RespeitaTransformMovidoAntesDoPrimeiroFrame()
+        {
+            var fresh = new GameObject("PlayerNovo");
+            var controller = fresh.AddComponent<CharacterController>();
+            controller.center = new Vector3(0f, 1f, 0f);
+            fresh.AddComponent<PlayerMotor>().Settings = settings;
+            fresh.transform.position = new Vector3(-8f, 0f, 5f); // como o spawn do Netcode
+
+            yield return null;
+            yield return null;
+
+            Assert.AreEqual(-8f, fresh.transform.position.x, 0.05f);
+            Assert.AreEqual(5f, fresh.transform.position.z, 0.05f);
+            Object.Destroy(fresh);
+        }
+
         [UnityTest]
         public IEnumerator Motor_ParaQuaseNaHoraAoSoltar()
         {

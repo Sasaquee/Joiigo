@@ -31,6 +31,7 @@ MATERIALS = {
     "FerroEscuro": ((0.18, 0.18, 0.20, 1), 0.7, 0.65, None),
     "CristalArcano": ((0.30, 0.90, 0.95, 1), 0.0, 0.1, (0.2, 1.0, 1.0, 1)),
     "PersonagemNeutro": ((0.55, 0.56, 0.60, 1), 0.1, 0.6, None),
+    "MarcadorLocal": ((0.92, 0.88, 0.78, 1), 0.0, 0.5, None),
 }
 
 
@@ -242,7 +243,39 @@ def manequim():
     save_and_export("Manequim")
 
 
+def alavanca_base():
+    """Base da alavanca de largada: caixa de ferro com engrenagens e cristal nas laterais."""
+    reset_scene()
+    box("FerroEscuro", (0.9, 0.7, 1.0), (0, 0, 0.5), bevel=0.04)
+    box("Latao", (1.0, 0.8, 0.1), (0, 0, 1.03), bevel=0.02)
+    box("FerroEscuro", (0.16, 0.5, 0.08), (0, 0, 1.1))  # fenda do braço
+    for x in (-0.46, 0.46):
+        cyl("Latao", 0.28, 0.06, (x, 0, 0.55), rot=(0, math.pi / 2, 0), verts=24)
+        gem(0.12, (x * 1.06, 0, 0.55), scale=(0.6, 1, 1))
+    save_and_export("AlavancaBase")
+
+
+def alavanca_braco():
+    """Braço da alavanca. O pivô fica na origem (gira em X); o braço sobe em Z."""
+    reset_scene()
+    cyl("Latao", 0.07, 0.2, (0, 0, 0), rot=(0, math.pi / 2, 0), verts=12)
+    cyl("FerroEscuro", 0.045, 0.85, (0, 0, 0.42), verts=10)
+    sphere("Latao", 0.11, (0, 0, 0.88))
+    save_and_export("AlavancaBraco")
+
+
+def anel_marcador():
+    """Anel discreto no chão sob o próprio personagem (D-010). Não usa cristal para não competir com a aura."""
+    reset_scene()
+    torus("MarcadorLocal", 0.62, 0.035, (0, 0, 0.02))
+    bpy.context.active_object.scale = (1, 1, 0.3)
+    save_and_export("AnelMarcador")
+
+
 if __name__ == "__main__":
+    alavanca_base()
+    alavanca_braco()
+    anel_marcador()
     engrenagem()
     cano(with_crystal=False)
     cano(with_crystal=True)

@@ -40,6 +40,8 @@ namespace Game.EditorTools
                 Render(cam, Path.Combine(dir, "arena_portao.png"));
                 follow.Apply(new Vector3(-15f, 0f, -8f));
                 Render(cam, Path.Combine(dir, "arena_alcova.png"));
+                follow.Apply(new Vector3(0f, 0f, -19f));
+                Render(cam, Path.Combine(dir, "arena_spawn.png"));
             }
 
             Vector3 pos = cam.transform.position;

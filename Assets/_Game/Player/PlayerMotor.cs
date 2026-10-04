@@ -18,6 +18,8 @@ namespace Game.Player
         private float verticalSpeed;
         private Vector3 moveDirection;
         private Vector3? aimPoint;
+        private Vector3 lastPosition;
+        private bool hasLastPosition;
 
         public MovementSettings Settings
         {
@@ -44,6 +46,14 @@ namespace Game.Player
             if (settings == null)
                 return;
 
+            // Se algo moveu o transform por fora (spawn do Netcode, teleporte), o CharacterController ainda
+            // guarda a posição antiga e o Move puxaria o jogador de volta. Ressincroniza antes de mover.
+            if (!hasLastPosition || (transform.position - lastPosition).sqrMagnitude > 0.000001f)
+            {
+                controller.enabled = false;
+                controller.enabled = true;
+            }
+
             float dt = Time.deltaTime;
             velocity = MovementMath.StepVelocity(velocity, new Float2(moveDirection.x, moveDirection.z),
                 settings.moveSpeed, settings.acceleration, settings.deceleration, dt);
@@ -53,6 +63,8 @@ namespace Game.Player
             controller.Move(new Vector3(velocity.X, verticalSpeed, velocity.Y) * dt);
 
             FaceAimPoint(dt);
+            lastPosition = transform.position;
+            hasLastPosition = true;
         }
 
         private void FaceAimPoint(float dt)

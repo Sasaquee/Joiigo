@@ -1,7 +1,10 @@
 using System.IO;
 using Game.Arena;
 using Game.Cameras;
+using Game.Net;
 using Game.Player;
+using Unity.Netcode;
+using Unity.Netcode.Transports.UTP;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -37,44 +40,53 @@ namespace Game.EditorTools
         private const float CardAlcoveRadius = 19f;
 
         // Nomes iguais aos materiais do Blender, para o remapeamento na importação.
-        private static readonly string[] SharedMaterialNames = { "Cobre", "Latao", "FerroEscuro", "CristalArcano", "PersonagemNeutro" };
+        private static readonly string[] SharedMaterialNames = { "Cobre", "Latao", "FerroEscuro", "CristalArcano", "PersonagemNeutro", "MarcadorLocal" };
 
-        private static Material copper, brass, darkIron, floorStone, crystal, crystalDim, playerBody;
+        private static Material copper, brass, darkIron, floorStone, crystal, crystalDim, crystalOff, playerBody;
+
+        // Objetos de cena gerados que são substituídos a cada reconstrução.
+        private static readonly string[] GeneratedRoots = { RootName, "Player", "NetworkManager", "Sessao", "UI", "EventSystem" };
 
         [MenuItem("Game/Setup/Construir Arena")]
         public static void Build()
         {
             ArenaSceneSetup.CreateArenaScene();
+            PlayerSettings.runInBackground = true; // várias janelas na LAN / Multiplayer Play Mode
 
             CreateMaterials();
             ConfigureModelImports();
             var movement = LoadOrCreate<MovementSettings>($"{DataFolder}/Player/MovementSettings.asset");
+            var interaction = LoadOrCreate<InteractionSettings>($"{DataFolder}/Player/InteractionSettings.asset");
             var cameraSettings = LoadOrCreate<CameraSettings>($"{DataFolder}/Camera/CameraSettings.asset");
-            var playerPrefab = CreatePlayerPrefab(movement);
+            var netSettings = LoadOrCreate<NetSettings>($"{DataFolder}/Net/NetSettings.asset");
+            var playerPrefab = CreatePlayerPrefab(movement, interaction, netSettings);
 
             var scene = EditorSceneManager.OpenScene(ArenaSceneSetup.ArenaScenePath, OpenSceneMode.Single);
             foreach (var root in scene.GetRootGameObjects())
             {
-                if (root.name == RootName || root.name == "Player")
+                if (System.Array.IndexOf(GeneratedRoots, root.name) >= 0)
                     Object.DestroyImmediate(root);
             }
+
+            var session = new GameObject("Sessao");
+            session.AddComponent<NetworkObject>();
+            var matchState = session.AddComponent<MatchState>();
 
             var arena = new GameObject(RootName).transform;
             BuildFloor(arena);
             BuildBoundary(arena);
-            BuildPlayerSpawn(arena);
+            var spawnPoints = BuildPlayerSpawn(arena, matchState, interaction);
             for (int i = 0; i < GateAngles.Length; i++)
-                BuildEnemyGate(arena, GateAngles[i], i);
+                BuildEnemyGate(arena, GateAngles[i], i, matchState);
             BuildCardAlcove(arena);
             BuildLampPosts(arena);
             BuildBoilers(arena);
             SetupLighting();
 
-            var player = (GameObject)PrefabUtility.InstantiatePrefab(playerPrefab, scene);
-            player.transform.position = Polar(PlayerSpawnAngle, PlayerSpawnRadius);
-            player.transform.rotation = Quaternion.LookRotation(-player.transform.position.normalized);
+            var netSession = BuildNetworkManager(playerPrefab, netSettings, spawnPoints, matchState);
+            NetworkUiBuilder.Build(netSession);
 
-            SetupCamera(cameraSettings, player.transform);
+            SetupCamera(cameraSettings, spawnPoints.transform);
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
@@ -129,16 +141,51 @@ namespace Game.EditorTools
             }
         }
 
-        private static void BuildPlayerSpawn(Transform parent)
+        private static PlayerSpawnPoints BuildPlayerSpawn(Transform parent, MatchState session, InteractionSettings interaction)
         {
             var spawn = Group("SpawnJogadores", parent);
             spawn.position = Polar(PlayerSpawnAngle, PlayerSpawnRadius);
+            spawn.rotation = Quaternion.LookRotation(-spawn.position.normalized); // +Z local aponta para o centro
             Marker(spawn, ArenaMarkerKind.PlayerSpawn, 3f);
             Disc("PlataformaLatao", spawn, new Vector3(0f, 0.02f, 0f), 3f, 0.04f, brass);
             Disc("RunaCentral", spawn, new Vector3(0f, 0.045f, 0f), 0.8f, 0.01f, crystalDim);
+
+            // 4 vagas (§7.2: até 4 jogadores), todas olhando para o centro da arena.
+            var slots = new Transform[4];
+            for (int i = 0; i < slots.Length; i++)
+            {
+                var slot = Group($"Vaga{i + 1}", spawn);
+                slot.localPosition = Quaternion.Euler(0f, 45f + i * 90f, 0f) * new Vector3(0f, 0f, 1.6f);
+                slot.localRotation = Quaternion.identity;
+                slots[i] = slot;
+            }
+            var points = spawn.gameObject.AddComponent<PlayerSpawnPoints>();
+            points.Configure(slots);
+
+            BuildStartLever(spawn, session, interaction);
+            return points;
         }
 
-        private static void BuildEnemyGate(Transform parent, float angle, int index)
+        /// <summary>Alavanca-máquina da largada, no fundo da plataforma de spawn (D-013).</summary>
+        private static void BuildStartLever(Transform spawn, MatchState session, InteractionSettings interaction)
+        {
+            var lever = new GameObject("AlavancaLargada").transform;
+            lever.SetParent(spawn, false);
+            lever.localPosition = new Vector3(0f, 0f, -2.4f);
+            lever.localRotation = Quaternion.identity;
+            lever.gameObject.AddComponent<NetworkObject>();
+            AddBoxCollider(lever, new Vector3(0f, 0.6f, 0f), new Vector3(1f, 1.2f, 0.8f));
+
+            var baseModel = Model("AlavancaBase", lever, Vector3.zero, Quaternion.identity, Vector3.one, isStatic: false);
+            var pivot = Group("Pivo", lever);
+            pivot.localPosition = new Vector3(0f, 1.1f, 0f);
+            Model("AlavancaBraco", pivot, Vector3.zero, Quaternion.identity, Vector3.one, isStatic: false);
+
+            lever.gameObject.AddComponent<StartLever>().Configure(session, interaction, pivot,
+                baseModel.GetComponentsInChildren<Renderer>(), crystalOff, crystal);
+        }
+
+        private static void BuildEnemyGate(Transform parent, float angle, int index, MatchState session)
         {
             var gate = Group($"PortaoMaquina{index + 1}", parent);
             gate.position = Polar(angle, GateRadius);
@@ -150,7 +197,15 @@ namespace Game.EditorTools
             // Engrenagem com núcleo de cristal: a mesma peça move e canaliza.
             var gear = Model("Engrenagem", gate, new Vector3(0f, 2f, 0.92f), Quaternion.Euler(90f, 0f, 0f), Vector3.one, isStatic: false);
             // Um portão engasga: a instalação funciona só em parte.
-            gear.AddComponent<Spinner>().Configure(Vector3.up, 40f, index == 1 ? 0.45f : 0f);
+            var spinner = gear.AddComponent<Spinner>();
+            spinner.Configure(Vector3.up, 40f, index == 1 ? 0.45f : 0f);
+            spinner.enabled = false;
+
+            // Parado e apagado até a largada (D-013). Os cristais do portão não são estáticos para poder trocar material.
+            foreach (var t in gate.GetComponentsInChildren<Transform>(true))
+                t.gameObject.isStatic = false;
+            gate.gameObject.AddComponent<GateActivation>().Configure(session, spinner,
+                gate.GetComponentsInChildren<Renderer>(), crystal, crystalOff);
 
             var spawn = Group("SpawnInimigo", parent);
             spawn.position = Polar(angle, EnemySpawnRadius);
@@ -229,6 +284,41 @@ namespace Game.EditorTools
             RenderSettings.ambientLight = new Color(0.22f, 0.22f, 0.26f);
         }
 
+        private static NetSession BuildNetworkManager(GameObject playerPrefab, NetSettings settings,
+            PlayerSpawnPoints spawnPoints, MatchState matchState)
+        {
+            var go = new GameObject("NetworkManager");
+            var manager = go.AddComponent<NetworkManager>();
+            go.AddComponent<UnityTransport>();
+            manager.NetworkConfig = new NetworkConfig
+            {
+                NetworkTransport = go.GetComponent<UnityTransport>(),
+                PlayerPrefab = playerPrefab,
+                ConnectionApproval = true,
+                TickRate = 30
+            };
+
+            // Lista padrão do Netcode (Assets/DefaultNetworkPrefabs.asset), gerenciada pelo pacote.
+            var list = AssetDatabase.LoadAssetAtPath<NetworkPrefabsList>("Assets/DefaultNetworkPrefabs.asset");
+            if (list == null)
+            {
+                list = ScriptableObject.CreateInstance<NetworkPrefabsList>();
+                AssetDatabase.CreateAsset(list, "Assets/DefaultNetworkPrefabs.asset");
+            }
+            if (!list.Contains(playerPrefab))
+                list.Add(new NetworkPrefab { Prefab = playerPrefab });
+            EditorUtility.SetDirty(list);
+            manager.NetworkConfig.Prefabs.NetworkPrefabsLists.Add(list);
+
+            var netSession = go.AddComponent<NetSession>();
+            var so = new SerializedObject(netSession);
+            so.FindProperty("settings").objectReferenceValue = settings;
+            so.FindProperty("spawnPoints").objectReferenceValue = spawnPoints;
+            so.FindProperty("matchState").objectReferenceValue = matchState;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            return netSession;
+        }
+
         private static void SetupCamera(CameraSettings settings, Transform target)
         {
             var cam = Camera.main;
@@ -249,9 +339,10 @@ namespace Game.EditorTools
 
         // ---------- Player ----------
 
-        private static GameObject CreatePlayerPrefab(MovementSettings movement)
+        private static GameObject CreatePlayerPrefab(MovementSettings movement, InteractionSettings interaction, NetSettings netSettings)
         {
             var root = new GameObject("Player");
+            root.AddComponent<NetworkObject>();
             var controller = root.AddComponent<CharacterController>();
             controller.height = 2f;
             controller.radius = 0.4f;
@@ -271,9 +362,36 @@ namespace Game.EditorTools
             // Placa de latão no peito: mostra para onde o personagem olha (D-005).
             Box("Frente", root.transform, new Vector3(0f, 1.42f, 0.2f), new Vector3(0.3f, 0.12f, 0.08f), brass, collider: false, isStatic: false);
 
+            // Anel visível só para o dono (D-010). O NetworkPlayer liga no spawn.
+            var marker = Model("AnelMarcador", root.transform, Vector3.zero, Quaternion.identity, Vector3.one, isStatic: false);
+            marker.name = "MarcadorLocal";
+            marker.SetActive(false);
+
+            var netPlayer = root.AddComponent<NetworkPlayer>();
+            var nso = new SerializedObject(netPlayer);
+            nso.FindProperty("netSettings").objectReferenceValue = netSettings;
+            nso.FindProperty("interaction").objectReferenceValue = interaction;
+            nso.FindProperty("localMarker").objectReferenceValue = marker;
+            nso.ApplyModifiedPropertiesWithoutUndo();
+
             var prefab = PrefabUtility.SaveAsPrefabAsset(root, PlayerPrefabPath);
             Object.DestroyImmediate(root);
+            EnsureNetworkObjectHash(prefab);
             return prefab;
+        }
+
+        /// <summary>
+        /// O Netcode só gera o GlobalObjectIdHash no OnValidate do editor. Prefab criado por script
+        /// fica com hash 0 e não spawna; por isso o OnValidate é chamado aqui.
+        /// </summary>
+        private static void EnsureNetworkObjectHash(GameObject prefabAsset)
+        {
+            var networkObject = prefabAsset.GetComponent<NetworkObject>();
+            typeof(NetworkObject)
+                .GetMethod("OnValidate", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic)
+                ?.Invoke(networkObject, null);
+            EditorUtility.SetDirty(networkObject);
+            AssetDatabase.SaveAssetIfDirty(prefabAsset);
         }
 
         // ---------- Materiais, modelos e dados ----------
@@ -286,7 +404,9 @@ namespace Game.EditorTools
             floorStone = Mat("PisoPedra", new Color(0.28f, 0.27f, 0.26f), 0f, 0.2f);
             crystal = Mat("CristalArcano", new Color(0.3f, 0.9f, 0.95f), 0f, 0.9f, new Color(0.2f, 1.4f, 1.6f));
             crystalDim = Mat("CristalArcanoFraco", new Color(0.15f, 0.45f, 0.5f), 0f, 0.8f, new Color(0.05f, 0.45f, 0.55f));
+            crystalOff = Mat("CristalApagado", new Color(0.08f, 0.14f, 0.16f), 0f, 0.85f, new Color(0f, 0.03f, 0.04f));
             playerBody = Mat("PersonagemNeutro", new Color(0.55f, 0.56f, 0.6f), 0.1f, 0.4f);
+            Mat("MarcadorLocal", new Color(0.92f, 0.88f, 0.78f), 0f, 0.5f);
             AssetDatabase.SaveAssets();
         }
 

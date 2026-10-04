@@ -2,10 +2,9 @@ using System.Collections;
 using System.Linq;
 using Game.Arena;
 using Game.Cameras;
-using Game.Player;
+using Game.Net;
 using NUnit.Framework;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 
 namespace Game.Tests.PlayMode
@@ -15,7 +14,13 @@ namespace Game.Tests.PlayMode
         [UnitySetUp]
         public IEnumerator CarregaArena()
         {
-            yield return SceneManager.LoadSceneAsync("Arena", LoadSceneMode.Single);
+            yield return ArenaTestScene.Load();
+        }
+
+        [UnityTearDown]
+        public IEnumerator Limpa()
+        {
+            yield return ArenaTestScene.Cleanup();
         }
 
         [Test]
@@ -30,24 +35,32 @@ namespace Game.Tests.PlayMode
         }
 
         [Test]
-        public void Arena_CameraSegueOJogador()
+        public void Arena_TemQuatroVagasDeSpawn()
         {
-            var player = Object.FindFirstObjectByType<PlayerMotor>();
-            var follow = Camera.main != null ? Camera.main.GetComponent<CameraFollow>() : null;
+            var spawn = Object.FindFirstObjectByType<PlayerSpawnPoints>();
+            Assert.IsNotNull(spawn);
+            Assert.AreEqual(4, spawn.Count);
+        }
 
-            Assert.IsNotNull(player, "Existe um jogador na arena");
+        [Test]
+        public void Arena_TemCameraConfiguradaESessaoDeRede()
+        {
+            var follow = Camera.main != null ? Camera.main.GetComponent<CameraFollow>() : null;
             Assert.IsNotNull(follow, "A câmera principal tem CameraFollow");
-            Assert.AreEqual(player.transform, follow.Target);
             Assert.IsNotNull(follow.Settings);
+            Assert.IsNotNull(Object.FindFirstObjectByType<NetSession>(), "Existe a sessão de rede");
+            Assert.IsNotNull(Object.FindFirstObjectByType<StartLever>(), "Existe a alavanca de largada");
         }
 
         [UnityTest]
-        public IEnumerator Arena_JogadorFicaNoChao()
+        public IEnumerator Arena_PortoesComecamParados()
         {
-            var player = Object.FindFirstObjectByType<PlayerMotor>();
-            yield return new WaitForSeconds(0.5f);
-
-            Assert.AreEqual(0f, player.transform.position.y, 0.15f);
+            yield return null;
+            foreach (var spinner in Object.FindObjectsByType<Spinner>(FindObjectsSortMode.None))
+            {
+                if (spinner.GetComponentInParent<GateActivation>() != null)
+                    Assert.IsFalse(spinner.enabled, "Engrenagem de portão parada antes da largada (D-013)");
+            }
         }
     }
 }

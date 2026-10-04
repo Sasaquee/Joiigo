@@ -27,6 +27,11 @@ ModelImporter:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
+      name: MarcadorLocal
+    second: {fileID: 2100000, guid: 80f8cc278a1d6a14a8c83c760e7017e2, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
       name: PersonagemNeutro
     second: {fileID: 2100000, guid: d744a2ab06818804abc661eb5e841eed, type: 2}
   materials:

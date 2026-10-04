@@ -62,6 +62,46 @@ Registro das perguntas de design feitas ao Thiago durante o protótipo. A respos
 
 ---
 
+## Fase 3 · 2026-10-04
+
+### D-009 · Resposta do movimento no cliente
+- **Pergunta:** Na sua tela, o seu personagem responde na hora ou com um pequeno atraso?
+- **Opções:** Previsão local · Autoridade pura
+- **Resposta literal:** "Previsão local (Recomendado)"
+- **Significa:** o cliente move o próprio personagem na hora, o host continua sendo a fonte da verdade e corrige quando há diferença.
+
+### D-010 · Quem é quem antes da aura
+- **Pergunta:** Até a aura chegar, como cada um sabe quem é quem?
+- **Opções:** Marca só no seu · Cor por jogador · Nenhuma marca
+- **Resposta literal:** "Marca só no seu (Recomendado)"
+- **Significa:** um anel discreto no chão sob o próprio personagem, visível só na própria tela. Não existe cor por jogador.
+
+### D-011 · Entrada no meio da partida
+- **Pergunta:** Alguém pode entrar no meio da partida?
+- **Opções:** A qualquer momento · Só antes de começar
+- **Resposta literal:** "Só antes de começar"
+- **Significa:** existe um momento de largada. Depois dele, ninguém novo entra (exceção em D-014).
+
+### D-012 · IP na tela do host
+- **Pergunta:** A tela de Hospedar mostra o IP do host?
+- **Opções:** Mostra o IP · Não mostra
+- **Resposta literal:** "Mostra o IP (Recomendado)"
+- **Significa:** depois de hospedar, o IP local aparece pequeno num canto.
+
+### D-013 · Sala de espera e largada
+- **Pergunta:** Como funciona a espera antes de começar e quem dá a largada?
+- **Opções:** Sala no mundo, alavanca · Sala no mundo, botão na tela · Tela de sala
+- **Resposta literal:** "Sala no mundo, alavanca (Recomendado)"
+- **Significa:** quem entra já aparece no spawn e pode andar. Os portões-máquina ficam parados e apagados. O host puxa uma alavanca-máquina no spawn com E, e os portões acordam.
+
+### D-014 · Reconexão depois da largada
+- **Pergunta:** Se um jogador cai da conexão depois da largada, ele pode voltar?
+- **Opções:** Pode voltar · Não pode
+- **Resposta literal:** "Pode voltar (Recomendado)"
+- **Significa:** quem já estava na partida entra de novo pelo IP e volta no spawn. Alguém novo continua barrado.
+
+---
+
 ## Perguntas pendentes (feitas na fase em que travarem)
 
 | Id | Pergunta | Fase |
