@@ -17,7 +17,7 @@ Dependências: `Core` ← `Runtime` ← `Debug` / `Editor`. O `Core` não conhec
 ## Namespaces
 
 - `Game.Core.*` no Core e `Game.<Sistema>` no Runtime (ex.: `Game.Player`).
-- O assembly `Game.Debug` usa o namespace **`Game.DevTools`** e o `Game.Editor` usa **`Game.EditorTools`**. Um namespace `Game.Debug` esconderia `UnityEngine.Debug`, e `Game.Editor` esconderia `UnityEditor.Editor`, dentro de qualquer código em `Game.*`.
+- O assembly `Game.Debug` usa o namespace **`Game.DevTools`**, o `Game.Editor` usa **`Game.EditorTools`** e a pasta `Camera/` usa **`Game.Cameras`**. Os nomes `Game.Debug`, `Game.Editor` e `Game.Camera` esconderiam `UnityEngine.Debug`, `UnityEditor.Editor` e `UnityEngine.Camera` dentro de qualquer código em `Game.*`.
 
 ## Rede
 
@@ -46,3 +46,23 @@ Dependências: `Core` ← `Runtime` ← `Debug` / `Editor`. O `Core` não conhec
 | Debug | ToggleOverlay, ForceNextDice, GiveCard, SpawnEnemy, DamageSelf, HealSelf, ToggleAuraPalette | F1–F7 |
 
 O mapa `Debug` só é lido pelo assembly `Game.Debug`, que não existe em build de jogo. As teclas do cinto de consumíveis e os demais atalhos são perguntas de design pendentes (P-002).
+
+## Arte e Blender
+
+- Os modelos placeholder são gerados por script: `Tools/Blender/build_props.py`.
+  ```
+  "E:/Program Files/Blender/blender.exe" --background --factory-startup --python Tools/Blender/build_props.py
+  ```
+- Saídas: `Art/Blender/*.blend` (fonte editável, fora de `Assets/`) e `Assets/_Game/Art/Models/*.fbx` (o que a Unity usa). Por isso só quem edita modelos precisa do Blender.
+- Os materiais do Blender têm os mesmos nomes dos materiais em `Assets/_Game/Art/Materials`, e a importação remapeia pelo nome.
+- Os modelos são simétricos de frente e de trás, e a rotação e a escala ficam embutidas na malha.
+
+## Ferramentas de editor
+
+| Menu | O que faz | Batchmode |
+|---|---|---|
+| Game → Setup → Criar cena Arena | Cria a cena e registra no Build Settings | `Game.EditorTools.ArenaSceneSetup.CreateArenaScene` |
+| Game → Setup → Construir Arena | Reconstrói arena, prefab do jogador, materiais e settings | `Game.EditorTools.ArenaBuilder.Build` |
+| Game → Debug → Capturar vistas da Arena | Salva PNGs pela câmera do jogo (`-snapshotDir <pasta>`) | `Game.EditorTools.SceneSnapshot.CaptureArena` |
+
+A arena é gerada pelo `ArenaBuilder`. Mudanças feitas à mão na cena se perdem ao rodar o construtor de novo.

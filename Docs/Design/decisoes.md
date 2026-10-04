@@ -34,6 +34,34 @@ Registro das perguntas de design feitas ao Thiago durante o protótipo. A respos
 
 ---
 
+## Fase 2 · 2026-10-03
+
+### D-005 · Para onde o personagem fica virado
+- **Pergunta:** Para onde o personagem fica virado enquanto anda?
+- **Opções:** Sempre para o mouse · Para o movimento · Movimento, mira ao atacar
+- **Resposta literal:** "Sempre para o mouse (Recomendado)"
+- **Significa:** o corpo gira sempre para o cursor, e dá para andar de costas ou de lado.
+
+### D-006 · Referência do WASD
+- **Pergunta:** O W anda para onde?
+- **Opções:** Relativo à tela · Relativo ao mundo
+- **Resposta literal:** "Relativo à tela (Recomendado)"
+- **Significa:** W sobe na tela e D vai para a direita da tela, seja qual for o giro da câmera.
+
+### D-007 · Resposta do movimento
+- **Pergunta:** Como o movimento responde ao teclado?
+- **Opções:** Quase instantâneo · Com inércia leve · Totalmente instantâneo
+- **Resposta literal:** "Quase instantâneo (Recomendado)"
+- **Significa:** o personagem arranca e para quase na hora, com aceleração curta. Os valores ficam em `MovementSettings`.
+
+### D-008 · Organização da arena
+- **Pergunta:** Como as áreas da arena se organizam?
+- **Opções:** Anel em volta do centro · Corredor em sequência · Pátio com zonas nos cantos
+- **Resposta literal:** "Anel em volta do centro (Recomendado)"
+- **Significa:** uma plataforma circular de combate no centro, com a entrada dos jogadores de um lado, três portões-máquina de inimigos na borda e uma alcova lateral para testar cartas.
+
+---
+
 ## Perguntas pendentes (feitas na fase em que travarem)
 
 | Id | Pergunta | Fase |

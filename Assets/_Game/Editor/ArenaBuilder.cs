@@ -1,0 +1,440 @@
+using System.IO;
+using Game.Arena;
+using Game.Cameras;
+using Game.Player;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.Rendering;
+
+namespace Game.EditorTools
+{
+    /// <summary>
+    /// Constrói a arena de protótipo (D-008: anel em volta do centro) com os modelos do Blender
+    /// (Tools/Blender/build_props.py) e primitivas para pisos e paredes.
+    /// Tudo mostra a fusão: cobre com cristal embutido, engrenagem com núcleo arcano, poste com luz arcana.
+    /// Rodar de novo reconstrói a arena do zero. Batchmode: -executeMethod Game.EditorTools.ArenaBuilder.Build
+    /// </summary>
+    public static class ArenaBuilder
+    {
+        private const string MaterialsFolder = "Assets/_Game/Art/Materials";
+        private const string ModelsFolder = "Assets/_Game/Art/Models";
+        private const string DataFolder = "Assets/_Game/Data";
+        private const string PlayerPrefabPath = "Assets/_Game/Player/Player.prefab";
+        private const string InputActionsPath = "Assets/_Game/Player/Input/GameControls.inputactions";
+        private const string RootName = "Arena";
+
+        // Layout em metros e graus a partir de +Z. É geometria de placeholder, não balanceamento.
+        private const float PlatformRadius = 12f;
+        private const float WallRadius = 26f;
+        private const float GateRadius = 22f;
+        private const float EnemySpawnRadius = 18.5f;
+        private static readonly float[] GateAngles = { -45f, 0f, 45f };
+        private const float PlayerSpawnAngle = 180f;
+        private const float PlayerSpawnRadius = 18f;
+        private const float CardAlcoveAngle = -115f;
+        private const float CardAlcoveRadius = 19f;
+
+        // Nomes iguais aos materiais do Blender, para o remapeamento na importação.
+        private static readonly string[] SharedMaterialNames = { "Cobre", "Latao", "FerroEscuro", "CristalArcano", "PersonagemNeutro" };
+
+        private static Material copper, brass, darkIron, floorStone, crystal, crystalDim, playerBody;
+
+        [MenuItem("Game/Setup/Construir Arena")]
+        public static void Build()
+        {
+            ArenaSceneSetup.CreateArenaScene();
+
+            CreateMaterials();
+            ConfigureModelImports();
+            var movement = LoadOrCreate<MovementSettings>($"{DataFolder}/Player/MovementSettings.asset");
+            var cameraSettings = LoadOrCreate<CameraSettings>($"{DataFolder}/Camera/CameraSettings.asset");
+            var playerPrefab = CreatePlayerPrefab(movement);
+
+            var scene = EditorSceneManager.OpenScene(ArenaSceneSetup.ArenaScenePath, OpenSceneMode.Single);
+            foreach (var root in scene.GetRootGameObjects())
+            {
+                if (root.name == RootName || root.name == "Player")
+                    Object.DestroyImmediate(root);
+            }
+
+            var arena = new GameObject(RootName).transform;
+            BuildFloor(arena);
+            BuildBoundary(arena);
+            BuildPlayerSpawn(arena);
+            for (int i = 0; i < GateAngles.Length; i++)
+                BuildEnemyGate(arena, GateAngles[i], i);
+            BuildCardAlcove(arena);
+            BuildLampPosts(arena);
+            BuildBoilers(arena);
+            SetupLighting();
+
+            var player = (GameObject)PrefabUtility.InstantiatePrefab(playerPrefab, scene);
+            player.transform.position = Polar(PlayerSpawnAngle, PlayerSpawnRadius);
+            player.transform.rotation = Quaternion.LookRotation(-player.transform.position.normalized);
+
+            SetupCamera(cameraSettings, player.transform);
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            AssetDatabase.SaveAssets();
+            Debug.Log("Arena construída.");
+        }
+
+        // ---------- Áreas ----------
+
+        private static void BuildFloor(Transform parent)
+        {
+            var group = Group("Chao", parent);
+            Box("Piso", group, new Vector3(0f, -0.1f, 0f), new Vector3(WallRadius * 2.4f, 0.2f, WallRadius * 2.4f), floorStone);
+
+            var center = Group("CentroCombate", group);
+            Marker(center, ArenaMarkerKind.CombatCenter, PlatformRadius);
+            // Anel arcano embutido na borda de metal da plataforma.
+            Disc("AnelArcano", center, new Vector3(0f, 0.01f, 0f), PlatformRadius + 0.35f, 0.04f, crystalDim);
+            Disc("Plataforma", center, new Vector3(0f, 0.03f, 0f), PlatformRadius, 0.06f, darkIron);
+            Disc("NucleoArcano", center, new Vector3(0f, 0.065f, 0f), 1.4f, 0.02f, crystal);
+            // Trilhos de cobre que levam a energia do núcleo até cada portão.
+            foreach (float angle in GateAngles)
+            {
+                var rail = Box("TrilhoCobre", center, Polar(angle, PlatformRadius * 0.55f) + Vector3.up * 0.07f,
+                    new Vector3(0.25f, 0.02f, PlatformRadius * 0.9f), copper, collider: false);
+                rail.transform.rotation = Quaternion.Euler(0f, angle, 0f);
+            }
+        }
+
+        private static void BuildBoundary(Transform parent)
+        {
+            var group = Group("Limite", parent);
+            const int segments = 28;
+            float segmentLength = 2f * Mathf.PI * WallRadius / segments + 0.3f;
+            float pieceScale = segmentLength / 6f; // 3 peças de 2 m por segmento
+
+            for (int i = 0; i < segments; i++)
+            {
+                float angle = i * 360f / segments;
+                var seg = Group($"Segmento{i:00}", group);
+                seg.position = Polar(angle, WallRadius);
+                seg.rotation = Quaternion.Euler(0f, angle, 0f); // +Z local aponta para fora
+
+                Box("Parede", seg, new Vector3(0f, 1.5f, 0.6f), new Vector3(segmentLength, 3f, 0.6f), darkIron);
+                for (int p = -1; p <= 1; p++)
+                {
+                    // O cristal fica dentro do cano, não ao lado dele (Pilar 4).
+                    string model = p == 0 && i % 2 == 0 ? "CanoCristal" : "Cano";
+                    Model(model, seg, new Vector3(p * segmentLength / 3f, 1f, 0f), Quaternion.identity,
+                        new Vector3(pieceScale, 1f, 1f));
+                }
+            }
+        }
+
+        private static void BuildPlayerSpawn(Transform parent)
+        {
+            var spawn = Group("SpawnJogadores", parent);
+            spawn.position = Polar(PlayerSpawnAngle, PlayerSpawnRadius);
+            Marker(spawn, ArenaMarkerKind.PlayerSpawn, 3f);
+            Disc("PlataformaLatao", spawn, new Vector3(0f, 0.02f, 0f), 3f, 0.04f, brass);
+            Disc("RunaCentral", spawn, new Vector3(0f, 0.045f, 0f), 0.8f, 0.01f, crystalDim);
+        }
+
+        private static void BuildEnemyGate(Transform parent, float angle, int index)
+        {
+            var gate = Group($"PortaoMaquina{index + 1}", parent);
+            gate.position = Polar(angle, GateRadius);
+            gate.rotation = Quaternion.LookRotation(-gate.position.normalized); // +Z local aponta para o centro
+
+            Model("PortaoMaquina", gate, Vector3.zero, Quaternion.identity, Vector3.one);
+            AddBoxCollider(gate, new Vector3(0f, 2.2f, 0f), new Vector3(5.6f, 4.4f, 1.6f));
+
+            // Engrenagem com núcleo de cristal: a mesma peça move e canaliza.
+            var gear = Model("Engrenagem", gate, new Vector3(0f, 2f, 0.92f), Quaternion.Euler(90f, 0f, 0f), Vector3.one, isStatic: false);
+            // Um portão engasga: a instalação funciona só em parte.
+            gear.AddComponent<Spinner>().Configure(Vector3.up, 40f, index == 1 ? 0.45f : 0f);
+
+            var spawn = Group("SpawnInimigo", parent);
+            spawn.position = Polar(angle, EnemySpawnRadius);
+            Marker(spawn, ArenaMarkerKind.EnemySpawn, 1.5f);
+        }
+
+        private static void BuildCardAlcove(Transform parent)
+        {
+            var alcove = Group("AlcovaCartas", parent);
+            alcove.position = Polar(CardAlcoveAngle, CardAlcoveRadius);
+            alcove.rotation = Quaternion.LookRotation(-alcove.position.normalized); // +Z local aponta para o centro
+            Marker(alcove, ArenaMarkerKind.CardTestArea, 4f);
+
+            Disc("Piso", alcove, new Vector3(0f, 0.02f, 0f), 4f, 0.04f, darkIron);
+            Disc("CirculoArcano", alcove, new Vector3(0f, 0.045f, 0f), 3.2f, 0.01f, crystalDim);
+
+            // Mesa de leitura no fundo da alcova: maquinário de latão com lente de cristal e engrenagem.
+            var table = Group("MesaLeitura", alcove);
+            table.localPosition = new Vector3(0f, 0f, -2.8f);
+            Box("Base", table, new Vector3(0f, 0.5f, 0f), new Vector3(2f, 1f, 0.9f), brass);
+            Cylinder("Lente", table, new Vector3(-0.35f, 1.04f, 0f), new Vector3(0.7f, 0.04f, 0.7f), crystal, collider: false);
+            var gear = Model("Engrenagem", table, new Vector3(0.55f, 1.06f, 0f), Quaternion.identity, Vector3.one * 0.3f, isStatic: false);
+            gear.AddComponent<Spinner>().Configure(Vector3.up, 25f, 0f);
+        }
+
+        private static void BuildLampPosts(Transform parent)
+        {
+            var group = Group("PostesArcanos", parent);
+            for (int i = 0; i < 6; i++)
+            {
+                float angle = 30f + i * 60f;
+                var post = Group($"Poste{i + 1}", group);
+                post.position = Polar(angle, PlatformRadius + 3.5f);
+
+                Model("PosteArcano", post, Vector3.zero, Quaternion.identity, Vector3.one);
+                AddCapsuleCollider(post, 0.35f, 3.6f);
+
+                var lightGo = new GameObject("LuzArcana");
+                lightGo.transform.SetParent(post, false);
+                lightGo.transform.localPosition = new Vector3(0f, 3.3f, 0f);
+                var lamp = lightGo.AddComponent<Light>();
+                lamp.type = LightType.Point;
+                lamp.color = new Color(0.35f, 0.9f, 1f);
+                lamp.range = 9f;
+                lamp.intensity = 6f;
+                if (i == 4)
+                    lightGo.AddComponent<LightFlicker>();
+            }
+        }
+
+        private static void BuildBoilers(Transform parent)
+        {
+            var group = Group("Caldeiras", parent);
+            foreach (float angle in new[] { 120f, -150f })
+            {
+                var boiler = Group("Caldeira", group);
+                boiler.position = Polar(angle, WallRadius - 3f);
+                Model("Caldeira", boiler, Vector3.zero, Quaternion.identity, Vector3.one);
+                AddCapsuleCollider(boiler, 1.3f, 5f);
+            }
+        }
+
+        private static void SetupLighting()
+        {
+            foreach (var l in Object.FindObjectsByType<Light>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (l.type != LightType.Directional)
+                    continue;
+                l.color = new Color(1f, 0.86f, 0.7f);
+                l.intensity = 0.8f;
+                l.transform.rotation = Quaternion.Euler(55f, -40f, 0f);
+                break;
+            }
+
+            RenderSettings.ambientMode = AmbientMode.Flat;
+            RenderSettings.ambientLight = new Color(0.22f, 0.22f, 0.26f);
+        }
+
+        private static void SetupCamera(CameraSettings settings, Transform target)
+        {
+            var cam = Camera.main;
+            if (cam == null)
+            {
+                var go = new GameObject("Main Camera") { tag = "MainCamera" };
+                cam = go.AddComponent<Camera>();
+            }
+
+            var follow = cam.GetComponent<CameraFollow>();
+            if (follow == null)
+                follow = cam.gameObject.AddComponent<CameraFollow>();
+            follow.Settings = settings;
+            follow.Target = target;
+            follow.Apply(target.position);
+            EditorUtility.SetDirty(follow);
+        }
+
+        // ---------- Player ----------
+
+        private static GameObject CreatePlayerPrefab(MovementSettings movement)
+        {
+            var root = new GameObject("Player");
+            var controller = root.AddComponent<CharacterController>();
+            controller.height = 2f;
+            controller.radius = 0.4f;
+            controller.center = new Vector3(0f, 1f, 0f);
+
+            var motor = root.AddComponent<PlayerMotor>();
+            motor.Settings = movement;
+
+            var reader = root.AddComponent<PlayerInputReader>();
+            var so = new SerializedObject(reader);
+            so.FindProperty("actions").objectReferenceValue = AssetDatabase.LoadAssetAtPath<InputActionAsset>(InputActionsPath);
+            so.ApplyModifiedPropertiesWithoutUndo();
+
+            var body = Model("Manequim", root.transform, Vector3.zero, Quaternion.identity, Vector3.one, isStatic: false);
+            body.name = "Corpo";
+
+            // Placa de latão no peito: mostra para onde o personagem olha (D-005).
+            Box("Frente", root.transform, new Vector3(0f, 1.42f, 0.2f), new Vector3(0.3f, 0.12f, 0.08f), brass, collider: false, isStatic: false);
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(root, PlayerPrefabPath);
+            Object.DestroyImmediate(root);
+            return prefab;
+        }
+
+        // ---------- Materiais, modelos e dados ----------
+
+        private static void CreateMaterials()
+        {
+            copper = Mat("Cobre", new Color(0.72f, 0.42f, 0.25f), 0.9f, 0.55f);
+            brass = Mat("Latao", new Color(0.78f, 0.62f, 0.3f), 0.9f, 0.5f);
+            darkIron = Mat("FerroEscuro", new Color(0.18f, 0.18f, 0.2f), 0.7f, 0.35f);
+            floorStone = Mat("PisoPedra", new Color(0.28f, 0.27f, 0.26f), 0f, 0.2f);
+            crystal = Mat("CristalArcano", new Color(0.3f, 0.9f, 0.95f), 0f, 0.9f, new Color(0.2f, 1.4f, 1.6f));
+            crystalDim = Mat("CristalArcanoFraco", new Color(0.15f, 0.45f, 0.5f), 0f, 0.8f, new Color(0.05f, 0.45f, 0.55f));
+            playerBody = Mat("PersonagemNeutro", new Color(0.55f, 0.56f, 0.6f), 0.1f, 0.4f);
+            AssetDatabase.SaveAssets();
+        }
+
+        private static Material Mat(string name, Color baseColor, float metallic, float smoothness, Color? emission = null)
+        {
+            EnsureFolder(MaterialsFolder);
+            string path = $"{MaterialsFolder}/{name}.mat";
+            var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (mat == null)
+            {
+                mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                AssetDatabase.CreateAsset(mat, path);
+            }
+
+            mat.SetColor("_BaseColor", baseColor);
+            mat.SetFloat("_Metallic", metallic);
+            mat.SetFloat("_Smoothness", smoothness);
+            if (emission.HasValue)
+            {
+                mat.EnableKeyword("_EMISSION");
+                mat.SetColor("_EmissionColor", emission.Value);
+                mat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+            }
+
+            EditorUtility.SetDirty(mat);
+            return mat;
+        }
+
+        /// <summary>Importa os FBX do Blender sem animação, câmera ou luz e usa os materiais do projeto.</summary>
+        private static void ConfigureModelImports()
+        {
+            foreach (string guid in AssetDatabase.FindAssets("t:Model", new[] { ModelsFolder }))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (AssetImporter.GetAtPath(path) is not ModelImporter importer)
+                    continue;
+
+                importer.importAnimation = false;
+                importer.animationType = ModelImporterAnimationType.None;
+                importer.importCameras = false;
+                importer.importLights = false;
+                importer.useFileScale = true;
+                importer.globalScale = 1f;
+                importer.materialImportMode = ModelImporterMaterialImportMode.ImportViaMaterialDescription;
+                foreach (string name in SharedMaterialNames)
+                {
+                    var mat = AssetDatabase.LoadAssetAtPath<Material>($"{MaterialsFolder}/{name}.mat");
+                    importer.AddRemap(new AssetImporter.SourceAssetIdentifier(typeof(Material), name), mat);
+                }
+                importer.SaveAndReimport();
+            }
+        }
+
+        private static T LoadOrCreate<T>(string path) where T : ScriptableObject
+        {
+            var asset = AssetDatabase.LoadAssetAtPath<T>(path);
+            if (asset != null)
+                return asset;
+
+            EnsureFolder(Path.GetDirectoryName(path)!.Replace('\\', '/'));
+            asset = ScriptableObject.CreateInstance<T>();
+            AssetDatabase.CreateAsset(asset, path);
+            return asset;
+        }
+
+        private static void EnsureFolder(string folder)
+        {
+            if (AssetDatabase.IsValidFolder(folder))
+                return;
+            string parent = Path.GetDirectoryName(folder)!.Replace('\\', '/');
+            EnsureFolder(parent);
+            AssetDatabase.CreateFolder(parent, Path.GetFileName(folder));
+        }
+
+        // ---------- Construção ----------
+
+        private static Vector3 Polar(float angleDegrees, float radius)
+        {
+            float a = angleDegrees * Mathf.Deg2Rad;
+            return new Vector3(Mathf.Sin(a) * radius, 0f, Mathf.Cos(a) * radius);
+        }
+
+        private static Transform Group(string name, Transform parent)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            return go.transform;
+        }
+
+        private static void Marker(Transform t, ArenaMarkerKind kind, float radius)
+        {
+            t.gameObject.AddComponent<ArenaMarker>().Configure(kind, radius);
+        }
+
+        private static GameObject Model(string name, Transform parent, Vector3 localPos, Quaternion localRot, Vector3 scale, bool isStatic = true)
+        {
+            var asset = AssetDatabase.LoadAssetAtPath<GameObject>($"{ModelsFolder}/{name}.fbx");
+            if (asset == null)
+                throw new FileNotFoundException($"Modelo {name}.fbx não encontrado. Rode Tools/Blender/build_props.py.");
+
+            var go = (GameObject)PrefabUtility.InstantiatePrefab(asset, parent);
+            go.transform.localPosition = localPos;
+            go.transform.localRotation = localRot;
+            go.transform.localScale = scale;
+            foreach (var t in go.GetComponentsInChildren<Transform>(true))
+                t.gameObject.isStatic = isStatic;
+            return go;
+        }
+
+        private static void AddBoxCollider(Transform t, Vector3 center, Vector3 size)
+        {
+            var col = t.gameObject.AddComponent<BoxCollider>();
+            col.center = center;
+            col.size = size;
+        }
+
+        private static void AddCapsuleCollider(Transform t, float radius, float height)
+        {
+            var col = t.gameObject.AddComponent<CapsuleCollider>();
+            col.radius = radius;
+            col.height = height;
+            col.center = new Vector3(0f, height * 0.5f, 0f);
+        }
+
+        private static GameObject Box(string name, Transform parent, Vector3 localPos, Vector3 scale, Material mat,
+            bool collider = true, bool isStatic = true)
+            => Primitive(PrimitiveType.Cube, name, parent, localPos, scale, mat, collider, isStatic);
+
+        private static GameObject Cylinder(string name, Transform parent, Vector3 localPos, Vector3 scale, Material mat, bool collider = true)
+            => Primitive(PrimitiveType.Cylinder, name, parent, localPos, scale, mat, collider, true);
+
+        /// <summary>Disco plano no chão (sem collider: o piso já segura o personagem).</summary>
+        private static GameObject Disc(string name, Transform parent, Vector3 localPos, float radius, float thickness, Material mat)
+            => Primitive(PrimitiveType.Cylinder, name, parent, localPos, new Vector3(radius * 2f, thickness * 0.5f, radius * 2f), mat, false, true);
+
+        private static GameObject Primitive(PrimitiveType type, string name, Transform parent, Vector3 localPos, Vector3 scale,
+            Material mat, bool collider, bool isStatic)
+        {
+            var go = GameObject.CreatePrimitive(type);
+            go.name = name;
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = localPos;
+            go.transform.localScale = scale;
+            go.GetComponent<Renderer>().sharedMaterial = mat;
+            if (!collider)
+                Object.DestroyImmediate(go.GetComponent<Collider>());
+            go.isStatic = isStatic;
+            return go;
+        }
+    }
+}
