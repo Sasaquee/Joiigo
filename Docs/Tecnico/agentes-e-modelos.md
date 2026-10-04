@@ -85,7 +85,7 @@ Fora da equipe (não servem ao projeto ou não têm endpoint gratuito): modelos 
 O harness tem um tool `workflow` que aceita `provider` e `model` por agente e por fase (informação dada pelo próprio harness). A equipe da §1 fica assim:
 
 ```js
-// Por agente: um subagente por papel
+// Por agente: um subagente por papel — no máximo 2 rodando ao mesmo tempo (§4.2)
 await agent(promptArtista,     { provider: 'nvidia', model: 'moonshotai/kimi-k3' })            // arte: só kimi-k3 (D-043)
 await agent(promptProgramador, { provider: 'nvidia', model: 'z-ai/glm-5.3' })
 await agent(promptTestador,    { provider: 'nvidia', model: 'deepseek-ai/deepseek-v4.1-flash' })
@@ -103,7 +103,28 @@ phases: [
 
 O prompt de cada papel é o texto de `.claude/agents/<papel>.md` (a parte depois do cabeçalho `---`). As perguntas ao dono, a Unity e o commit ficam com o orquestrador (o próprio agente principal do harness, em `kimi-k3`), fora das fases. Exemplos que o harness der com modelos que não estão nesta lista (ex.: `deepseek-r1`, `llama-3.3-70b`) não valem para este projeto.
 
-Os endpoints gratuitos têm limite de requisições por minuto. Se um modelo começar a recusar por limite, passe a tarefa para o reserva da tabela da §1 em vez de insistir.
+### 4.2 Limite da conta gratuita da NVIDIA (regra obrigatória)
+
+**O que é o limite** (pesquisado em 2026-10-04):
+- A conta gratuita tem cerca de **40 requisições por minuto por chave**. O limite é **compartilhado** por todos os modelos, agentes e sessões que usam a mesma `NVIDIA_API_KEY`.
+- A NVIDIA diz que o limite também **varia por modelo e pelo tráfego do momento**. Num modelo lotado, a requisição pode ficar parada sem resposta em vez de voltar erro 429.
+- No plano gratuito **não há como aumentar** o limite.
+- Cada passo de um agente (pensar → chamar ferramenta → ler o resultado) é **uma requisição**. Uma tarefa agêntica comum gasta de 30 a 60 requisições.
+
+**O que já aconteceu:** um teste disparou 11 agentes ao mesmo tempo. Dez responderam em 1 minuto, e o `deepseek-v4.1-flash` ficou sem resposta 5 minutos por tentativa, de 5 tentativas possíveis. A sessão principal ficou parada esperando.
+
+**Regras (valem para todo agente rodando pela API da NVIDIA):**
+
+1. **No máximo 3 agentes ao mesmo tempo** na mesma chave, contando o agente principal. No `workflow`, dispare os `agent()` em lotes de até 2 subagentes e espere o lote terminar antes do próximo.
+2. **Uma sessão do harness por vez** com a chave da NVIDIA. Duas janelas abertas trabalhando dividem os mesmos 40 por minuto.
+3. **Teto de 30 requisições por minuto** (25% de folga). Prefira passos que façam mais de uma coisa (ler vários arquivos numa chamada, comandos agrupados) a muitos passos pequenos.
+4. **Nunca testar todos os modelos em paralelo.** Os 11 IDs já foram conferidos na API em 2026-10-04. Se precisar testar de novo, faça um modelo por vez, uma vez só.
+5. **Desistir cedo de modelo travado.** Sem nenhuma resposta em **2 minutos**, ou com **2 erros seguidos** (429, timeout, servidor): cancele, aguarde 60 s e passe a tarefa ao **reserva** da tabela da §1. Não espere as 5 tentativas de 5 minutos do harness.
+6. **Erro 429:** pare tudo por **60 s** (a janela é por minuto) antes de qualquer nova chamada. Não insista em loop.
+7. **Esperar job em segundo plano:** use espera curta (até 2 min por consulta). Se o job não andou entre duas consultas, aplique a regra 5.
+8. A arte (D-043) não tem reserva: se o `kimi-k3` travar, a tarefa de arte espera e o resto da fase continua.
+
+Esses limites não valem para o Claude Code (outro provedor, com limites próprios da conta).
 
 ## 5. Claude Code
 

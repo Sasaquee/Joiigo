@@ -30,6 +30,7 @@ Detalhes em `Docs/Tecnico/agentes-e-modelos.md`. Resumo:
 - **Artista** (Claude: só Opus, vários em paralelo se quiser — D-042 · NVIDIA: só `kimi-k3` — D-043): modelagem e arte. Só modelo competente para isso; sem ele, a arte espera.
 - **Programador / Testador / Revisor / Documentador** (Claude: Sonnet · NVIDIA: `glm-5.3`, `deepseek-v4.1-flash`): código mecânico, testes, revisão e docs. A revisão sai de um modelo diferente do que escreveu.
 - Prompts dos papéis em `.claude/agents/*.md` (servem para qualquer harness).
+- **API gratuita da NVIDIA (~40 requisições/min por chave, compartilhadas):** no máximo **3 agentes ao mesmo tempo** (subagentes em lotes de 2), uma sessão do harness por vez, nunca testar todos os modelos em paralelo. Modelo sem resposta em 2 min ou com 2 erros seguidos → cancele, espere 60 s e use o reserva. Regras completas em `Docs/Tecnico/agentes-e-modelos.md` §4.2.
 - Só uma Unity abre o projeto por vez, então compilar e testar é serial. Só um harness trabalha no repositório por vez; ao parar no meio, deixe `Docs/Tecnico/<tarefa>-pendente.md` (passagem de bastão).
 
 ## Armadilhas já conhecidas
