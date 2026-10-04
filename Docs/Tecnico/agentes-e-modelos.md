@@ -70,6 +70,7 @@ A API da NVIDIA é compatível com OpenAI:
 | Item | Valor | Por quê |
 |---|---|---|
 | Modelo padrão | `z-ai/glm-5.3`, raciocínio `medium` | Seria o `kimi-k3`, mas ele estava instável em 2026-10-04 (ver §4.4); em `high` o GLM levava 10–25 min por passo |
+| Permissão | **acesso total** na interface do app | O modo seguro marca a pasta com integridade baixa e quebra build/testes depois (§4.4) |
 | `input` de cada modelo | `[text, image]` em `kimi-k3`, `deepseek-v4.1-flash`, `glm-5.3-flash`, `muse-glimmer-30b`; `[text]` nos outros | Sem isso o harness recusa imagem ao modelo |
 | `streamIdleTimeoutMs` (provedor `nvidia`) | 120000 (padrão 300000) | Desistir de modelo mudo em 2 min |
 | `retryPolicy` | `normal`, 2 tentativas, espera de 15 s a 60 s | Padrão era 5 tentativas; com 5 min cada, um modelo travado prendia a sessão por 30 min |
@@ -154,32 +155,38 @@ Antes de instalar qualquer plugin: ler o código, procurar rede/`child_process`/
 
 ### 4.4 Teste de capacidade (2026-10-04)
 
-Um mini projeto com as mesmas regras do Joiigo foi rodado pelo harness em modo seguro (`workspace-write`), com subagentes. O projeto fica em `Documents/Codes/dsh-teste-capacidade`: D20 em C# com NUnit, dado modelado no Blender, um bug plantado e uma pergunta de design em aberto.
+O teste foi feito em três partes, sempre com o harness em **acesso total** (`danger-full-access`):
+1. **Mini projeto** com as mesmas regras do Joiigo (`Documents/Codes/dsh-teste-d20`): D20 em C# com NUnit, dado modelado no Blender, um bug plantado e uma pergunta de design em aberto.
+2. **Unity em batchmode no próprio Joiigo**, só rodando os testes, sem alterar nada.
+3. **Arte só por texto:** o Pilão Arcano da cidade, descrito em palavras, sem imagem de referência.
 
-**Estado dos modelos na NVIDIA gratuita naquele dia** (cada um testado sozinho):
+**Resultados**
 
-| Modelo | Resultado |
+| Parte | Resultado |
 |---|---|
-| `z-ai/glm-5.3` | Funciona, mas é lento: ~21 tokens/s. Em `high`, um passo de planejamento gerou 32 mil tokens (25 min). Em alguns momentos nem o 1º passo saiu em 8 min. |
-| `moonshotai/kimi-k3` | Instável: às vezes responde "!!!!" (32 tokens de lixo) ou erro 429. Funcionou 1 vez em 3 como artista. |
-| `deepseek-ai/deepseek-v4.1-flash` | Travou (5 min sem resposta por tentativa) e não aceita `reasoningEffort: high`. |
-| `z-ai/glm-5.3-flash` | Lento demais (>150 s numa tarefa mínima). |
-| `nvidia/nemotron-3-super-120b-a12b`, `nvidia/nemotron-3.5-lightning-30b-a3b`, `meta/muse-glimmer-30b` | Rápidos (12–20 s numa tarefa mínima). O Lightning escreve código fraco: aninhamento excessivo, chave fora do lugar, e chegou a quebrar um arquivo do NuGet. |
+| Unity no Joiigo | ✅ Leu o `AGENTS.md`, respeitou as armadilhas (batchmode com `-PassThru` + `WaitForExit`), conferiu que o editor estava fechado sem matar nada e rodou os testes: **101/101 passando**, sem erro de compilação, em 9 min no total. Não alterou nenhum arquivo do projeto. |
+| Código C# | ✅ O GLM-5.3 escreveu código limpo e correto e corrigiu o bug plantado. Os testes (Nemotron 3 Super + GLM) chegaram a **20/20** depois que o orquestrador achou e mandou corrigir os erros deles. |
+| Orquestração | ✅ Leu regras e skill sozinho, respeitou o limite de agentes, cancelou e trocou modelos travados, e desfez estragos de subagentes (troca do .NET, pastas de lixo). Um revisor de outro modelo revisou o diff. |
+| Arte | ⚠️ O dado D20 ficou bom (script do Kimi K3, render corrigido pelo orquestrador). O Pilão só por texto não saiu: o Kimi K3 devolvia lixo, o Nemotron 3 Super entregou geometria quebrada e o GLM-5.3 passou 25 min pensando sem escrever. |
+| Fim da fase | ❌ Não chegou ao relatório nem ao commit em ~2 h. |
 
-**O que o harness fez bem:**
-- Leu `AGENTS.md` e `~/.dsh/AGENTS.md` e carregou a skill da equipe sozinho.
-- Seguiu as regras do projeto: achou a causa do bug, registrou a dúvida de design como pergunta pendente (com opções e recomendação) em vez de decidir, e manteve os números em arquivo de dados.
-- Respeitou o limite: no máximo 2 subagentes, consultas a cada 2 min, cancelou agente parado e trocou para um modelo que funcionava. Não passou a arte para outro modelo quando o Kimi falhou (D-043).
-- O "olho" (`muse-glimmer-30b`) reprovou corretamente um render ruim (câmera perto demais, números invisíveis).
-- O artista (`kimi-k3`) escreveu e rodou sozinho o script do Blender (icosaedro, FBX e render).
-- O orquestrador depurou com método e pegou o erro de sintaxe do programador.
+**Estado dos modelos na NVIDIA gratuita (mudou ao longo do dia):**
+- `z-ai/glm-5.3` responde, mas pensa de 15 a 25 min a cada decisão grande, mesmo em `medium`.
+- `nvidia/nemotron-3-super-120b-a12b` é rápido e bom para testes e revisão.
+- `moonshotai/kimi-k3` devolve "!!!!" na maioria das chamadas; ajustes de compatibilidade não resolveram.
+- `deepseek-ai/deepseek-v4.1-flash` e `z-ai/glm-5.3-flash` travam.
+- `moonshotai/kimi-k2.6`, `mistralai/mistral-large-2-instruct` e `nvidia/llama-3.1-nemotron-ultra-253b-v1` aparecem na lista da API, mas devolvem 404.
+- A chave `DEEPSEEK_API_KEY` que está no harness é inválida.
 
-**O que impede usar no Joiigo hoje:**
-1. **O modo seguro bloqueia ferramentas de build e teste no Windows.** O `dotnet build` só funciona com `-m:1 -nr:false -p:UseSharedCompilation=false`, e o `dotnet test` trava, porque o executor de testes conversa por rede local, que fica bloqueada. A Unity em batchmode (licença, processos auxiliares) deve esbarrar no mesmo. Liberar exige `danger-full-access`, que deixa o agente ler e mudar qualquer arquivo do PC.
-2. **Velocidade:** em 2h40 o pipeline chegou só ao código compilando, sem testes, revisão, docs nem commit.
-3. **Titulares instáveis:** os 3 modelos principais da §1 falharam no dia. A equipe que funcionou foi GLM-5.3 (orquestrador), Nemotron Lightning (programador) e Muse Glimmer (olho).
+**Falhas de julgamento observadas** (o Claude ou o dono precisam revisar):
+- Aplicou a recomendação de uma pergunta pendente "até o dono decidir", ou seja, decidiu provisoriamente. Nem o revisor pegou.
+- Passou a arte para modelos fora da regra D-043 depois que o Kimi falhou.
+- Escreveu errado o nome de um modelo (`muse-glimmer-30b` sem `meta/`) e depois atribuiu a falha a "congestionamento".
+- No modo headless, encerra o turno para "esperar notificação", o que mata os jobs. No app desktop esse problema não existe.
 
-**Conclusão:** o harness está pronto para tarefas de **texto e planejamento**, como docs, análise, revisão e scripts do Blender sem rodar a Unity. Ele **não está pronto para fases do Joiigo** que exigem compilar e testar na Unity. Vale refazer o teste quando os modelos estabilizarem e se o harness ganhar um jeito seguro de liberar só os processos de build e teste.
+**Armadilha de ambiente:** o modo seguro (`workspace-write`) marca a pasta do projeto com integridade baixa, e a marca fica. Depois disso, `dotnet test` e builds falham com "Acesso negado" mesmo em acesso total. Use sempre acesso total no Joiigo. Se a marca aparecer (`icacls <pasta>` mostra "Nível Obrigatório Baixo"), copie o projeto para uma pasta nova.
+
+**Conclusão:** o harness **consegue trabalhar no Joiigo**: lê as regras, compila e roda os testes na Unity, escreve código bom e coordena subagentes. Hoje ele é **lento** (horas para uma fase que o Claude faz em minutos) e **não é confiável para arte**. Use para tarefas bem delimitadas (testes, revisão, docs, funções de C# com contrato pronto), sempre com revisão final do Claude ou do dono antes do commit. Arte continua com o Opus até o Kimi K3 estabilizar.
 
 ## 5. Claude Code
 

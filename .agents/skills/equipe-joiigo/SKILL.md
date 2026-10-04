@@ -34,7 +34,10 @@ Só modelos com imagem (`kimi-k3`, `deepseek-v4.1-flash`, `glm-5.3-flash`, `muse
 
 - Use raciocínio `medium`: em `high`, o GLM leva de 10 a 25 min por passo na conta gratuita.
 - Se o titular e o reserva de um papel estiverem fora, use um modelo que respondeu agora (ex.: `nvidia/nemotron-3.5-lightning-30b-a3b`, `nvidia/nemotron-3-super-120b-a12b`) e revise o código dele com cuidado. A arte continua só com o `kimi-k3`.
-- No modo seguro do Windows, o `dotnet build` precisa de `-m:1 -nr:false -p:UseSharedCompilation=false`, e o `dotnet test` e a Unity em batchmode podem travar. Se travar, não insista: registre no relatório e peça ao dono para rodar.
+- **Use acesso total (`danger-full-access`) no Joiigo, nunca o modo seguro.** O modo seguro do Windows marca a pasta do projeto com integridade baixa (rótulo herdado), e essa marca fica: depois disso, tudo o que for compilado ali roda com integridade baixa e `dotnet test`/Unity falham com "Acesso negado", mesmo em acesso total. Se aparecer esse erro, confira com `icacls <pasta>` se há "Nível Obrigatório Baixo".
+- `agent()` do workflow aceita só `label`, `phase`, `schema`, `provider` e `model` (não aceita `reasoningEffort`; o subagente herda o raciocínio da configuração).
+- Rode você mesmo (sessão principal) o build, os testes e o Blender, e confira o que os subagentes entregam: eles às vezes "contornam" erro mudando o projeto (ex.: trocar a versão do .NET) ou deixam pastas de lixo.
+- Não aplique a recomendação de uma pergunta pendente "até o dono decidir": isso é decidir provisoriamente. Deixe o caso sem comportamento (erro claro) e registre.
 
 ## Ordem de uma fase
 
