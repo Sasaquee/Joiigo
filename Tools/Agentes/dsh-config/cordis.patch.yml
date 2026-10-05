@@ -1,0 +1,137 @@
+# Configuração de referência do DeepSeek harness para o Joiigo (ver Docs/Tecnico/configurar-deepseek-harness.md).
+# Não contém chaves: só os NOMES das variáveis (apiKeyEnv). As chaves ficam no app, em ~/.dsh/.credentials.yaml.
+# Aplicada por Tools/Agentes/dsh-config/aplicar.ps1, que troca só estes blocos no cordis.patch.yml do app.
+- id: llm-pi-ai
+  name: "@deepseek-ai/dsh-llm-pi-ai"
+  config:
+    providers:
+      nvidia:
+        models:
+          - id: z-ai/glm-5.3
+            name: GLM 5.3
+            input: [ text ]
+          - id: moonshotai/kimi-k3
+            name: Kimi K3
+            input: [ text, image ]
+          - id: deepseek-ai/deepseek-v4.1-flash
+            name: DeepSeek V4.1 Flash
+            input: [ text, image ]
+          - id: z-ai/glm-5.3-flash
+            name: GLM 5.3 Flash
+            input: [ text, image ]
+          - id: nvidia/nemotron-3.5-lightning-30b-a3b
+            name: Nemotron 3.5 Lightning 30B
+            input: [ text ]
+          - id: nvidia/nemotron-3-ultra-550b-a55b
+            name: Nemotron 3 Ultra 550B
+            input: [ text ]
+          - id: nvidia/nemotron-3-super-120b-a12b
+            name: Nemotron 3 Super 120B
+            input: [ text ]
+          - id: poolside/laguna-xs-2.1
+            name: Laguna XS 2.1
+            input: [ text ]
+          - id: meta/muse-glimmer-30b
+            name: Muse Glimmer 30B
+            input: [ text, image ]
+          - id: google/gemma-4-31b-it
+            name: Gemma 4 31B
+            input: [ text ]
+          - id: openai/gpt-oss-20b
+            name: GPT-OSS 20B
+            input: [ text ]
+        apiKeyEnv: NVIDIA_API_KEY
+        # Conta gratuita: ~40 req/min por chave (Joiigo, agentes-e-modelos.md §4.2).
+        # Desiste de modelo mudo em 2 min (padrão era 5) e tenta só 2 vezes (padrão 5).
+        streamIdleTimeoutMs: 120000
+        retryPolicy:
+          mode: normal
+          maxRetries: 2
+          backoff:
+            initialDelayMs: 15000
+            maxDelayMs: 60000
+            jitterRatio: 0.2
+      # Google AI Studio (plano gratuito). Chave: GEMINI_API_KEY (aistudio.google.com/apikey).
+      google:
+        apiKeyEnv: GEMINI_API_KEY
+        models:
+          - id: gemini-3.8-flash
+            name: Gemini 3.8 Flash
+            input: [text, image]
+            contextWindow: 1048576
+            maxTokens: 65536
+          - id: gemini-3.7-flash
+            name: Gemini 3.7 Flash
+            input: [text, image]
+            contextWindow: 1048576
+            maxTokens: 65536
+          - id: gemini-3.5-flash-lite
+            name: Gemini 3.5 Flash Lite
+            input: [text, image]
+            contextWindow: 1048576
+            maxTokens: 65536
+        streamIdleTimeoutMs: 120000
+        retryPolicy:
+          mode: normal
+          maxRetries: 2
+          backoff:
+            initialDelayMs: 15000
+            maxDelayMs: 60000
+            jitterRatio: 0.2
+      # OpenRouter, só modelos gratuitos (:free). Chave: OPENROUTER_API_KEY (openrouter.ai/keys).
+      # Sem créditos: 20 req/min e 50 req/dia no total; com US$10 de créditos: 1000/dia.
+      openrouter:
+        apiKeyEnv: OPENROUTER_API_KEY
+        models:
+          - id: thinkingmachines/inkling:free
+            name: Inkling (free)
+            input: [text, image]
+          - id: qwen/qwen3.8-27b:free
+            name: Qwen 3.8 27B (free)
+            input: [text, image]
+          - id: poolside/laguna-s-2.1:free
+            name: Laguna S 2.1 (free)
+            input: [text]
+          - id: cohere/north-mini-code:free
+            name: North Mini Code (free)
+            input: [text]
+          - id: openrouter/free
+            name: OpenRouter Free (roteador)
+            input: [text, image]
+          - id: deepseek/deepseek-v4-pro
+            name: DeepSeek V4 Pro (PAGO ~US$0,21/0,42 por M)
+            input: [text]
+          - id: deepseek/deepseek-v4-flash
+            name: DeepSeek V4 Flash (PAGO ~US$0,02/1,28 por M)
+            input: [text]
+          - id: moonshotai/kimi-k3
+            name: Kimi K3 (PAGO ~US$0,72/14 por M)
+            input: [text, image]
+          - id: google/gemini-3.8-flash
+            name: Gemini 3.8 Flash (PAGO ~US$0,75/3,75 por M)
+            input: [text, image]
+        streamIdleTimeoutMs: 120000
+        retryPolicy:
+          mode: normal
+          maxRetries: 2
+          backoff:
+            initialDelayMs: 15000
+            maxDelayMs: 60000
+            jitterRatio: 0.2
+- id: agent-default-model
+  name: "@deepseek-ai/dsh-agent-default-model"
+  config:
+    provider: nvidia
+    # GLM-5.3 funciona com ferramentas; o kimi-k3 da NVIDIA falha depois de usar ferramenta (ver agentes-e-modelos.md §4.4).
+    model: z-ai/glm-5.3
+    reasoningEffort: medium
+# No máximo 2 subagentes/agentes de workflow ao mesmo tempo (+ o principal = 3).
+- id: subagent
+  name: "@deepseek-ai/dsh-subagent"
+  config:
+    maxActiveSubagents: 2
+- id: workflow-ptc
+  name: "@deepseek-ai/dsh-workflow-ptc"
+  config:
+    provider: spawn
+    maxConcurrentAgents: 2

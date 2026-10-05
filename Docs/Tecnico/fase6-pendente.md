@@ -42,6 +42,12 @@ D-046 carta flutuando de pé · D-047 dado grande na tela · D-048 tabela de tr�
    - Aprovação dos números provisórios: qualidade gasta ×0,85 / boa ×1,0 / perfeita ×1,15; peso do caminho 2 (top 2 tags); emboscada 2–3 inimigos a 5 m; rolagem 2,2 s + 0,6 s até a carta.
 3. **Relatório §7** (pode delegar o rascunho ao harness, papel `documentador`, e revisar) com capturas em `Docs/Capturas/fase6/`.
 4. **Commit único que fecha a fase** (apaga este arquivo), push, e parar esperando o OK do dono.
+5. **Próxima etapa: passe de resolução** (D-053), não a Fase 7. O dono acha o jogo pixelado demais. Comece pela pergunta P-012 (`decisoes.md`), mostrando capturas lado a lado: 640x360 (hoje), 960x540, 1280x720 e a resolução da tela. Pontos que a etapa toca:
+   - `Camera/PixelCamera.cs` (`targetHeight` = 360; levar o número para um ScriptableObject) e `Editor/PixelRenderSetup.cs` (`renderScale` da prévia no editor);
+   - `Art/Shaders/PixelPost.shader` (espessura do contorno e faixas de luz, que dependem da resolução);
+   - cartas (`Tools/Cards/card_pixel.py`), verso e D20 (`UI/DiceRollUi.cs`, textura do palco em filtro Point);
+   - texturas e modelos do Blender, se ficarem pobres em mais resolução (arte = Claude Opus, D-044);
+   - `Docs/Design/arte-pixel.md` atualizado com o que o dono decidir.
 
 ## Problemas conhecidos
 

@@ -332,6 +332,12 @@ Registro das perguntas de design feitas ao dono durante o protótipo. A resposta
 - **Resposta literal:** "Decidir quando o coop voltar (Recomendado)"
 - **Significa:** por enquanto o 20 dá só o arcano maior ou a carta única; o efeito para o grupo continua pendente.
 
+## Roteiro · 2026-10-04
+
+### D-053 · Etapa de resolução
+- **Pedido do dono (literal):** "adicione uma etapa no desenvovilmento do gamer para melhorar a resolução do jogo em tudo, ta muito pixelado"
+- **Significa:** entra no roteiro um **passe de resolução** logo depois de fechar a Fase 6 e antes da Fase 7. Ele revê a nitidez de tudo: mundo 3D, personagem, inimigos, efeitos, cartas, D20 e interface. **Quanto** sobe a resolução e o que muda no estilo de D-039 ainda não foi decidido (P-012, perguntar no início da etapa com imagens de comparação).
+
 ---
 
 ## Perguntas pendentes (feitas na fase em que travarem)
@@ -348,4 +354,5 @@ Registro das perguntas de design feitas ao dono durante o protótipo. A resposta
 | ~~P-008~~ | Como a carta do chão se mostra no mundo | resolvida em D-046 |
 | P-009 | Efeito temporário do 20 no coop | quando o coop voltar |
 | P-010 | Forma e linguagem visual da aura | 7 |
+| P-012 | Passe de resolução (D-053): para quanto sobe o mundo (hoje 640x360: 960x540, 1280x720 ou resolução da tela); se o contorno, a luz em faixas e a paleta de D-039 ficam; se as cartas em pixel art (D-041) ganham versão em mais resolução | passe de resolução |
 | ~~P-011~~ | Arte com `kimi-k3` no DeepSeek harness | resolvida em D-043 |

@@ -13,7 +13,8 @@ RPG de ação 2.5D cooperativo (2 a 4 jogadores em LAN) em Unity 6. Este reposit
 | 4 | Combate (golpe em arco, dano mecânico/arcano), 3 inimigos com IA no host, ondas, morte que desmonta; ambientação semi-realista noturna (texturas CC0, fornalhas, vapor) | ✅ |
 | 5 | Cartas de tarô (14, arte dourada), loadout por tiragem (Tab), skills 1–4, cinto Q/E/R, energia, efeitos mecânico-arcanos | ✅ |
 | — | Passe visual: 3D pixelado, andarilho, cartas em pixel art, efeitos e cidade steampunk | ✅ |
-| 6 | Carta no chão e D20 | próxima |
+| 6 | Carta no chão e D20 | em andamento |
+| — | Passe de resolução: deixar o jogo menos pixelado em tudo (D-053) | depois da 6 |
 | 7–8 | Aura, ciclo completo e playtest | — |
 
 ## Abrir o projeto
@@ -39,6 +40,7 @@ Guia completo em [`Docs/Tecnico/rede-lan.md`](Docs/Tecnico/rede-lan.md). Resumo:
 | [`Docs/Tecnico/arquitetura.md`](Docs/Tecnico/arquitetura.md) | Pastas, assemblies, rede, Blender, ferramentas de editor. |
 | [`Docs/Tecnico/versoes.md`](Docs/Tecnico/versoes.md) | Versões exatas da Unity e dos pacotes. |
 | [`Docs/Tecnico/agentes-e-modelos.md`](Docs/Tecnico/agentes-e-modelos.md) | Papéis dos agentes de IA, modelos no Claude Code e no DeepSeek harness (NVIDIA) e ordem de trabalho. Regras para qualquer IA em [`AGENTS.md`](AGENTS.md). |
+| [`Docs/Tecnico/configurar-deepseek-harness.md`](Docs/Tecnico/configurar-deepseek-harness.md) | Configurar o DeepSeek harness numa máquina nova: você pega e cola as chaves, o Claude faz o resto. |
 | `Docs/Capturas/` | Capturas de cada fase. |
 
 ## Testes

@@ -54,6 +54,8 @@ O limite de uso de uma conta pode acabar no meio de uma tarefa (aconteceu no pas
 
 ## 4. Configurar o DeepSeek harness com a NVIDIA
 
+> **Máquina nova:** siga [`configurar-deepseek-harness.md`](configurar-deepseek-harness.md). Você pega e cola as chaves, o Claude aplica a configuração de referência (`Tools/Agentes/dsh-config/`) com `aplicar.ps1`.
+
 A API da NVIDIA é compatível com OpenAI:
 
 | Item | Valor |
