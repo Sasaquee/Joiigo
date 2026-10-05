@@ -266,9 +266,10 @@ def alavanca_braco():
 
 
 def anel_marcador():
-    """Anel discreto no chão sob o próprio personagem (D-010). Não usa cristal para não competir com a aura."""
+    """Anel discreto no chão sob o próprio personagem (D-010), fino e por fora do círculo da aura (D-066).
+    Não usa cristal para não competir com a aura. Raio = AuraSettings.localMarkerRadius (AuraBuilder.MarkerModelRadius)."""
     reset_scene()
-    torus("MarcadorLocal", 0.62, 0.035, (0, 0, 0.02))
+    torus("MarcadorLocal", 1.08, 0.022, (0, 0, 0.02))
     bpy.context.active_object.scale = (1, 1, 0.3)
     save_and_export("AnelMarcador")
 

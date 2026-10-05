@@ -36,6 +36,12 @@ namespace Game.Cards
         private readonly NetworkList<int> qualityNet = new NetworkList<int>();
         private readonly NetworkVariable<CooldownState> cooldownNet = new NetworkVariable<CooldownState>(default,
             NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        // Sinais da aura que só o host conhece (D-063): escudo ligado e reforço da Mola de Recuo valendo.
+        private readonly NetworkVariable<byte> auraFlagsNet = new NetworkVariable<byte>(0,
+            NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private const byte AuraFlagShield = 1;
+        private const byte AuraFlagHurtBonus = 2;
+        private PlayerShield shield;
 
         // Host
         private readonly ModifierSet modifiers = new ModifierSet();
@@ -76,6 +82,29 @@ namespace Game.Cards
         public float Energy => IsServer && energy != null ? energy.Current : energyNet.Value;
         public float EnergyMax => IsServer && energy != null ? energy.Max : energyMaxNet.Value;
         public float EnergyFraction => EnergyMax > 0f ? Mathf.Clamp01(Energy / EnergyMax) : 0f;
+
+        /// <summary>Escudo do Broquel ligado agora (todos leem; o host publica). Sinal da aura (D-063).</summary>
+        public bool ShieldActive => (auraFlagsNet.Value & AuraFlagShield) != 0;
+
+        /// <summary>Reforço da Mola de Recuo valendo agora (todos leem; o host publica). Sinal da aura (D-063).</summary>
+        public bool HurtBonusActive => (auraFlagsNet.Value & AuraFlagHurtBonus) != 0;
+
+        /// <summary>Alguma carta amaldiçoada nos espaços de skill (ela cobra vida a cada uso). Sinal da aura (D-063).</summary>
+        public bool CursedEquipped
+        {
+            get
+            {
+                if (database == null)
+                    return false;
+                for (int i = 0; i < CardRules.SkillSlots; i++)
+                {
+                    CardData data = database.Get(GetSlot(SlotType.Skill, i));
+                    if (data != null && data.cursed)
+                        return true;
+                }
+                return false;
+            }
+        }
 
         // ---------- ICardUser ----------
 
@@ -156,6 +185,7 @@ namespace Game.Cards
                 for (int i = 0; i < cooldowns.Length; i++)
                     cooldowns[i].Tick(dt);
                 PublishEnergy(false);
+                PublishAuraFlags();
             }
 
             if (changedPending)
@@ -163,6 +193,19 @@ namespace Game.Cards
                 changedPending = false;
                 Changed?.Invoke();
             }
+        }
+
+        private void PublishAuraFlags()
+        {
+            if (shield == null)
+                shield = GetComponent<PlayerShield>(); // o Broquel cria o componente no primeiro uso
+            byte flags = 0;
+            if (shield != null && shield.IsActive)
+                flags |= AuraFlagShield;
+            if (ServerHurtBonus > 0f)
+                flags |= AuraFlagHurtBonus;
+            if (auraFlagsNet.Value != flags)
+                auraFlagsNet.Value = flags;
         }
 
         // ---------- Leitura (todos) ----------

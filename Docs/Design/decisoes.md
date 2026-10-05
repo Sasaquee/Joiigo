@@ -378,6 +378,50 @@ Pedido do dono antes das perguntas: "vamos focar em melhorar a qualidade de imag
 - **Resposta literal:** "Redesenhar em alta (Recomendado)"
 - **Significa:** mesmo desenho e composição de cada carta (e do verso), refeitos com detalhe em resolução alta e bordas limpas. Arte só pelo Opus (D-044).
 
+## Fase 7 · Aura · 2026-10-05
+
+### D-060 · Forma da aura (resolve P-010)
+- **Pergunta:** A aura vai ser o único jeito de ver HP, energia e estados. Que forma ela tem em volta do andarilho?
+- **Opções:** Círculo aos pés · Chama na silhueta · Peças em órbita
+- **Resposta literal:** "Círculo aos pés (Recomendado)"
+- **Significa:** um círculo de latão com runas em cristal no chão, com luz subindo em volta do corpo.
+
+### D-061 · HP na aura
+- **Pergunta:** Como a aura mostra o HP, sem número nem barra?
+- **Opções:** Força e tamanho · Cor · Arco que se fecha
+- **Resposta literal:** "Força e tamanho (Recomendado)"
+- **Significa:** HP cheio deixa a aura forte e larga; com pouco HP ela encolhe e apaga, e perto do zero falha como lâmpada. Não depende de cor.
+
+### D-062 · Energia na aura
+- **Pergunta:** E a energia, que paga as skills das cartas?
+- **Opções:** Faíscas na aura · Lanterna do andarilho · Anel interno
+- **Resposta literal:** "Faíscas na aura (Recomendado)"
+- **Significa:** mais energia, mais faíscas subindo e mais rápidas; com energia cheia, o cristal das runas acende inteiro.
+
+### D-063 · Estados na aura
+- **Pergunta:** Como os estados aparecem na aura? (escudo, maldição cobrando vida, caído, bônus de dano depois de levar golpe)
+- **Opções:** Cada um com um sinal · Só os fortes · Por cor
+- **Resposta literal:** "Cada um com um sinal (Recomendado)"
+- **Significa:** escudo = casca de cristal; maldição = fiapos violeta; caído = aura apagada, só brasa; bônus de dano = runas em brasa laranja. Cada sinal tem forma própria além da cor.
+
+### D-064 · Sons da aura
+- **Pergunta:** Que sons de aviso a aura faz?
+- **Opções:** Batimento + chiado · Só batimento · Cristal desafinando
+- **Resposta literal:** "Batimento + chiado (Recomendado)"
+- **Significa:** batimento grave com HP baixo, que acelera perto do zero; chiado curto de vapor quando um golpe inimigo está vindo no jogador. Baixos; somem com HP cheio.
+
+### D-065 · Paleta alternativa
+- **Pergunta:** Como fica a paleta alternativa para daltônicos (ligada por tecla de debug no protótipo)?
+- **Opções:** Azul e amarelo · Alto contraste · Três paletas
+- **Resposta literal:** "Azul e amarelo (Recomendado)"
+- **Significa:** ciano, violeta e laranja viram azul forte, amarelo e branco. A cor só reforça a forma.
+
+### D-066 · Marca do seu personagem com a aura
+- **Pergunta:** Com o círculo da aura aos pés de todos, como fica o anel branco que marca o seu personagem (D-010)?
+- **Opções:** Anel por fora · Sua aura mais forte · Tirar o anel
+- **Resposta literal:** "Anel por fora (Recomendado)"
+- **Significa:** o anel branco continua, fino, por fora do círculo da aura, só na sua tela.
+
 ---
 
 ## Perguntas pendentes (feitas na fase em que travarem)
@@ -393,6 +437,6 @@ Pedido do dono antes das perguntas: "vamos focar em melhorar a qualidade de imag
 | ~~P-007~~ | Recuperação da energia | resolvida em D-030 |
 | ~~P-008~~ | Como a carta do chão se mostra no mundo | resolvida em D-046 |
 | P-009 | Efeito temporário do 20 no coop | quando o coop voltar |
-| P-010 | Forma e linguagem visual da aura | 7 |
+| ~~P-010~~ | Forma e linguagem visual da aura | resolvida em D-060 a D-066 |
 | ~~P-012~~ | Passe de resolução (D-053): para quanto sobe o mundo (hoje 640x360: 960x540, 1280x720 ou resolução da tela); se o contorno, a luz em faixas e a paleta de D-039 ficam; se as cartas em pixel art (D-041) ganham versão em mais resolução | resolvida em D-056 a D-059 |
 | ~~P-011~~ | Arte com `kimi-k3` no DeepSeek harness | resolvida em D-043 |

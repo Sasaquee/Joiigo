@@ -394,6 +394,7 @@ namespace Game.EditorTools
 
             PlayerCombatSetup.ConfigurePlayerPrefab(root, combatSettings);
             CardAssetsBuilder.ConfigurePlayerPrefab(root, cardDb);
+            AuraBuilder.ConfigurePlayerPrefab(root, marker.transform); // aura (Fase 7) e anel local por fora dela (D-066)
 
             var prefab = PrefabUtility.SaveAsPrefabAsset(root, PlayerPrefabPath);
             Object.DestroyImmediate(root);

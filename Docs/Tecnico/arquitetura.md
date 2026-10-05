@@ -14,6 +14,19 @@
 
 O render do jogo usa `PixelCamera` e `PixelPost`, com configurações em `ImageQualitySettings` (D-056 a D-059). Esse ScriptableObject define `worldHeight` (0 = resolução da tela), `msaa` (4), `lightBands` (24), `bandSoftness` (0,25), `dither` (0) e `outlinePixelsAt1080` (2). O `PixelRenderSetup` copia faixas, rampa e pontilhado para o material `PixelPost.mat` e o MSAA para o asset do URP; o `PixelCamera` passa a espessura do contorno ao shader (`_OutlineWidth`, global). O mundo é renderizado na resolução da tela por padrão, com o snap de pixel aplicado somente quando `worldHeight` reduz a contagem de linhas.
 
+A aura (Fase 7, D-060 a D-066) segue a mesma divisão:
+- **Core:** `Core/Aura/AuraMapper` transforma HP, energia e sinais (`AuraInput`) nos parâmetros visuais (`AuraState`): raio, força, falha, faíscas, runas cheias, sinais, batimento e as cores da paleta normal ou alternativa.
+- **Jogo:** `Aura/PlayerAura`, no jogador, junta a entrada do que já vem pela rede:
+  - vida (`NetworkHealth`);
+  - energia, carta amaldiçoada equipada e, publicados pelo host, os sinais de escudo e de reforço da Mola (`PlayerCards`);
+  - estado de caído (`PlayerLife`).
+  
+  O `PlayerAura` suaviza esses valores e entrega o `AuraState` ao `AuraVisual` (círculo de latão, runas, luz, faíscas, fiapos, brasas e casca do escudo) e ao `AuraAudio` (batimento e chiado, só no seu personagem, sintetizados em código).
+- **Números:** `Data/Aura/AuraSettings.asset`.
+- **Texturas:** geradas por `Tools/Aura/aura_art.py`, ficam em `Art/Aura/`.
+- **Montagem:** o `AuraBuilder` liga tudo ao prefab do jogador.
+- **Paleta para daltônicos:** F8 (`Debug/DevAuraTools`).
+
 Dependências: `Core` ← `Runtime` ← `Debug` / `Editor`. O `Core` não conhece ninguém.
 
 ## Namespaces

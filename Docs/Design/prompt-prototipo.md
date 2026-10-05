@@ -71,7 +71,7 @@ Ao fim de cada fase: compila sem erros, testes passam, commit e relatório (§7)
 - **Fase 5** · Cartas e loadout: dados das cartas, efeitos, loadout e uso das skills.
 - **Fase 6** · Carta no chão e D20: rolagem no host, animação visível para todos, tabela, críticos 1 e 20. ✅
 - **Passe de resolução** (D-053, pedido do dono) ✅ · Melhorar a resolução do jogo em tudo (mundo, personagem, inimigos, efeitos, cartas, D20, interface), que está pixelado demais. Começa perguntando P-012 com imagens de comparação; números de resolução em ScriptableObject.
-- **Fase 7** · Aura: mapeamento, visual, sons, paleta alternativa; remover qualquer número da tela no jogo normal.
+- **Fase 7** · Aura: mapeamento, visual, sons, paleta alternativa; remover qualquer número da tela no jogo normal. ✅
 - **Fase 8** · Ciclo completo e playtest: debug finalizado, fluxo arena → combate → carta → dado → equipar → usar, e `Docs/Playtest/roteiro.md`.
 
 ### 7. Relatório de cada fase

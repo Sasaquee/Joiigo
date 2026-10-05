@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 356dba38af6d43b43bb4b67c55dcb9cd, type: 3}
+  m_Name: AuraSettings
+  m_EditorClassIdentifier: Game.Runtime::Game.Aura.AuraSettings
+  minRadius: 0.55
+  minIntensity: 0.2
+  flickerBelow: 0.2
+  heartbeatBelow: 0.35
+  heartbeatSlowBpm: 60
+  heartbeatFastBpm: 140
+  sparkMinSpeed: 0.3
+  downedIntensity: 0.08
+  fullRadius: 0.9
+  localMarkerRadius: 1.08
+  lightHeight: 1.5
+  maxSparksPerSecond: 16
+  sparkRiseSpeed: 1.8
+  wispsPerSecond: 5
+  embersPerSecond: 5
+  shellRadius: 1.05
+  smoothing: 6
+  heartbeatVolume: 0.35
+  hissVolume: 0.28
+  dangerRadius: 5.5
+  dangerHalfAngle: 35
+  hissCooldown: 0.9
