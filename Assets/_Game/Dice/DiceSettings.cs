@@ -55,6 +55,39 @@ namespace Game.Dice
         [Tooltip("Distância do jogador onde os inimigos da emboscada surgem (m).")]
         [Min(1f)] public float ambushRadius = 5f;
 
+        [Header("O 1 teatral (D-068): só apresentação, a regra do 1 não muda")]
+        [Tooltip("Fração da rolagem em que o dado começa a avermelhar e a tela a escurecer (0 = desde o início; 1 = só quando para).")]
+        [Range(0f, 1f)] public float criticalTintStart = 0.45f;
+        [Tooltip("Quanto o véu escuro cobre a tela no máximo (0 a 1). O jogo continua visível por trás (D-047).")]
+        [Range(0f, 1f)] public float veilOpacity = 0.55f;
+        [Tooltip("Força das bordas vermelhas da tela no máximo (0 a 1).")]
+        [Range(0f, 1f)] public float vignetteOpacity = 0.85f;
+        [Tooltip("Depois que o dado para no 1, o véu fica cheio por isto (s). Nunca menos que a chegada da emboscada " +
+                 "(grantDelay + veilAmbushMargin) nem que o tempo do dado sumir da tela: o código trava nesses mínimos.")]
+        [Min(0f)] public float veilHold = 1.5f;
+        [Tooltip("Folga depois da chegada da emboscada (grantDelay) antes de o véu poder começar a sumir (s); cobre o atraso da rede.")]
+        [Min(0f)] public float veilAmbushMargin = 0.5f;
+        [Tooltip("Quanto o véu leva para sumir (s).")]
+        [Min(0.05f)] public float veilFadeOut = 0.9f;
+        [Tooltip("Pulso das bordas vermelhas no baque do dado (s); 0 = sem pulso.")]
+        [Min(0f)] public float criticalPulseTime = 0.5f;
+        [Tooltip("Volume do baque grave quando o dado assenta no 1 (0 a 1).")]
+        [Range(0f, 1f)] public float criticalThudVolume = 0.9f;
+        [Tooltip("Volume do ronco grave quando os inimigos da emboscada surgem (0 a 1).")]
+        [Range(0f, 1f)] public float ambushRumbleVolume = 0.8f;
+        [Tooltip("Raio da rachadura vermelha no chão onde cada inimigo da emboscada surge (m).")]
+        [Min(0.1f)] public float ambushFxRadius = 1.4f;
+        [Tooltip("Quanto a rachadura fica no chão até sumir (s).")]
+        [Min(0.2f)] public float ambushFxDuration = 1.8f;
+        [Tooltip("Altura da coluna de luz vermelha que sobe onde o inimigo surge (m).")]
+        [Min(0f)] public float ambushFxPillarHeight = 3f;
+        [Tooltip("Quanto dura a coluna de luz (s).")]
+        [Min(0.05f)] public float ambushFxPillarTime = 0.55f;
+        [Tooltip("Intensidade do clarão vermelho no surgimento (luz pontual).")]
+        [Min(0f)] public float ambushFxFlashIntensity = 8f;
+        [Tooltip("Quanto dura o clarão vermelho (s).")]
+        [Min(0.05f)] public float ambushFxFlashTime = 0.45f;
+
         public DiceTable CreateTable()
         {
             var list = new List<DiceBand>();

@@ -422,6 +422,24 @@ Pedido do dono antes das perguntas: "vamos focar em melhorar a qualidade de imag
 - **Resposta literal:** "Anel por fora (Recomendado)"
 - **Significa:** o anel branco continua, fino, por fora do círculo da aura, só na sua tela.
 
+### D-067 · Aviso de energia cheia (resolve P-013)
+- **Pergunta:** A energia hoje aparece como faíscas na aura (D-062) e o dono não percebeu quando estava cheia no playtest. O que fazemos?
+- **Opções:** Pulso ao encher · Faíscas mais fortes · Barra discreta no chão · Manter como está
+- **Resposta literal:** "Pulso ao encher (Recommended)"
+- **Significa:** quando a energia chega ao máximo, a aura dá um pulso de luz e um som curto, uma vez. As faíscas continuam como em D-062. Fica para uma fase de ajuste da aura (arte e som só com o Opus, D-044).
+
+### D-068 · O 1 do D20 mais teatral (resolve P-014)
+- **Pergunta:** O dono tirou 1 (carta amaldiçoada + emboscada, D-048 e D-049) e não sentiu desastre. Como o 1 deve ser?
+- **Opções:** Mais teatral · Emboscada maior · Carta amaldiçoada mais cara · Manter como está
+- **Resposta literal:** "Mais teatral (Recommended)"
+- **Significa:** a regra do 1 não muda (mesma carta amaldiçoada, mesmo número de inimigos da emboscada). Muda a apresentação: dado vermelho, tela escurece, som grave e os inimigos surgem de forma visível. Arte, efeito e som só com o Opus (D-044).
+
+### D-069 · Reforçar o cristal no mundo (resolve P-015)
+- **Pergunta:** O dono descreveu o mundo só como steampunk, sem perceber a magia (Pilar 4). Quer reforçar a magia?
+- **Opções:** Reforçar o cristal · Magia só nas cartas e na aura · Mudar a paleta do mundo · Deixar para depois do coop
+- **Resposta literal:** "Reforçar o cristal (Recommended)"
+- **Significa:** mais brilho de cristal no mundo (veios luminosos nas máquinas, poeira mágica no ar, cristais das torres pulsando), sem trocar a cidade nem a paleta de D-039 a D-045. Arte e luz só com o Opus (D-044).
+
 ---
 
 ## Perguntas pendentes (feitas na fase em que travarem)
@@ -440,3 +458,6 @@ Pedido do dono antes das perguntas: "vamos focar em melhorar a qualidade de imag
 | ~~P-010~~ | Forma e linguagem visual da aura | resolvida em D-060 a D-066 |
 | ~~P-012~~ | Passe de resolução (D-053): para quanto sobe o mundo (hoje 640x360: 960x540, 1280x720 ou resolução da tela); se o contorno, a luz em faixas e a paleta de D-039 ficam; se as cartas em pixel art (D-041) ganham versão em mais resolução | resolvida em D-056 a D-059 |
 | ~~P-011~~ | Arte com `kimi-k3` no DeepSeek harness | resolvida em D-043 |
+| ~~P-013~~ | Energia pouco notada no playtest de 2026-10-05 | resolvida em D-067 |
+| ~~P-014~~ | Peso do 1 no D20 (o dono tirou 1 e não sentiu desastre) | resolvida em D-068 |
+| ~~P-015~~ | Magia pouco visível no mundo (Pilar 4) | resolvida em D-069 |

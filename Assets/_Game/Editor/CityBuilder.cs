@@ -102,6 +102,16 @@ namespace Game.EditorTools
 
         private const float BridgeModelLength = 6f;   // PonteCanos.fbx
 
+        // Cristal vivo (D-069). Números balanceáveis em Data/Ambience/CrystalAmbienceSettings.asset.
+        // Torres: o cristal e a luz delas pulsam juntos (CrystalPulse) no lugar do EmissivePulse.
+        private static readonly string[] Towers = { "TorreRelogio", "PilaoArcano" };
+        // Veio na crista do cano do meio da PonteCanos (cobre oxidado, raio 0,15 com o eixo a 0,92 m do pé):
+        // a cidade manda energia para a praça.
+        private const float BridgeVeinHeight = 1.075f;
+        private const float BridgeVeinLength = 5.8f;  // entra nos flanges de latão das pontas
+        private const float BridgeVeinWidth = 0.1f;
+        private const float BridgeVeinThickness = 0.04f;
+
         // ---------- Estado da construção ----------
 
         private sealed class Placed
@@ -123,7 +133,9 @@ namespace Game.EditorTools
         private static System.Random rng;
         private static Vector2 camOffset;
         private static float camHeight;
-        private static Material stoneMat, darkStoneMat, ironMat;
+        private static Material stoneMat, darkStoneMat, ironMat, crystalMat;
+        private static CrystalAmbienceSettings crystalSettings;
+        private static List<Transform> towers;
         private static List<Placed> placed;
         private static List<Request> smokeRequests, lightRequests;
         private static HashSet<string> missingModels;
@@ -144,6 +156,7 @@ namespace Game.EditorTools
             lightRequests = new List<Request>();
             missingModels = new HashSet<string>();
             streetSlots = new List<Vector2>();
+            towers = new List<Transform>();
 
             var root = new GameObject(RootName).transform;
             root.SetParent(arenaRoot, false);
@@ -159,6 +172,7 @@ namespace Game.EditorTools
             BuildSky(Group("Ceu", root));
             ApplySmoke();
             ApplyLights();
+            ApplyTowerPulse();
 
             foreach (string name in missingModels)
                 Debug.LogWarning($"CityBuilder: {name}.fbx não encontrado em {ModelsFolder}. Rode Tools/Blender/build_city.py.");
@@ -472,9 +486,63 @@ namespace Game.EditorTools
             if (AllowedHeight(mid) < height + 1.3f)
                 return false;
             var rot = Quaternion.LookRotation(dir / length) * Quaternion.Euler(0f, -90f, 0f); // X local ao longo do vão
-            return Model("PonteCanos", parent, mid + Vector3.up * height, rot,
-                new Vector3(length / BridgeModelLength, 1f, widthScale)) != null;
+            var bridge = Model("PonteCanos", parent, mid + Vector3.up * height, rot,
+                new Vector3(length / BridgeModelLength, 1f, widthScale));
+            if (bridge == null)
+                return false;
+            AddBridgeVein(bridge.transform, new Vector2(mid.x, mid.z).magnitude);
+            return true;
         }
+
+        /// <summary>
+        /// Veio de cristal ao longo da ponte (filho dela: estica junto com o vão). Pulsa junto com as junções de cristal
+        /// da ponte; a crista corre de fora para dentro da cidade, rumo à praça (deslocamento = -raio).
+        /// </summary>
+        private static void AddBridgeVein(Transform bridge, float radius)
+        {
+            if (crystalMat == null)
+                return;
+            var vein = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            vein.name = "VeioCristal";
+            vein.transform.SetParent(bridge, false);
+            vein.transform.localPosition = new Vector3(0f, BridgeVeinHeight, 0f);
+            vein.transform.localRotation = Quaternion.identity;
+            vein.transform.localScale = new Vector3(BridgeVeinLength, BridgeVeinThickness, BridgeVeinWidth);
+            Object.DestroyImmediate(vein.GetComponent<Collider>());
+            var veinRenderer = vein.GetComponent<MeshRenderer>();
+            veinRenderer.sharedMaterial = crystalMat;
+            veinRenderer.shadowCastingMode = ShadowCastingMode.Off;
+            vein.isStatic = false;
+
+            var renderers = CrystalRenderers(bridge);
+            var offsets = new float[renderers.Length];
+            for (int i = 0; i < offsets.Length; i++)
+                offsets[i] = -radius;
+            bridge.gameObject.AddComponent<CrystalPulse>().Configure(crystalSettings, CrystalPulseRole.Veio, renderers,
+                offsets, null, crystalMat);
+        }
+
+        /// <summary>Torres: cristais e luz respirando juntos, devagar, cada torre no seu tempo.</summary>
+        private static void ApplyTowerPulse()
+        {
+            if (crystalMat == null)
+                return;
+            foreach (var tower in towers)
+            {
+                if (tower == null)
+                    continue;
+                tower.gameObject.AddComponent<CrystalPulse>().Configure(crystalSettings, CrystalPulseRole.Torre,
+                    CrystalRenderers(tower), null, tower.GetComponentsInChildren<Light>(true), crystalMat);
+            }
+        }
+
+        /// <summary>Renderers de malha da peça (o CrystalPulse escolhe sozinho os índices em CristalArcano).</summary>
+        private static Renderer[] CrystalRenderers(Transform root)
+            => System.Array.ConvertAll(root.GetComponentsInChildren<MeshRenderer>(true), r => (Renderer)r);
+
+        /// <summary>Peças cujo cristal é pulsado por um CrystalPulse na raiz (não pode ter EmissivePulse junto).</summary>
+        private static bool OwnsCrystalPulse(string model)
+            => model == "PonteCanos" || System.Array.IndexOf(Towers, model) >= 0;
 
         // ---------- Rua do anel: mercado, caixotes, lampiões, bueiros ----------
 
@@ -617,6 +685,8 @@ namespace Game.EditorTools
             foreach (var r in go.GetComponentsInChildren<Renderer>(true))
                 r.shadowCastingMode = name == "Dirigivel" || name == "BueiroVapor" ? ShadowCastingMode.Off : ShadowCastingMode.On;
             Decorate(go.transform, name);
+            if (System.Array.IndexOf(Towers, name) >= 0)
+                towers.Add(go.transform);
             return go;
         }
 
@@ -644,10 +714,18 @@ namespace Game.EditorTools
                 else if (n == "CristalFlutuante")
                 {
                     Dynamic(t).AddComponent<Spinner>().Configure(Vector3.up, 25f, 0f);
-                    t.gameObject.AddComponent<EmissivePulse>().Configure(Range(0.4f, 0.8f), 0.55f, 1.35f);
+                    float speed = Range(0.4f, 0.8f); // sorteia sempre: pular o sorteio mudaria o resto da cidade
+                    if (!OwnsCrystalPulse(model))
+                        t.gameObject.AddComponent<EmissivePulse>().Configure(speed, 0.55f, 1.35f);
                 }
                 else if (n == "CristalPulso")
-                    Dynamic(t).AddComponent<EmissivePulse>().Configure(Range(0.3f, 0.9f), 0.6f, 1.25f);
+                {
+                    // Torres e pontes: o CrystalPulse da raiz pulsa este cristal (D-069).
+                    var pulsing = Dynamic(t);
+                    float speed = Range(0.3f, 0.9f); // sorteia sempre: pular o sorteio mudaria o resto da cidade
+                    if (!OwnsCrystalPulse(model))
+                        pulsing.AddComponent<EmissivePulse>().Configure(speed, 0.6f, 1.25f);
+                }
                 else if (n == "PlacaArco" || n == "Bandeirola" || n == "Lanterna")
                     Dynamic(t).AddComponent<Sway>().Configure(Vector3.right, n == "Bandeirola" ? 7f : 4f, Range(0.6f, 1.1f));
                 else if (n.StartsWith("Placa"))
@@ -844,6 +922,8 @@ namespace Game.EditorTools
             stoneMat = LoadMat("Pedra", "PisoPedra");
             darkStoneMat = LoadMat("PedraEscura", "PisoPedra");
             ironMat = LoadMat("FerroEscuro", "PedraEscura");
+            crystalMat = AssetDatabase.LoadAssetAtPath<Material>($"{MaterialsFolder}/CristalArcano.mat");
+            crystalSettings = AmbienceBuilder.LoadCrystalSettings();
         }
 
         private static Material LoadMat(string name, string fallback)

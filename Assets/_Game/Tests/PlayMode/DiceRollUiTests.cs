@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using Game.UI;
 using NUnit.Framework;
 using UnityEngine;
@@ -58,6 +59,78 @@ namespace Game.Tests.PlayMode
             yield break;
 #endif
         }
+
+        [UnityTest]
+        public IEnumerator DepoisDoUm_OutroNumeroVoltaAoLataoECiano()
+        {
+            // D-068: o 1 avermelha o dado e as luzes do palco; a próxima rolagem (2 a 20) tem de voltar ao normal.
+#if UNITY_EDITOR
+            var model = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(D20ModelPath);
+            Assert.IsNotNull(model, "Modelo do D20");
+            canvas = new GameObject("UI", typeof(Canvas));
+            canvas.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
+            var go = new GameObject("TelaDoDado", typeof(RectTransform));
+            go.transform.SetParent(canvas.transform, false);
+            var ui = go.AddComponent<DiceRollUi>();
+            ui.Configure(model);
+
+            ui.Play(10, 0.5f);
+            yield return null;
+            Assert.IsNotNull(ui.Die, "O palco do dado foi montado");
+            List<Color> normal = Snapshot(ui);
+
+            ui.Play(1, 0.5f);
+            float timeout = 2f;
+            while (ui.CriticalTint < 1f && timeout > 0f)
+            {
+                timeout -= Time.unscaledDeltaTime;
+                yield return null;
+            }
+            Assert.AreEqual(1f, ui.CriticalTint, "O dado parou vermelho no 1");
+            List<Color> red = Snapshot(ui);
+            bool changed = false;
+            for (int i = 0; i < normal.Count; i++)
+                changed |= !Near(normal[i], red[i]);
+            Assert.IsTrue(changed, "No 1 o material do dado e as luzes mudaram");
+
+            ui.Play(10, 0.5f);
+            yield return null;
+            Assert.IsFalse(ui.IsCritical, "O 10 encerra o modo teatral");
+            Assert.IsFalse(ui.VeilActive, "O 10 tira o véu");
+            Assert.AreEqual(0f, ui.CriticalTint, "O 10 devolve o latão");
+            List<Color> back = Snapshot(ui);
+            Assert.AreEqual(normal.Count, back.Count);
+            for (int i = 0; i < normal.Count; i++)
+                Assert.IsTrue(Near(normal[i], back[i]), $"Cor {i} voltou ao latão/ciano ({back[i]} em vez de {normal[i]})");
+#else
+            Assert.Ignore("Só no editor.");
+            yield break;
+#endif
+        }
+
+        /// <summary>Cores de todos os materiais do dado (base e emissão) e das duas luzes do palco.</summary>
+        private static List<Color> Snapshot(DiceRollUi ui)
+        {
+            var colors = new List<Color>();
+            foreach (Renderer r in ui.Die.GetComponentsInChildren<Renderer>(true))
+            {
+                foreach (Material m in r.sharedMaterials)
+                {
+                    if (m == null)
+                        continue;
+                    if (m.HasProperty("_BaseColor"))
+                        colors.Add(m.GetColor("_BaseColor"));
+                    if (m.HasProperty("_EmissionColor"))
+                        colors.Add(m.GetColor("_EmissionColor"));
+                }
+            }
+            colors.Add(ui.KeyLight.color);
+            colors.Add(ui.RimLight.color);
+            return colors;
+        }
+
+        private static bool Near(Color a, Color b) =>
+            Mathf.Abs(a.r - b.r) < 0.002f && Mathf.Abs(a.g - b.g) < 0.002f && Mathf.Abs(a.b - b.b) < 0.002f;
 
         private static Color ReadPixel(RenderTexture rt, int x, int y)
         {

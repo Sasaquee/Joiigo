@@ -27,6 +27,11 @@ A aura (Fase 7, D-060 a D-066) segue a mesma divisão:
 - **Montagem:** o `AuraBuilder` liga tudo ao prefab do jogador.
 - **Paleta para daltônicos:** F7 (`Debug/DevAuraTools`).
 
+Passe de ajuste pós-playtest (D-067 a D-069, relatório em `relatorio-passe-ajuste.md`):
+- **Pulso de energia cheia:** `Core/Aura/AuraPulseTrigger` decide o quadro do pulso (uma vez por enchida, com rearme abaixo de `fullPulseRearmBelow`; não dispara ao nascer, caído nem ao levantar). `Core/Aura/AuraSmoother` suaviza HP e energia e só começa depois que o jogador entra na rede. O `PlayerAura` liga os dois ao `AuraVisual.Pulse` (onda, todos veem) e ao `AuraAudio.PlayFullChime` (só o dono).
+- **O 1 do D20:** o `DiceRollUi` deixa o dado vermelho e põe um véu abaixo da HUD só no 1; `Dice/CriticalSounds` sintetiza o baque e o ronco; o `CardDropService` manda `ShowAmbushRpc` com as posições e o `Dice/AmbushFx` mostra o surgimento em todos. A regra do 1 e o momento da emboscada não mudaram.
+- **Cristal no mundo:** `Core/Ambience/CrystalWave` (onda pura, testada em EditMode), `Arena/CrystalPulse` aplica o pulso e a crista de luz por `MaterialPropertyBlock`, `Arena/CrystalAmbienceSettings` guarda os números (`Data/Ambience/`); os veios e a poeira nascem no `AmbienceBuilder` e no `CityBuilder`.
+
 Dependências: `Core` ← `Runtime` ← `Debug` / `Editor`. O `Core` não conhece ninguém.
 
 ## Namespaces

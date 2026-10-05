@@ -21,7 +21,9 @@ namespace Game.Tests.PlayMode
         private PlayerCards cards;
         private CardDropService service;
         private WaveSpawner spawner;
+        private Game.UI.DiceRollUi diceUi;
         private int rolledSeen;
+        private Vector3[] ambushSeen;
 
         [UnitySetUp]
         public IEnumerator SobeHost()
@@ -41,21 +43,27 @@ namespace Game.Tests.PlayMode
             service = Object.FindFirstObjectByType<CardDropService>();
             spawner = Object.FindFirstObjectByType<WaveSpawner>();
             Assert.IsNotNull(service, "Cena tem o CardDropService (reconstruir: Game > Setup > Construir Arena)");
-            Assert.IsNotNull(Object.FindFirstObjectByType<Game.UI.DiceRollUi>(), "Cena tem a tela do dado");
+            diceUi = Object.FindFirstObjectByType<Game.UI.DiceRollUi>();
+            Assert.IsNotNull(diceUi, "Cena tem a tela do dado");
 
             rolledSeen = 0;
+            ambushSeen = null;
             CardDropService.RollStarted += OnRoll;
+            CardDropService.AmbushRevealed += OnAmbush;
         }
 
         [UnityTearDown]
         public IEnumerator Encerra()
         {
             CardDropService.RollStarted -= OnRoll;
+            CardDropService.AmbushRevealed -= OnAmbush;
             CardDropService.DebugForceNextRoll(null);
             yield return ArenaTestScene.Cleanup();
         }
 
         private void OnRoll(ulong roller, int result, float duration) => rolledSeen = result;
+
+        private void OnAmbush(Vector3[] positions) => ambushSeen = positions;
 
         private float WaitForGrant => service.Settings.rollDuration + service.Settings.grantDelay + 0.6f;
 
@@ -128,6 +136,115 @@ namespace Game.Tests.PlayMode
                 if (enemy.IsAlive && Vector3.Distance(enemy.transform.position, cards.transform.position) <= reach)
                     near++;
             Assert.GreaterOrEqual(near, service.Settings.ambushMin, "Emboscada: inimigos surgem em volta do jogador (D-049)");
+        }
+
+        // ---------- O 1 teatral (D-068): só apresentação ----------
+
+        [UnityTest]
+        public IEnumerator Um_DadoVermelhoVeuEscuroEBaque()
+        {
+            yield return PickUpWithRoll(1);
+            Assert.IsTrue(diceUi.IsCritical, "O 1 entra no modo teatral (D-068)");
+            Assert.IsTrue(diceUi.VeilActive, "O véu escuro entra durante a rolagem do 1");
+
+            yield return new WaitForSeconds(service.Settings.rollDuration + 0.2f);
+            Assert.IsTrue(diceUi.VeilActive, "O véu segura com o dado parado no 1");
+            Assert.Greater(diceUi.VeilStrength, 0.9f, "Com o dado parado, o véu está cheio");
+            Assert.Greater(diceUi.CriticalTint, 0.9f, "O dado parou vermelho");
+            Assert.AreEqual(1, diceUi.ThudsPlayed, "Um baque grave quando o dado assenta no 1");
+        }
+
+        [UnityTest]
+        public IEnumerator OutroNumero_DadoEVeuComoAntes()
+        {
+            yield return PickUpWithRoll(10);
+            Assert.IsFalse(diceUi.IsCritical, "Fora do 1 não há modo teatral");
+            yield return new WaitForSeconds(service.Settings.rollDuration + 0.2f);
+            Assert.IsFalse(diceUi.IsCritical, "Fora do 1 não há modo teatral");
+            Assert.IsFalse(diceUi.VeilActive, "Fora do 1 a tela não escurece");
+            Assert.AreEqual(0f, diceUi.CriticalTint, "Fora do 1 o dado continua latão e ciano");
+            Assert.AreEqual(0, diceUi.ThudsPlayed, "Fora do 1 não há baque");
+        }
+
+        [UnityTest]
+        public IEnumerator Um_VeuSomeDepois()
+        {
+            yield return PickUpWithRoll(1);
+            Assert.IsTrue(diceUi.VeilActive, "O véu entrou");
+            var s = service.Settings;
+            float timeout = s.rollDuration + s.veilHold + s.veilFadeOut + 1f;
+            while (diceUi.VeilActive && timeout > 0f)
+            {
+                timeout -= Time.unscaledDeltaTime;
+                yield return null;
+            }
+            Assert.IsFalse(diceUi.VeilActive, "O véu some depois da emboscada");
+            Assert.IsFalse(diceUi.IsCritical, "O modo teatral termina");
+            Assert.AreEqual(0f, diceUi.CriticalTint, "O dado volta ao latão para a próxima rolagem");
+        }
+
+        [UnityTest]
+        public IEnumerator Um_VeuFicaAbaixoDaHudEDoDado()
+        {
+            // Revisão do D-068: o véu era filho da tela do dado (última da Canvas) e cobria a barra de cartas.
+            yield return PickUpWithRoll(1);
+            RectTransform veil = diceUi.Veil;
+            Assert.IsNotNull(veil, "A tela do dado tem o véu");
+            Assert.IsTrue(diceUi.VeilActive, "O véu está na tela");
+
+            Transform canvas = diceUi.GetComponentInParent<Canvas>().rootCanvas.transform;
+            Assert.AreEqual(canvas, veil.parent, "O véu é filho direto da Canvas");
+
+            var bar = Object.FindFirstObjectByType<Game.UI.SkillBar>();
+            Assert.IsNotNull(bar, "Cena tem a barra de cartas");
+            Transform barTop = ChildOf(canvas, bar.transform);
+            Transform diceTop = ChildOf(canvas, diceUi.transform);
+            Assert.IsNotNull(barTop, "A barra de cartas está na Canvas");
+            Assert.Less(veil.GetSiblingIndex(), barTop.GetSiblingIndex(), "O véu fica abaixo da barra de cartas");
+            Assert.Less(veil.GetSiblingIndex(), diceTop.GetSiblingIndex(), "O dado fica acima do véu");
+        }
+
+        /// <summary>O ancestral de `t` que é filho direto de `root` (null se `t` não está sob `root`).</summary>
+        private static Transform ChildOf(Transform root, Transform t)
+        {
+            while (t != null && t.parent != root)
+                t = t.parent;
+            return t;
+        }
+
+        [UnityTest]
+        public IEnumerator Um_EmboscadaMostraOSurgimentoDeCadaInimigo()
+        {
+            var fx = Object.FindFirstObjectByType<AmbushFx>();
+            Assert.IsNotNull(fx, "O serviço do dado cria o efeito de surgimento");
+
+            yield return PickUpWithRoll(1);
+            float timeout = WaitForGrant + 1f;
+            while (ambushSeen == null && timeout > 0f)
+            {
+                timeout -= Time.deltaTime;
+                yield return null;
+            }
+            Assert.IsNotNull(ambushSeen, "A emboscada avisa todos onde os inimigos surgiram (ShowAmbushRpc)");
+            Assert.That(ambushSeen.Length, Is.InRange(service.Settings.ambushMin, service.Settings.ambushMax),
+                "A emboscada continua com 2 a 3 inimigos (D-049)");
+
+            var enemies = Object.FindObjectsByType<EnemyController>(FindObjectsSortMode.None);
+            foreach (Vector3 position in ambushSeen)
+            {
+                bool found = false;
+                foreach (var enemy in enemies)
+                {
+                    Vector3 d = enemy.transform.position - position;
+                    d.y = 0f;
+                    found |= enemy.IsAlive && d.magnitude < 1f;
+                }
+                Assert.IsTrue(found, "Cada surgimento é onde um inimigo nasceu");
+            }
+
+            Assert.AreEqual(ambushSeen.Length, fx.Shown, "Um surgimento por inimigo");
+            Assert.AreEqual(ambushSeen.Length, fx.ActiveCount, "Os surgimentos estão no chão agora");
+            Assert.AreEqual(1, fx.RumblesPlayed, "Um ronco grave por emboscada");
         }
 
         [UnityTest]

@@ -11,7 +11,8 @@ namespace Game.Aura
     /// Aura do jogador (Fase 7): a única forma de ver HP, energia e estados (D-060 a D-063). Cada cliente monta a aura
     /// de todos os jogadores a partir do que já vem pela rede (vida, energia, espaços, caído e os sinais do host).
     /// O mapeamento estado → aura é do Core (AuraMapper); aqui só se junta a entrada, suaviza e entrega ao
-    /// visual (AuraVisual) e, no seu personagem, aos sons (AuraAudio).
+    /// visual (AuraVisual) e, no seu personagem, aos sons (AuraAudio). Quando a energia enche, dispara uma vez o pulso
+    /// de luz (todos veem) e o "ding" (só no seu personagem) (D-067; a borda é decidida pelo Core, AuraPulseTrigger).
     /// </summary>
     public class PlayerAura : MonoBehaviour
     {
@@ -24,10 +25,8 @@ namespace Game.Aura
         private PlayerLife life;
         private NetworkObject netObject;
         private AuraTuning tuning;
-
-        private float shownHealth = 1f;
-        private float shownEnergy;
-        private bool initialized;
+        private AuraPulseTrigger fullPulse;
+        private readonly AuraSmoother smoother = new AuraSmoother();
 
         /// <summary>Estado mapeado no último quadro (para testes e para o visual).</summary>
         public AuraState Current { get; private set; }
@@ -61,20 +60,38 @@ namespace Game.Aura
             if (settings == null)
                 return;
             tuning ??= settings.ToTuning();
+            fullPulse ??= new AuraPulseTrigger(settings.fullPulseRearmBelow);
 
             float targetHealth = health != null ? health.Fraction : 1f;
             float targetEnergy = cards != null ? cards.EnergyFraction : 0f;
-            if (!initialized)
-            {
-                shownHealth = targetHealth;
-                shownEnergy = targetEnergy;
-                initialized = true;
-            }
-            float k = 1f - Mathf.Exp(-settings.smoothing * Time.deltaTime);
-            shownHealth = Mathf.Lerp(shownHealth, targetHealth, k);
-            shownEnergy = Mathf.Lerp(shownEnergy, targetEnergy, k);
+            // Antes de entrar na rede, a vida e a energia ainda não chegaram: o Core acompanha sem suavizar e só começa
+            // a suavizar no primeiro quadro em rede (senão a energia "subiria" do zero e o pulso de cheia tocaria ao nascer).
+            bool spawned = netObject == null || netObject.IsSpawned;
+            smoother.Step(targetHealth, targetEnergy, spawned, settings.smoothing, Time.deltaTime);
 
-            Current = AuraMapper.Map(new AuraInput(shownHealth, shownEnergy, ReadSignals()), tuning, AuraPaletteSwitch.Current);
+            AuraSignals signals = ReadSignals();
+            Current = AuraMapper.Map(new AuraInput(smoother.Health, smoother.Energy, signals), tuning, AuraPaletteSwitch.Current);
+
+            // Energia acabou de encher (D-067): uma vez por enchida (rearma abaixo de fullPulseRearmBelow); nunca no
+            // primeiro quadro em rede, nem caído, nem no primeiro quadro depois de levantar.
+            bool downed = (signals & AuraSignals.Downed) != 0;
+            bool pulse;
+            if (spawned)
+            {
+                pulse = fullPulse.Update(smoother.Energy, downed);
+            }
+            else
+            {
+                fullPulse.Reset();
+                pulse = false;
+            }
+            if (pulse)
+            {
+                if (visual != null)
+                    visual.Pulse(Current);
+                if (audioCues != null)
+                    audioCues.PlayFullChime(IsLocal);
+            }
 
             if (visual != null)
                 visual.Apply(Current, Time.deltaTime);

@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Game.Aura
 {
     /// <summary>
-    /// Números da aura (Fase 7, D-060 a D-066). As regras do mapeamento ficam no Core (AuraMapper); aqui ficam os
+    /// Números da aura (Fase 7, D-060 a D-066; pulso de energia cheia, D-067). As regras do mapeamento ficam no Core (AuraMapper); aqui ficam os
     /// números de ajuste, os tamanhos do visual e os sons. Asset em Data/Aura/AuraSettings.asset.
     /// </summary>
     [CreateAssetMenu(menuName = "Game/Aura/Aura Settings", fileName = "AuraSettings")]
@@ -46,9 +46,32 @@ namespace Game.Aura
         [Tooltip("Rapidez com que a aura acompanha a mudança de HP e energia (maior = mais rápida).")]
         [Min(0.1f)] public float smoothing = 6f;
 
+        [Header("Pulso de energia cheia (D-067)")]
+        [Tooltip("Duração da onda de luz que sai da borda do círculo quando a energia enche (s).")]
+        [Min(0.05f)] public float fullPulseDuration = 0.65f;
+        [Tooltip("Raio final da onda (m). Ela nasce na borda do círculo de latão e se expande até aqui.")]
+        [Min(0.2f)] public float fullPulseEndRadius = 2.4f;
+        [Tooltip("Espessura da faixa clara da onda, em fração do raio dela (engrossa conforme a onda cresce; lida ao montar a aura).")]
+        [Range(0.02f, 0.5f)] public float fullPulseBand = 0.14f;
+        [Tooltip("Brilho da onda no início (cor Base da paleta multiplicada por este valor).")]
+        [Min(0f)] public float fullPulseGlow = 1.8f;
+        [Tooltip("Brilho do eco: segunda faixa, mais fina e mais fraca, que vem atrás da onda (fração do brilho da onda).")]
+        [Range(0f, 1f)] public float fullPulseEchoGlow = 0.45f;
+        [Tooltip("Opacidade do contorno escuro por fora da onda (lê no piso claro). 0 = sem contorno.")]
+        [Range(0f, 1f)] public float fullPulseOutlineAlpha = 0.45f;
+        [Tooltip("Brilho extra das runas no instante do pulso (soma ao brilho de runas cheias, em fração dele).")]
+        [Min(0f)] public float fullPulseRuneBoost = 1.5f;
+        [Tooltip("Quanto tempo as runas levam para voltar ao brilho normal depois do pulso (s).")]
+        [Min(0.01f)] public float fullPulseRuneTime = 0.4f;
+        [Tooltip("Depois de um pulso, a energia precisa cair abaixo desta fração para o próximo encher pulsar de novo " +
+                 "(histerese: oscilar perto de cheia não repete o pulso).")]
+        [Range(0f, 0.999f)] public float fullPulseRearmBelow = 0.95f;
+
         [Header("Sons (só para o seu personagem, D-064)")]
         [Range(0f, 1f)] public float heartbeatVolume = 0.35f;
         [Range(0f, 1f)] public float hissVolume = 0.28f;
+        [Tooltip("Volume do 'ding' cristalino quando a energia enche (D-067).")]
+        [Range(0f, 1f)] public float fullChimeVolume = 0.3f;
         [Tooltip("Distância (m) em que um inimigo preparando golpe na sua direção dispara o chiado.")]
         [Min(0f)] public float dangerRadius = 5.5f;
         [Tooltip("Meia-abertura (graus) do cone à frente do inimigo que conta como 'vindo em você'.")]

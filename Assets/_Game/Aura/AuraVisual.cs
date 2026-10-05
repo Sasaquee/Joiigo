@@ -8,6 +8,7 @@ namespace Game.Aura
     /// <summary>
     /// Desenho da aura (D-060 a D-065): círculo de latão com runas em cristal no chão, luz subindo em volta do corpo,
     /// faíscas da energia, fiapos violeta da maldição, brasas de quem caiu e casca de cristal do escudo.
+    /// Quando a energia enche, uma onda de luz sai da borda do círculo e as runas piscam mais forte (D-067).
     /// Só desenha o AuraState que recebe; quem decide é o Core. As texturas vêm de Tools/Aura/aura_art.py.
     /// Montado em código no Awake (filho "Aura"), para o prefab gerado pelo construtor não guardar malhas nem materiais.
     /// </summary>
@@ -29,6 +30,15 @@ namespace Game.Aura
         private const float RuneFullGlow = 1.6f;
         private const float LightGlow = 0.8f;
         private const float ShellGlow = 0.55f;
+        // Pulso de energia cheia (D-067). aura_circulo.png: o anel externo do latão termina a 0,444 da largura
+        // (0,888 do raio); a onda nasce ali. O eco vem atrás (fração do caminho da onda) e é mais fino; o contorno
+        // escuro fica colado por fora da faixa clara (o contorno do pós-processo não pega malha transparente).
+        private const float PulseHeight = 0.035f;
+        private const float BrassEdgeRatio = 0.888f;
+        private const float PulseEchoLag = 0.7f;
+        private const float PulseEchoBand = 0.5f;
+        private const float PulseOutlineWidth = 0.05f;
+        private static readonly Color PulseOutlineColor = new Color(0.169f, 0.165f, 0.188f); // FerroEscuro #2B2A30
 
         [SerializeField] private AuraSettings settings;
         [SerializeField] private Texture2D circleTexture;
@@ -48,9 +58,14 @@ namespace Game.Aura
         private ParticleSystem sparks;
         private ParticleSystem wisps;
         private ParticleSystem embers;
+        private MeshRenderer pulseWave;
+        private MeshRenderer pulseEcho;
+        private MeshRenderer pulseOutline;
         private MaterialPropertyBlock block;
         private float noiseSeed;
         private float lightScroll;
+        private float sincePulse = float.PositiveInfinity; // segundos desde o último pulso de energia cheia
+        private float pulseStartRadius;
 
         public void Configure(AuraSettings auraSettings, Texture2D circleTex, Texture2D runesTex, Texture2D lightTex,
             Texture2D sparkTex, Texture2D wispTex, Texture2D emberTex, Texture2D shellTex)
@@ -70,6 +85,12 @@ namespace Game.Aura
 
         /// <summary>Fiapos da maldição saindo agora (para testes).</summary>
         public bool WispsOn => wisps != null && wisps.emission.enabled;
+
+        /// <summary>Quantos pulsos de energia cheia começaram (D-067, para testes).</summary>
+        public int PulsesPlayed { get; private set; }
+
+        /// <summary>Onda do pulso de energia cheia correndo agora (para testes).</summary>
+        public bool PulseActive => settings != null && sincePulse < settings.fullPulseDuration;
 
         private void Awake()
         {
@@ -103,6 +124,15 @@ namespace Game.Aura
             lightColumn = Layer(root, "Luz", OpenCylinder(32), Textured(FxKit.FlatAdditive, lightTexture), 0f);
             shell = Layer(root, "Casca", Dome(24, 8), Textured(FxKit.FlatAdditive, shellTexture), 0f);
             shell.enabled = false;
+
+            // Pulso de energia cheia (D-067): faixa clara, eco mais fino atrás e contorno escuro por fora. Anéis chapados
+            // (FxKit.Ring, raio externo 1), sem textura; a cor vai pelo MaterialPropertyBlock. Não giram (filhos da raiz).
+            float band = Mathf.Clamp(settings.fullPulseBand, 0.02f, 0.5f);
+            pulseWave = Layer(root, "PulsoOnda", FxKit.Ring(1f - band), FxKit.FlatAdditive, PulseHeight);
+            pulseEcho = Layer(root, "PulsoEco", FxKit.Ring(1f - band * PulseEchoBand), FxKit.FlatAdditive, PulseHeight);
+            pulseOutline = Layer(root, "PulsoContorno", FxKit.Ring(1f / (1f + PulseOutlineWidth)), FxKit.FlatAlpha,
+                PulseHeight);
+            ShowPulse(false);
 
             sparks = Emitter("Faiscas", sparkTexture, 0.05f, 0.11f, 0.6f, 1.0f, 64);
             wisps = Emitter("Fiapos", wispTexture, 0.28f, 0.5f, 1.2f, 1.8f, 24);
@@ -210,6 +240,12 @@ namespace Game.Aura
             // Runas: cristal na cor da aura, ou em brasa laranja no reforço da Mola (D-063); cheias com energia cheia (D-062).
             Color runeColor = ToColor(hurtBonus || downed ? state.Ember : state.Base);
             float runeGlow = glow * (state.RunesFull ? RuneFullGlow : RuneGlow);
+            // No pulso de energia cheia as runas piscam mais forte e voltam ao normal (D-067).
+            if (!downed && sincePulse < settings.fullPulseRuneTime)
+            {
+                float u = 1f - sincePulse / settings.fullPulseRuneTime;
+                runeGlow *= 1f + settings.fullPulseRuneBoost * u * u;
+            }
             if (hurtBonus)
                 runeGlow *= 0.75f + 0.25f * Mathf.Sin(Time.time * 9f);
             Paint(runes, runeColor * runeGlow, 1f);
@@ -248,6 +284,71 @@ namespace Game.Aura
             Drive(wisps, (state.Signals & AuraSignals.Curse) != 0 ? settings.wispsPerSecond : 0f, 0.55f,
                 radius * 0.8f, ToColor(state.Curse));
             Drive(embers, downed ? settings.embersPerSecond : 0f, 0.45f, radius * 0.7f, ToColor(state.Ember));
+
+            UpdatePulse(state, downed);
+
+            // O relógio do pulso anda depois de desenhar: o quadro do Pulse() mostra a onda na borda do latão.
+            if (sincePulse < Mathf.Max(settings.fullPulseDuration, settings.fullPulseRuneTime))
+                sincePulse += dt;
+            else
+                sincePulse = float.PositiveInfinity;
+        }
+
+        /// <summary>
+        /// Começa o pulso de energia cheia (D-067). O PlayerAura chama uma vez, no quadro em que a energia enche
+        /// (AuraPulseTrigger); todos os jogadores veem o pulso de todos.
+        /// </summary>
+        public void Pulse(AuraState state)
+        {
+            if (root == null)
+                Build();
+            if (root == null)
+                return;
+            pulseStartRadius = settings.fullRadius * state.Radius * BrassEdgeRatio;
+            sincePulse = 0f;
+            PulsesPlayed++;
+        }
+
+        /// <summary>
+        /// Onda do pulso: sai rápido da borda do latão e desacelera até o raio final, apagando no caminho.
+        /// Faixa clara na cor Base da paleta, eco mais fraco atrás e contorno escuro por fora. Cai = some na hora.
+        /// </summary>
+        private void UpdatePulse(AuraState state, bool downed)
+        {
+            if (downed)
+                sincePulse = float.PositiveInfinity;
+            float duration = settings.fullPulseDuration;
+            if (sincePulse >= duration)
+            {
+                ShowPulse(false);
+                return;
+            }
+
+            float t = Mathf.Clamp01(sincePulse / duration);
+            float grow = 1f - (1f - t) * (1f - t) * (1f - t);
+            float fade = (1f - t) * (1f - t);
+            float end = Mathf.Max(pulseStartRadius, settings.fullPulseEndRadius);
+            float r = Mathf.Lerp(pulseStartRadius, end, grow);
+            float echo = Mathf.Lerp(pulseStartRadius, r, PulseEchoLag);
+            Color baseColor = ToColor(state.Base);
+
+            pulseWave.transform.localScale = new Vector3(r, 1f, r);
+            Paint(pulseWave, baseColor * (settings.fullPulseGlow * fade), 1f);
+            pulseEcho.transform.localScale = new Vector3(echo, 1f, echo);
+            Paint(pulseEcho, baseColor * (settings.fullPulseGlow * settings.fullPulseEchoGlow * fade), 1f);
+            float outline = r * (1f + PulseOutlineWidth);
+            pulseOutline.transform.localScale = new Vector3(outline, 1f, outline);
+            Paint(pulseOutline, PulseOutlineColor, settings.fullPulseOutlineAlpha * fade);
+
+            ShowPulse(true);
+            pulseOutline.enabled = settings.fullPulseOutlineAlpha > 0f;
+        }
+
+        private void ShowPulse(bool on)
+        {
+            pulseWave.enabled = on;
+            pulseEcho.enabled = on;
+            pulseOutline.enabled = on;
         }
 
         /// <summary>Falha de lâmpada (D-061): com Flicker alto, a aura cai quase a nada por instantes.</summary>

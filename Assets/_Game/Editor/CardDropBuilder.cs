@@ -91,6 +91,7 @@ namespace Game.EditorTools
             var ui = rect.gameObject.AddComponent<DiceRollUi>();
             var so = new SerializedObject(ui);
             so.FindProperty("diePrefab").objectReferenceValue = AssetDatabase.LoadAssetAtPath<GameObject>(D20ModelPath);
+            so.FindProperty("settings").objectReferenceValue = AssetDatabase.LoadAssetAtPath<DiceSettings>(SettingsPath); // 1 teatral (D-068)
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 

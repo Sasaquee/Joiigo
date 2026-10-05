@@ -330,5 +330,181 @@ namespace Game.Tests.EditMode
             Assert.Throws<ArgumentNullException>(() =>
                 AuraMapper.Map(new AuraInput(1f, 1f, AuraSignals.None), null, AuraPalette.Normal));
         }
+
+        // ---------- Pulso de energia cheia (D-067) ----------
+
+        // Primeiro quadro (energia pela metade) já visto, para os testes partirem de um gatilho armado.
+        private static AuraPulseTrigger GatilhoArmado()
+        {
+            var trigger = new AuraPulseTrigger(0.95f);
+            Assert.IsFalse(trigger.Update(0.5f, false));
+            return trigger;
+        }
+
+        [Test]
+        public void Pulso_DisparaQuandoAEnergiaEnche()
+        {
+            var trigger = GatilhoArmado();
+            Assert.IsFalse(trigger.Update(0.99f, false), "Quase cheia não pulsa");
+            Assert.IsTrue(trigger.Update(1f, false), "Encheu: pulsa");
+        }
+
+        [Test]
+        public void Pulso_CheiaEhAMesmaDasRunas()
+        {
+            // O pulso usa o mesmo limiar que acende as runas inteiras (AuraMapper.FullEnergy).
+            var trigger = GatilhoArmado();
+            Assert.IsFalse(Mapear(1f, 0.998f, AuraSignals.None).RunesFull);
+            Assert.IsFalse(trigger.Update(0.998f, false));
+            Assert.IsTrue(Mapear(1f, AuraMapper.FullEnergy, AuraSignals.None).RunesFull);
+            Assert.IsTrue(trigger.Update(AuraMapper.FullEnergy, false));
+        }
+
+        [Test]
+        public void Pulso_NaoRepeteEnquantoContinuaCheia()
+        {
+            var trigger = GatilhoArmado();
+            Assert.IsTrue(trigger.Update(1f, false));
+            for (int i = 0; i < 10; i++)
+                Assert.IsFalse(trigger.Update(1f, false), "Cheia de novo no quadro seguinte não pulsa");
+        }
+
+        [Test]
+        public void Pulso_GastaEEncheDeNovo_PulsaDeNovo()
+        {
+            var trigger = GatilhoArmado();
+            Assert.IsTrue(trigger.Update(1f, false));
+            Assert.IsFalse(trigger.Update(0.7f, false), "Gastar não pulsa");
+            Assert.IsFalse(trigger.Update(0.9f, false));
+            Assert.IsTrue(trigger.Update(1f, false), "Encheu outra vez: pulsa outra vez");
+        }
+
+        [Test]
+        public void Pulso_OscilandoPertoDeCheiaNaoRepete()
+        {
+            // Bug: a energia suavizada oscilando em volta de 0,999 repetia o pulso; agora só rearma abaixo de RearmBelow.
+            var trigger = GatilhoArmado();
+            Assert.IsTrue(trigger.Update(1f, false));
+            for (int i = 0; i < 20; i++)
+            {
+                Assert.IsFalse(trigger.Update(0.997f, false), "Caiu um pouco: não rearma");
+                Assert.IsFalse(trigger.Update(0.9995f, false), "Voltou a cheia sem ter caído de verdade: não pulsa");
+            }
+            Assert.IsFalse(trigger.Update(0.94f, false), "Caiu abaixo de RearmBelow: rearma, sem pulsar");
+            Assert.IsTrue(trigger.Update(1f, false), "Encheu depois de rearmar: pulsa");
+        }
+
+        [Test]
+        public void Pulso_RearmeLimitadoAteCheia()
+        {
+            Assert.AreEqual(AuraMapper.FullEnergy, new AuraPulseTrigger(2f).RearmBelow, Tol);
+            Assert.AreEqual(0f, new AuraPulseTrigger(-1f).RearmBelow, Tol);
+            Assert.AreEqual(0.95f, new AuraPulseTrigger(float.NaN).RearmBelow, Tol);
+        }
+
+        [Test]
+        public void Pulso_PrimeiroQuadroCheioNaoDispara()
+        {
+            var trigger = new AuraPulseTrigger();
+            Assert.IsFalse(trigger.Update(1f, false), "Nasceu cheio: não pulsa");
+            Assert.IsFalse(trigger.Update(1f, false), "Continua cheio: não pulsa");
+        }
+
+        [Test]
+        public void Pulso_ResetVoltaAoPrimeiroQuadro()
+        {
+            var trigger = GatilhoArmado();
+            trigger.Reset();
+            Assert.IsFalse(trigger.Update(1f, false), "Depois do Reset, o primeiro quadro só registra");
+        }
+
+        [Test]
+        public void Pulso_CaidoNaoDispara()
+        {
+            var trigger = GatilhoArmado();
+            Assert.IsFalse(Mapear(0f, 1f, AuraSignals.Downed).RunesFull, "Caído: runas não ficam cheias (AuraMapper)");
+            Assert.IsFalse(trigger.Update(1f, true), "Caído com energia cheia não pulsa");
+            Assert.IsFalse(trigger.Update(1f, true));
+        }
+
+        [Test]
+        public void Pulso_ReviverCheioNaoDispara()
+        {
+            // Bug: caído tem RunesFull falso; ao levantar com a energia cheia, a borda falso -> verdadeiro pulsava.
+            var trigger = GatilhoArmado();
+            Assert.IsFalse(trigger.Update(1f, true), "Caiu com a energia cheia");
+            Assert.IsFalse(trigger.Update(1f, false), "Levantou cheio: primeiro quadro de pé, não pulsa");
+            Assert.IsFalse(trigger.Update(1f, false), "Continua cheio: não pulsa");
+            Assert.IsFalse(trigger.Update(0.5f, false), "Gastou");
+            Assert.IsTrue(trigger.Update(1f, false), "Encheu de verdade depois de levantar: pulsa");
+        }
+
+        [Test]
+        public void Pulso_LevantaComPoucaEnergia_EncherPulsa()
+        {
+            var trigger = GatilhoArmado();
+            Assert.IsFalse(trigger.Update(0.3f, true));
+            Assert.IsFalse(trigger.Update(0.4f, false), "Levantou com pouca energia");
+            Assert.IsTrue(trigger.Update(1f, false), "Encheu: pulsa");
+        }
+
+        // ---------- Suavização (D-067: nada de energia "subindo" ao nascer) ----------
+
+        [Test]
+        public void Suavizacao_AntesDePronto_AcompanhaSemSuavizar()
+        {
+            var smoother = new AuraSmoother();
+            smoother.Step(1f, 0f, false, 6f, 0.016f);
+            smoother.Step(0.5f, 0.3f, false, 6f, 0.016f);
+            Assert.AreEqual(0.5f, smoother.Health, Tol);
+            Assert.AreEqual(0.3f, smoother.Energy, Tol);
+            Assert.IsFalse(smoother.Initialized);
+        }
+
+        [Test]
+        public void Suavizacao_PrimeiroQuadroProntoCopiaOAlvo_DepoisSuaviza()
+        {
+            var smoother = new AuraSmoother();
+            smoother.Step(1f, 0f, false, 6f, 0.016f);   // fora da rede: energia ainda 0
+            smoother.Step(1f, 1f, true, 6f, 0.016f);    // em rede: a energia de verdade chegou
+            Assert.AreEqual(1f, smoother.Energy, Tol, "Primeiro quadro em rede copia o alvo");
+            Assert.IsTrue(smoother.Initialized);
+
+            smoother.Step(1f, 0f, true, 6f, 0.1f);
+            Assert.AreEqual(MathF.Exp(-0.6f), smoother.Energy, Tol, "Depois suaviza");
+        }
+
+        [Test]
+        public void Suavizacao_NascerAntesDaRede_NaoPulsa()
+        {
+            // Bug: a aura copiava o alvo só no primeiro quadro, mesmo fora da rede (energia 0); em rede, a energia
+            // "subia" do zero até cheia e o pulso tocava logo ao nascer.
+            var smoother = new AuraSmoother();
+            var trigger = new AuraPulseTrigger();
+            int pulses = 0;
+            for (int i = 0; i < 3; i++)
+            {
+                smoother.Step(1f, 0f, false, 6f, 0.016f);
+                trigger.Reset(); // como o PlayerAura faz fora da rede
+            }
+            for (int i = 0; i < 300; i++)
+            {
+                smoother.Step(1f, 1f, true, 6f, 0.016f);
+                if (trigger.Update(smoother.Energy, false))
+                    pulses++;
+            }
+            Assert.AreEqual(1f, smoother.Energy, Tol);
+            Assert.AreEqual(0, pulses, "Nascer com a energia cheia não pulsa");
+        }
+
+        [Test]
+        public void Suavizacao_SemTempoNaoMexe()
+        {
+            var smoother = new AuraSmoother();
+            smoother.Step(1f, 1f, true, 6f, 0.016f);
+            smoother.Step(0f, 0f, true, 6f, 0f);
+            Assert.AreEqual(1f, smoother.Health, Tol);
+            Assert.AreEqual(1f, smoother.Energy, Tol);
+        }
     }
 }

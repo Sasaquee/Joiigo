@@ -30,6 +30,18 @@ namespace Game.Dice
         /// <summary>Em todos: um jogador pegou uma carta e o dado começou a rolar (quem rolou, resultado, duração da rolagem).</summary>
         public static event Action<ulong, int, float> RollStarted;
 
+        /// <summary>
+        /// Em todos: os inimigos da emboscada do 1 acabaram de nascer nestas posições (D-068). Só para a apresentação
+        /// (AmbushFx); não muda nem atrasa nada na regra.
+        /// </summary>
+        public static event Action<Vector3[]> AmbushRevealed;
+
+        /// <summary>
+        /// O mesmo aviso, só deste serviço: o AmbushFx dele escuta aqui, para que dois serviços na cena não mostrem o
+        /// surgimento duas vezes.
+        /// </summary>
+        public event Action<Vector3[]> Ambushed;
+
         private D20 dice;
         private DiceTable table;
         private CardDraw draw;
@@ -48,6 +60,14 @@ namespace Game.Dice
         public IReadOnlyList<FloorCard> CardsOnFloor => cardsOnFloor;
         /// <summary>Host: último resultado rolado (0 = nenhum). Para o overlay de debug e os testes.</summary>
         public int LastRoll { get; private set; }
+
+        private void Awake()
+        {
+            // O surgimento da emboscada (D-068) aparece em todos os clientes: o efeito mora no mesmo objeto do serviço.
+            if (!TryGetComponent(out AmbushFx fx))
+                fx = gameObject.AddComponent<AmbushFx>();
+            fx.Bind(this);
+        }
 
         public override void OnNetworkSpawn()
         {
@@ -155,6 +175,7 @@ namespace Game.Dice
             float radius = settings != null ? settings.ambushRadius : 5f;
             int count = random.Next(min, max + 1);
             var types = spawner.Settings.enemyTypes;
+            var revealed = new List<Vector3>(count);
             float start = random.Next(0, 360);
             for (int i = 0; i < count; i++)
             {
@@ -167,15 +188,29 @@ namespace Game.Dice
                     position = new Vector3(flat.x, position.y, flat.y);
                 }
                 var def = types[random.Next(0, types.Length)];
-                if (def != null)
-                    spawner.ServerSpawn(def, position);
+                if (def == null)
+                    continue;
+                var enemy = spawner.ServerSpawn(def, position);
+                if (enemy != null)
+                    revealed.Add(enemy.transform.position);
             }
+
+            // D-068: todos mostram o surgimento junto com o nascimento (sem atrasar nem mudar os inimigos).
+            if (revealed.Count > 0)
+                ShowAmbushRpc(revealed.ToArray());
         }
 
         [Rpc(SendTo.Everyone)]
         private void ShowRollRpc(ulong roller, int result, float duration)
         {
             RollStarted?.Invoke(roller, result, duration);
+        }
+
+        [Rpc(SendTo.Everyone)]
+        private void ShowAmbushRpc(Vector3[] positions)
+        {
+            Ambushed?.Invoke(positions);
+            AmbushRevealed?.Invoke(positions);
         }
 
         private static PlayerCards FindPlayerCards(ulong clientId)

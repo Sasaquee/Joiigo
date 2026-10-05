@@ -8,6 +8,9 @@ namespace Game.Core.Aura
     /// </summary>
     public static class AuraMapper
     {
+        /// <summary>A partir desta fração a energia conta como cheia: runas inteiras (D-062) e pulso (D-067).</summary>
+        public const float FullEnergy = 0.999f;
+
         /// <summary>Lerp(a, b, t) = a + (b - a) * t.</summary>
         private static float Lerp(float a, float b, float t) => a + (b - a) * t;
 
@@ -54,7 +57,7 @@ namespace Game.Core.Aura
                 // Energia vira faíscas (D-062); cheia, acende as runas inteiras.
                 sparkRate = e;
                 sparkSpeed = Lerp(tuning.SparkMinSpeed, 1f, e);
-                runesFull = e >= 0.999f;
+                runesFull = e >= FullEnergy;
                 signals = input.Signals;
 
                 // Batimento grave com HP baixo, acelerando perto do zero (D-064).

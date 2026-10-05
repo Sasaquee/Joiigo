@@ -3,6 +3,7 @@ using Game.Aura;
 using Game.Cards;
 using Game.Combat;
 using Game.Core.Aura;
+using Game.Core.Cards;
 using Game.Core.Combat;
 using Game.Net;
 using Game.Player;
@@ -15,7 +16,7 @@ namespace Game.Tests.PlayMode
 {
     /// <summary>
     /// Fase 7 — aura de ponta a ponta no host (D-060 a D-066): a aura acompanha o HP, mostra o escudo e quem caiu,
-    /// troca de paleta e o anel do seu personagem fica por fora do círculo.
+    /// troca de paleta e o anel do seu personagem fica por fora do círculo. Energia cheia dá um pulso e um "ding" (D-067).
     /// </summary>
     public class AuraTests
     {
@@ -149,6 +150,107 @@ namespace Game.Tests.PlayMode
             float ringRadius = 1.08f * marker.localScale.x; // raio do AnelMarcador.fbx (build_props.py)
             Assert.Greater(ringRadius, aura.Settings.fullRadius, "Anel branco por fora do círculo cheio (D-066)");
             yield break;
+        }
+
+        // ---------- Pulso de energia cheia (D-067) ----------
+
+        private static IEnumerator WaitFor(System.Func<bool> condition, float timeout)
+        {
+            while (!condition() && timeout > 0f)
+            {
+                timeout -= Time.deltaTime;
+                yield return null;
+            }
+        }
+
+        // Equipa uma skill que custa energia e a usa, para a energia sair de cheia.
+        private void Spend(PlayerCards cards, string cardId, int slot)
+        {
+            int id = cards.FindCardId(cardId);
+            Assert.GreaterOrEqual(id, 0, $"Carta {cardId} existe no banco");
+            cards.ServerGiveCard(id);
+            cards.RequestEquip(id, SlotType.Skill, slot);
+            Assert.AreEqual(id, cards.GetSlot(SlotType.Skill, slot), $"{cardId} equipada");
+            Vector3 aim = player.transform.position + player.transform.forward * 6f;
+            Assert.IsTrue(cards.ServerUseSkill(slot, aim), $"Usou {cardId} (gasta energia)");
+        }
+
+        [UnityTest]
+        public IEnumerator NasceComEnergiaCheia_NaoPulsa()
+        {
+            var visual = player.GetComponent<AuraVisual>();
+            var audio = player.GetComponent<AuraAudio>();
+            Assert.Greater(player.GetComponent<PlayerCards>().EnergyFraction, 0.999f, "O jogador nasce com a energia cheia");
+            yield return WaitFrames(10);
+            Assert.IsTrue(aura.Current.RunesFull, "Runas cheias");
+            Assert.AreEqual(0, visual.PulsesPlayed, "Nascer cheio não é encher: sem pulso (D-067)");
+            Assert.AreEqual(0, audio.ChimesPlayed, "Nascer cheio: sem ding");
+        }
+
+        [UnityTest]
+        public IEnumerator EnergiaEnche_UmPulsoEUmDing_NaoRepete_EPulsaDeNovoAoEncherOutraVez()
+        {
+            player.GetComponent<PlayerInputReader>().enabled = false; // sem mouse no teste
+            var cards = player.GetComponent<PlayerCards>();
+            var visual = player.GetComponent<AuraVisual>();
+            var audio = player.GetComponent<AuraAudio>();
+            Assert.IsNotNull(visual);
+            Assert.IsNotNull(audio);
+
+            // Gasta: a energia sai de cheia (rearma o pulso), sem pulsar.
+            Spend(cards, "pistao_runico", 0);
+            yield return WaitFor(() => !aura.Current.RunesFull, 2f);
+            Assert.IsFalse(aura.Current.RunesFull, "Gastou: runas deixam de estar cheias");
+            // O pulso só rearma abaixo de fullPulseRearmBelow (histerese): espera a energia mostrada descer até lá.
+            yield return WaitSeconds(0.8f);
+            Assert.AreEqual(0, visual.PulsesPlayed, "Gastar não pulsa");
+
+            // Enche: um pulso e um ding.
+            cards.AddEnergy(10000f);
+            yield return WaitFor(() => visual.PulsesPlayed > 0, 3f);
+            Assert.AreEqual(1, visual.PulsesPlayed, "Encheu: um pulso (D-067)");
+            Assert.AreEqual(1, audio.ChimesPlayed, "Encheu: um ding no seu personagem");
+            Assert.IsTrue(visual.PulseActive, "A onda está correndo");
+            Assert.IsTrue(player.transform.Find("Aura/PulsoOnda").GetComponent<MeshRenderer>().enabled, "Onda visível");
+
+            // Continua cheia: não repete, e a onda acaba.
+            yield return WaitSeconds(aura.Settings.fullPulseDuration + 1f);
+            Assert.IsTrue(aura.Current.RunesFull);
+            Assert.AreEqual(1, visual.PulsesPlayed, "Continua cheia: não pulsa de novo");
+            Assert.AreEqual(1, audio.ChimesPlayed, "Continua cheia: não toca de novo");
+            Assert.IsFalse(visual.PulseActive, "A onda acabou");
+            Assert.IsFalse(player.transform.Find("Aura/PulsoOnda").GetComponent<MeshRenderer>().enabled, "Onda escondida");
+
+            // Gasta e enche de novo: pulsa de novo.
+            Spend(cards, "mina_engrenagem", 1);
+            yield return WaitFor(() => !aura.Current.RunesFull, 2f);
+            Assert.IsFalse(aura.Current.RunesFull, "Gastou de novo");
+            yield return WaitSeconds(0.8f); // a energia mostrada precisa passar de fullPulseRearmBelow para rearmar
+            cards.AddEnergy(10000f);
+            yield return WaitFor(() => visual.PulsesPlayed > 1, 3f);
+            Assert.AreEqual(2, visual.PulsesPlayed, "Encheu outra vez: pulsa outra vez");
+            Assert.AreEqual(2, audio.ChimesPlayed, "Encheu outra vez: toca outra vez");
+        }
+
+        [UnityTest]
+        public IEnumerator LevantarComEnergiaCheia_NaoPulsa()
+        {
+            // Bug: caído tem RunesFull falso; ao levantar com a energia cheia, a borda falso -> verdadeiro pulsava.
+            var visual = player.GetComponent<AuraVisual>();
+            var audio = player.GetComponent<AuraAudio>();
+            var life = player.GetComponent<PlayerLife>();
+            Assert.IsTrue(aura.Current.RunesFull, "Começa com a energia cheia");
+
+            health.ServerApplyDamage(new DamagePacket(health.Max * 10f, 0f), 0);
+            yield return WaitFor(() => life.IsDowned, 2f);
+            Assert.IsTrue(life.IsDowned, "Caiu");
+            yield return WaitFor(() => !life.IsDowned, life.Settings.downedDuration + 3f);
+            Assert.IsFalse(life.IsDowned, "Levantou (fim do tempo caído)");
+            yield return WaitSeconds(1f);
+
+            Assert.IsTrue(aura.Current.RunesFull, "De pé, com a energia cheia");
+            Assert.AreEqual(0, visual.PulsesPlayed, "Levantar cheio não é encher: sem pulso (D-067)");
+            Assert.AreEqual(0, audio.ChimesPlayed, "Levantar cheio: sem ding");
         }
     }
 }
