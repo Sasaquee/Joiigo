@@ -16,7 +16,7 @@ RPG de ação 2.5D cooperativo (2 a 4 jogadores em LAN) em Unity 6. Este reposit
 | 6 | Carta no chão e D20 (rolagem para todos, tabela de três eixos, críticos 1 e 20, qualidade das cartas) | ✅ |
 | — | Passe de resolução: mundo na resolução da tela, D20 nítido, cartas em alta resolução (D-053, D-056 a D-059) | ✅ |
 | 7 | Aura: HP, energia e estados sem números (círculo de latão e runas, sons de aviso, paleta para daltônicos) | ✅ |
-| 8 | Ciclo completo e playtest | próxima |
+| 8 | Ciclo completo e playtest: debug finalizado (F1–F9), ciclo inteiro testado, roteiro em `Docs/Playtest/roteiro.md` | ✅ código · ⏳ **falta playtest humano** |
 
 ## Abrir o projeto
 

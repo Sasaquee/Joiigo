@@ -16,7 +16,7 @@ Até aqui, o HP, a energia e os estados não apareciam em lugar nenhum. Agora a 
   - batimento grave abaixo de 35% de HP, de 60 a 140 batidas por minuto conforme o HP cai;
   - chiado curto de vapor quando um inimigo a até 5,5 m prepara um golpe virado para você.
   - Os dois são sintetizados em código, sem arquivo de áudio.
-- **Paleta alternativa (D-065):** a tecla **F8** troca ciano, violeta e laranja por azul forte, branco e amarelo. Como cada sinal tem forma própria, a cor só reforça.
+- **Paleta alternativa (D-065):** a tecla **F7** troca ciano, violeta e laranja por azul forte, branco e amarelo. Como cada sinal tem forma própria, a cor só reforça.
 - **Seu anel (D-066):** o anel branco do seu personagem foi refeito mais fino e fica por fora do círculo da aura.
 - **Números na tela:** conferido, o jogo normal não mostra nenhum número de jogo. O único número visível é o título de tarô das cartas, que faz parte do desenho.
 
@@ -32,7 +32,7 @@ Novos:
 - Dados: `Data/Aura/AuraSettings.asset`.
 - Arte: `Tools/Aura/aura_art.py` → `Art/Aura/` (círculo, runas, luz, faísca, fiapo, brasa e casca).
 - Editor: `Editor/AuraBuilder.cs`, que liga a aura ao prefab do jogador e cuida da importação das texturas.
-- Debug: `Debug/DevAuraTools.cs` (F8).
+- Debug: `Debug/DevAuraTools.cs` (F7).
 - Testes:
   - `Tests/EditMode/AuraCoreTests.cs` (27): HP cheio, médio, baixo e zero; com e sem cada estado; as duas paletas; entrada fora de faixa.
   - `Tests/PlayMode/AuraTests.cs` (7): HP cheio e baixo, batimento, escudo, caído, paleta, anel por fora e círculo com textura.
@@ -51,7 +51,7 @@ Alterados:
 3. Bata nos inimigos para ganhar energia: as faíscas aumentam e, com energia cheia, as runas acendem inteiras.
 4. Deixe os inimigos baterem: a aura encolhe, escurece e, quase sem vida, falha e o batimento toca.
 5. **Tab**: equipe o Broquel e use-o para ver a casca de cristal; equipe a Lâmina Sedenta para ver os fiapos violeta; equipe a Mola de Recuo e leve um golpe para ver as runas em brasa.
-6. **F8** troca a paleta. Ao cair, só sobram brasas.
+6. **F7** troca a paleta. Ao cair, só sobram brasas.
 
 Testes: EditMode 165/165, PlayMode 66/66 (mais 2 de capturas, explícitos). Capturas: `Docs/Capturas/fase7/` (texturas e as oito situações).
 

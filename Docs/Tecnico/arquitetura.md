@@ -25,7 +25,7 @@ A aura (Fase 7, D-060 a D-066) segue a mesma divisão:
 - **Números:** `Data/Aura/AuraSettings.asset`.
 - **Texturas:** geradas por `Tools/Aura/aura_art.py`, ficam em `Art/Aura/`.
 - **Montagem:** o `AuraBuilder` liga tudo ao prefab do jogador.
-- **Paleta para daltônicos:** F8 (`Debug/DevAuraTools`).
+- **Paleta para daltônicos:** F7 (`Debug/DevAuraTools`).
 
 Dependências: `Core` ← `Runtime` ← `Debug` / `Editor`. O `Core` não conhece ninguém.
 
