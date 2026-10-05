@@ -1699,6 +1699,33 @@ def desenhar(card):
     return t
 
 
+def desenhar_verso():
+    """Verso da carta do chão (D-046): o que o jogador vê antes de pegar. Não diz nada sobre a carta:
+    uma roda de engrenagem dourada com um cristal ciano no miolo (máquina e magia na mesma peça),
+    raios, estrelas e a moldura dos arcanos maiores."""
+    t = Tela("major")
+    fundo(t)
+    halo(t, CX, CY, 40, "major")
+    roda = engrenagem(CX, CY, 25.0, 16, 4.5, fase=0.25)
+    miolo = E(CX, CY, 17.5)
+    t.pintar(roda - miolo, esfera(CX, CY, 29.5, 1.0, 0.05), chanfro=0.15)
+    t.pintar(anel(CX, CY, 12.5, 15.0), esfera(CX, CY, 15.0, 1.0, 0.1), chanfro=0.1)
+    for i in range(8):                       # raios da roda
+        a = i * math.tau / 8 + math.tau / 16
+        p0 = (CX + math.cos(a) * 15.5, CY + math.sin(a) * 15.5)
+        p1 = (CX + math.cos(a) * 18.5, CY + math.sin(a) * 18.5)
+        t.pintar(L([p0, p1], 1.8), linear(p0[0], p0[1], p1[0], p1[1]), chanfro=0.1)
+    for i in range(4):                       # rebites nos quatro cantos da roda
+        a = i * math.tau / 4
+        t.rebite(int(CX - 0.5 + math.cos(a) * 21.0), int(CY - 0.5 + math.sin(a) * 21.0))
+    t.cristal(CX, CY, 8.0, 15.0)
+    for dy in (-44, 44):                     # cristais pequenos acima e abaixo da roda
+        t.cristal_pequeno(int(CX - 0.5), int(CY - 0.5 + dy))
+    estrelas(t, random.Random("verso"), 40)
+    moldura(t, "major", "", "")
+    return t
+
+
 def exportar(t, cid):
     face = Image.new("RGB", (W, H))
     face.putdata([PAL[c] for row in t.px for c in row])
@@ -1741,6 +1768,9 @@ if __name__ == "__main__":
         t = desenhar(c)
         faces.append(exportar(t, c[0]))
         print(f"[card_pixel] {c[0]}")
+    if not only or "verso" in only:
+        exportar(desenhar_verso(), "verso")
+        print("[card_pixel] verso")
     if not only:
         folha(faces)
         print(f"[card_pixel] folha: {SHEET}")

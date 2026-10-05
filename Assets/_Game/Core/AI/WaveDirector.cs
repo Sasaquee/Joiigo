@@ -39,6 +39,9 @@ namespace Game.Core.AI
 
         public bool InPause => !waitingForClear;
 
+        /// <summary>Ondas vencidas (todos os inimigos da onda morreram). Cresce no Tick em que a onda acaba.</summary>
+        public int WavesCleared { get; private set; }
+
         /// <summary>
         /// Avança. Quando uma onda sai, preenche spawns com o índice do tipo de cada inimigo
         /// a gerar e devolve true.
@@ -54,6 +57,7 @@ namespace Game.Core.AI
                 if (aliveEnemies > 0)
                     return false;
                 waitingForClear = false;
+                WavesCleared++;
                 pauseTimer = pauseBetweenWaves;
             }
 

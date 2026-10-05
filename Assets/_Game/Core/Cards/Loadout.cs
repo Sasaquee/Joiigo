@@ -51,6 +51,17 @@ namespace Game.Core.Cards
             Version++;
         }
 
+        /// <summary>O jogador tem a carta (no inventário, equipada ou no cinto).</summary>
+        public bool Has(int cardId)
+        {
+            if (cardId < 0)
+                return false;
+            if (inventory.Contains(cardId))
+                return true;
+            return System.Array.IndexOf(skills, cardId) >= 0 || System.Array.IndexOf(passives, cardId) >= 0
+                || System.Array.IndexOf(equipment, cardId) >= 0 || System.Array.IndexOf(belt, cardId) >= 0;
+        }
+
         public bool RemoveFromInventory(int cardId)
         {
             bool removed = inventory.Remove(cardId);

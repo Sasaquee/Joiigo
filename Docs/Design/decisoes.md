@@ -284,6 +284,56 @@ Registro das perguntas de design feitas ao dono durante o protótipo. A resposta
 
 ---
 
+## Fase 6 · 2026-10-04
+
+### D-046 · Carta no chão (resolve P-008)
+- **Pergunta:** Como a carta aparece no chão da arena antes de ser pega (com F)?
+- **Opções:** Flutuando de pé · Caída no chão · Relicário mecânico
+- **Resposta literal:** "Flutuando de pé (Recomendado)"
+- **Significa:** a carta, de verso dourado, flutua baixa e gira devagar, com um brilho ciano subindo. O verso esconde o que ela é.
+
+### D-047 · Rolagem do D20
+- **Pergunta:** Como o D20 rola na frente do jogador ao pegar a carta?
+- **Opções:** Dado grande na tela · Dado no mundo · Dado sobre a cabeça
+- **Resposta literal:** "Dado grande na tela (Recomendado)"
+- **Significa:** um D20 de latão e cristal, em 3D pixelado, rola grande no centro da tela por ~2 s e para no número, com o jogo seguindo por trás. No coop, todos veem o mesmo dado.
+
+### D-048 · Tabela do D20
+- **Pergunta:** Como a tabela do D20 decide raridade, qualidade e quantidade?
+- **Opções:** Três eixos simples · Sem qualidade por enquanto · Quero ajustar a tabela
+- **Resposta literal:** "Três eixos simples (Recomendado)"
+- **Significa:** 1: amaldiçoada + perigo · 2–6: comum gasta · 7–11: comum boa · 12–15: incomum boa · 16–18: incomum perfeita · 19: incomum perfeita + 1 comum · 20: arcano maior ou única. A qualidade (gasta, boa, perfeita) muda um pouco os números da carta e aparece só na moldura. As faixas e os números ficam em dados (provisórios).
+
+### D-049 · Perigo do crítico 1
+- **Pergunta:** No 1, além da carta amaldiçoada, que perigo o resultado atrai?
+- **Opções:** Emboscada · Onda antecipada · A carta morde
+- **Resposta literal:** "Emboscada (Recomendado)"
+- **Significa:** 2 ou 3 inimigos surgem em volta do jogador na hora.
+
+### D-050 · Origem das cartas na arena
+- **Pergunta:** De onde surgem as cartas no chão da arena?
+- **Opções:** Fim de cada onda · Inimigos derrubam · Pontos fixos da arena
+- **Resposta literal:** "Fim de cada onda (Recomendado)"
+- **Significa:** quando uma onda termina, uma carta aparece flutuando no centro da arena.
+
+### D-051 · Carta repetida
+- **Pergunta:** Se o dado sortear uma carta que o jogador já tem, o que acontece?
+- **Opções:** Sorteia outra · Melhora a que já tem · Pode ter cópias
+- **Resposta literal:** "Melhora a que já tem"
+- **Significa:** a repetida sobe a qualidade da carta que ele já tem (gasta → boa → perfeita).
+
+### D-052 · Repetida de carta já perfeita
+- **Pergunta:** E se a que ele tem já for perfeita?
+- **Opções:** Sorteia outra · Nada acontece · Cópia extra
+- **Resposta literal:** "Cópia extra"
+- **Significa:** ganha uma segunda cópia da carta perfeita (por exemplo, duas granadas no cinto).
+
+### P-009 · Efeito do 20 no coop
+- **Resposta literal:** "Decidir quando o coop voltar (Recomendado)"
+- **Significa:** por enquanto o 20 dá só o arcano maior ou a carta única; o efeito para o grupo continua pendente.
+
+---
+
 ## Perguntas pendentes (feitas na fase em que travarem)
 
 | Id | Pergunta | Fase |
@@ -295,7 +345,7 @@ Registro das perguntas de design feitas ao dono durante o protótipo. A resposta
 | ~~P-005~~ | Tempo caído: número provisório 5 s em `CombatSettings` (para aprovar) | resolvida como número |
 | P-006 | Nomes finais dos 3 inimigos (comportamentos decididos em D-023 a D-026; ids internos provisórios: automato, drone, constructo) | antes do conteúdo final |
 | ~~P-007~~ | Recuperação da energia | resolvida em D-030 |
-| P-008 | Como a carta do chão se mostra no mundo antes de ser pega | 6 |
-| P-009 | Efeito temporário do 20 no coop | 6 |
+| ~~P-008~~ | Como a carta do chão se mostra no mundo | resolvida em D-046 |
+| P-009 | Efeito temporário do 20 no coop | quando o coop voltar |
 | P-010 | Forma e linguagem visual da aura | 7 |
 | ~~P-011~~ | Arte com `kimi-k3` no DeepSeek harness | resolvida em D-043 |

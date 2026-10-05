@@ -36,14 +36,14 @@ namespace Game.Cards
             // No visual "grenade_throw", a direção é o vetor até o ponto de queda e o tamanho é o tempo de voo.
             Vector3 start = origin + Vector3.up * HandHeight;
             user.BroadcastVisual("grenade_throw", start, landing - start, flightTime);
-            user.Run(Land(user, landing));
+            user.Run(Land(user, landing, user.Potency)); // a qualidade é a do momento do arremesso (D-048)
         }
 
-        private IEnumerator Land(ICardUser user, Vector3 landing)
+        private IEnumerator Land(ICardUser user, Vector3 landing, float potency)
         {
             yield return new WaitForSeconds(flightTime);
 
-            var packet = new DamagePacket(damage, arcaneFraction);
+            var packet = new DamagePacket(damage * potency, arcaneFraction); // qualidade da carta (D-048)
             foreach (IDamageable target in user.EnemiesInRadius(landing, radius))
                 target.ServerApplyDamage(packet, user.ClientId);
             user.BroadcastVisual("grenade_explode", landing + Vector3.up * 0.1f, Vector3.up, radius);

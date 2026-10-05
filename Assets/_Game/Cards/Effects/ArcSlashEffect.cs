@@ -22,7 +22,7 @@ namespace Game.Cards
             Vector3 dir = user.AimDirection;
             var origin = new Float2(p.x, p.z);
             var facing = new Float2(dir.x, dir.z);
-            var packet = new DamagePacket(damage, arcaneFraction);
+            var packet = new DamagePacket(damage * user.Potency, arcaneFraction); // qualidade da carta (D-048)
 
             foreach (IDamageable target in user.EnemiesInRadius(p, range))
             {

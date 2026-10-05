@@ -67,6 +67,7 @@ namespace Game.EditorTools
             var waves = EnemyPrefabBuilder.BuildAll(crystal, crystalOff); // inimigos e ondas (D-023 a D-026)
             var combatSettings = LoadOrCreate<CombatSettings>($"{DataFolder}/Combat/CombatSettings.asset");
             var cardDb = CardAssetsBuilder.BuildAll(); // 14 cartas aprovadas (D-035)
+            CardDropBuilder.BuildAssets(); // carta no chão e D20 (Fase 6)
             var playerPrefab = CreatePlayerPrefab(movement, interaction, netSettings, combatSettings, cardDb);
 
             var scene = EditorSceneManager.OpenScene(ArenaSceneSetup.ArenaScenePath, OpenSceneMode.Single);
@@ -97,7 +98,8 @@ namespace Game.EditorTools
             NetworkUiBuilder.Build(netSession);
             CardUiBuilder.Build(); // tiragem (Tab) e barra de cartas (D-027, D-028)
             PlayerCombatSetup.AddSoloBootstrap(netSession, matchState); // entra direto, solo (D-018)
-            EnemyPrefabBuilder.AddWaveSpawner(matchState, waves);
+            var spawner = EnemyPrefabBuilder.AddWaveSpawner(matchState, waves);
+            CardDropBuilder.AddToScene(session, spawner); // carta no fim da onda, D20 na tela (D-046 a D-052)
 
             SetupCamera(cameraSettings, spawnPoints.transform);
 

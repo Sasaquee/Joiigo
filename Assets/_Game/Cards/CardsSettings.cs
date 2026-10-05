@@ -1,3 +1,4 @@
+using Game.Core.Cards;
 using UnityEngine;
 
 namespace Game.Cards
@@ -18,5 +19,20 @@ namespace Game.Cards
         [Header("Passivas")]
         [Tooltip("Mola de Recuo: por quanto tempo depois de levar dano o próximo golpe sai reforçado (s).")]
         [Min(0f)] public float hurtBonusWindow = 3f;
+
+        [Header("Qualidade (D-048)")]
+        [Tooltip("Multiplica os números da carta gasta (dano, cura, bônus das passivas e equipamentos).")]
+        [Min(0f)] public float wornMultiplier = 0.85f;
+        [Tooltip("Multiplicador da carta boa.")]
+        [Min(0f)] public float goodMultiplier = 1f;
+        [Tooltip("Multiplicador da carta perfeita.")]
+        [Min(0f)] public float perfectMultiplier = 1.15f;
+
+        public float QualityMultiplier(CardQuality quality) => quality switch
+        {
+            CardQuality.Worn => wornMultiplier,
+            CardQuality.Perfect => perfectMultiplier,
+            _ => goodMultiplier
+        };
     }
 }

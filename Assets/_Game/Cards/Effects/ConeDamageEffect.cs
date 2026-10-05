@@ -26,10 +26,10 @@ namespace Game.Cards
 
         public override void Execute(ICardUser user, CardData card)
         {
-            user.Run(Routine(user, user.AimDirection));
+            user.Run(Routine(user, user.AimDirection, user.Potency)); // a qualidade vale para o sopro inteiro (D-048)
         }
 
-        private IEnumerator Routine(ICardUser user, Vector3 aim)
+        private IEnumerator Routine(ICardUser user, Vector3 aim, float potency)
         {
             Vector3 dir = new Vector3(aim.x, 0f, aim.z);
             dir = dir.sqrMagnitude > 0.0001f ? dir.normalized : Vector3.forward;
@@ -50,7 +50,7 @@ namespace Game.Cards
                     user.BroadcastVisual("cone_vapor", origin + Vector3.up, dir, range);
                 }
 
-                Tick(user, origin, dir, damagePerSecond * step);
+                Tick(user, origin, dir, damagePerSecond * step * potency);
 
                 yield return new WaitForSeconds(step);
                 elapsed += step;

@@ -43,7 +43,7 @@ namespace Game.Cards
                 return;
             }
 
-            var packet = new DamagePacket(damage, arcaneFraction);
+            var packet = new DamagePacket(damage * user.Potency, arcaneFraction); // qualidade da carta (D-048)
             var struck = new List<IDamageable>();
             for (int i = 0; i < jumps && current != null; i++)
             {

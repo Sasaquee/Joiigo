@@ -17,3 +17,6 @@ MonoBehaviour:
   energyPerHit: 8
   startEnergyFraction: 1
   hurtBonusWindow: 3
+  wornMultiplier: 0.85
+  goodMultiplier: 1
+  perfectMultiplier: 1.15

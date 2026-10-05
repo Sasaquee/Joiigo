@@ -36,6 +36,8 @@ namespace Game.UI
         [SerializeField] private RectTransform[] backs = new RectTransform[2];
         [SerializeField] private Image frame;
         [SerializeField] private Outline frameOutline;
+        [SerializeField] private Image qualityRing;
+        [SerializeField] private Outline qualityOutline;
         [SerializeField] private RawImage face;
         [SerializeField] private RawImage shimmer;
         [SerializeField] private Text label;
@@ -93,6 +95,12 @@ namespace Game.UI
             view.frame = UiFactory.MakeImage("Moldura", root, EmptyFill);
             UiFactory.Stretch(view.frame.rectTransform);
             view.frameOutline = UiFactory.AddOutline(view.frame, EmptyOutline, 2f);
+
+            // Qualidade (D-048): só a borda muda — cobre oxidado na gasta, nada na boa, ouro na perfeita.
+            view.qualityRing = UiFactory.MakeImage("Qualidade", root, new Color(1f, 1f, 1f, 0f));
+            UiFactory.Stretch(view.qualityRing.rectTransform, -2f);
+            view.qualityRing.raycastTarget = false;
+            view.qualityOutline = UiFactory.AddOutline(view.qualityRing, Color.clear, 3f);
 
             var faceRect = UiFactory.MakeRect("Ilustracao", root);
             UiFactory.Stretch(faceRect);
@@ -152,8 +160,12 @@ namespace Game.UI
             }
 
             copyCount = Mathf.Max(1, copyCount);
-            if (styled && data == shownCard && id == CardId && copyCount == copies)
+            PlayerCards local = LocalPlayerCards.Get();
+            CardQuality quality = local != null ? local.QualityOf(id) : CardQuality.Good;
+            if (styled && data == shownCard && id == CardId && copyCount == copies && quality == shownQuality)
                 return;
+            shownQuality = quality;
+            ShowQuality(quality);
 
             styled = true;
             shownCard = data;
@@ -185,6 +197,24 @@ namespace Game.UI
             ShowBacks(copyCount - 1);
         }
 
+        private static readonly Color WornEdge = new Color(0.31f, 0.55f, 0.47f, 0.95f);     // verdete (#4F8C7A)
+        private static readonly Color PerfectEdge = new Color(1f, 0.86f, 0.38f, 1f);       // ouro vivo
+
+        private CardQuality shownQuality = CardQuality.Good;
+
+        private void ShowQuality(CardQuality quality)
+        {
+            if (qualityOutline == null)
+                return;
+            qualityOutline.effectColor = quality switch
+            {
+                CardQuality.Worn => WornEdge,
+                CardQuality.Perfect => PerfectEdge,
+                _ => Color.clear
+            };
+            qualityOutline.effectDistance = quality == CardQuality.Perfect ? new Vector2(4f, -4f) : new Vector2(3f, -3f);
+        }
+
         /// <summary>Espaço vazio: contorno de latão apagado, só a forma.</summary>
         public void Clear()
         {
@@ -203,6 +233,7 @@ namespace Game.UI
             frame.enabled = true;
             frame.color = EmptyFill;
             frameOutline.effectColor = EmptyOutline;
+            ShowQuality(CardQuality.Good);
             ShowBacks(0);
             SetCooldown(0f);
         }

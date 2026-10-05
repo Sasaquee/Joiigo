@@ -12,8 +12,8 @@ namespace Game.Cards
         public override void Execute(ICardUser user, CardData card)
         {
             if (user.Health != null)
-                user.Health.ServerHeal(heal);
-            user.AddEnergy(energy);
+                user.Health.ServerHeal(heal * user.Potency); // qualidade da carta (D-048)
+            user.AddEnergy(energy * user.Potency);
             user.BroadcastVisual("heal", user.Transform.position, Vector3.up, 1f);
         }
     }

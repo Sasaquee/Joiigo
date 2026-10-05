@@ -30,6 +30,8 @@ namespace Game.UI
         private readonly Dictionary<int, int> owned = new Dictionary<int, int>();
         private readonly Dictionary<int, int> scratch = new Dictionary<int, int>();
         private readonly Queue<int> pending = new Queue<int>();
+        private readonly Dictionary<int, float> lastRevealed = new Dictionary<int, float>();
+        private const float RepeatGuard = 2.5f; // carta nova com qualidade: inventário e qualidade mudam juntos, revela uma vez só
         private readonly List<Reveal> reveals = new List<Reveal>();
 
         private RectTransform rect;
@@ -123,15 +125,29 @@ namespace Game.UI
                 return;
             Snapshot(owned);                 // o que já existe não é revelação
             cards.Changed += OnCardsChanged;
+            cards.QualityChanged += OnQualityChanged;
         }
 
         private void Unbind()
         {
             if (cards != null)
+            {
                 cards.Changed -= OnCardsChanged;
+                cards.QualityChanged -= OnQualityChanged;
+            }
             cards = null;
             owned.Clear();
             pending.Clear();
+        }
+
+        /// <summary>A repetida melhorou uma carta que o jogador já tinha (D-051): revela de novo, já com a moldura nova.</summary>
+        private void OnQualityChanged(int cardId, CardQuality quality)
+        {
+            if (cards == null || !cards.Owns(cardId) || pending.Count >= MaxPending || pending.Contains(cardId))
+                return;
+            if (lastRevealed.TryGetValue(cardId, out float at) && Time.unscaledTime - at < RepeatGuard)
+                return;
+            pending.Enqueue(cardId);
         }
 
         /// <summary>Mudou algo nas cartas: compara o total de cada carta (inventário + equipadas) com o que havia.</summary>
@@ -190,6 +206,7 @@ namespace Game.UI
 
         private void StartReveal(int cardId)
         {
+            lastRevealed[cardId] = Time.unscaledTime;
             float height = Mathf.Clamp(rect.rect.height > 1f ? rect.rect.height * 0.42f : 420f, 200f, 460f);
             var size = new Vector2(CardView.WidthForHeight(height), height);
 

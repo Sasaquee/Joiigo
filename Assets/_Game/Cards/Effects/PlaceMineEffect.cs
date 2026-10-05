@@ -51,7 +51,7 @@ namespace Game.Cards
                 return;
             }
 
-            mine.ServerInit(damage, arcaneFraction, areaRadius, triggerRadius, fuse, armDelay, user.ClientId);
+            mine.ServerInit(damage * user.Potency, arcaneFraction, areaRadius, triggerRadius, fuse, armDelay, user.ClientId);
             networkObject.Spawn(true);
             user.BroadcastVisual("mine_place", position, dir, areaRadius);
         }

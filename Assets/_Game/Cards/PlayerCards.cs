@@ -32,6 +32,8 @@ namespace Game.Cards
             NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         private readonly NetworkVariable<float> energyMaxNet = new NetworkVariable<float>(100f,
             NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        // Qualidade de cada carta do banco, por id (D-048). Vale para todas as cópias da carta.
+        private readonly NetworkList<int> qualityNet = new NetworkList<int>();
         private readonly NetworkVariable<CooldownState> cooldownNet = new NetworkVariable<CooldownState>(default,
             NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
@@ -58,6 +60,9 @@ namespace Game.Cards
 
         /// <summary>Em todos: mudou o inventário, as cartas equipadas, o cinto ou uma recarga. A regeneração contínua da energia não dispara; leia EnergyFraction a cada quadro.</summary>
         public event Action Changed;
+
+        /// <summary>Em todos: a qualidade de uma carta mudou (id, nova qualidade). Serve para a revelação da melhoria.</summary>
+        public event Action<int, CardQuality> QualityChanged;
 
         public CardDatabase Database => database;
         public CardsSettings Settings => settings;
@@ -96,9 +101,15 @@ namespace Game.Cards
             loadoutNet.OnValueChanged += OnLoadoutChanged;
             cooldownNet.OnValueChanged += OnCooldownChanged;
             inventoryNet.OnListChanged += OnInventoryChanged;
+            qualityNet.OnListChanged += OnQualityChanged;
 
             if (IsServer)
             {
+                qualityNet.Clear();
+                int cardCount = database != null ? database.Count : 0;
+                for (int i = 0; i < cardCount; i++)
+                    qualityNet.Add((int)CardQuality.Good); // cartas dadas sem dado (debug) são boas
+
                 loadout = new Loadout(id => database != null ? database.KindOf(id) : CardKind.Skill);
                 float max = settings != null ? settings.maxEnergy : 100f;
                 float regen = settings != null ? settings.regenPerSecond : 4f;
@@ -128,6 +139,7 @@ namespace Game.Cards
             loadoutNet.OnValueChanged -= OnLoadoutChanged;
             cooldownNet.OnValueChanged -= OnCooldownChanged;
             inventoryNet.OnListChanged -= OnInventoryChanged;
+            qualityNet.OnListChanged -= OnQualityChanged;
             if (health != null)
                 health.Damaged -= OnPlayerDamaged;
         }
@@ -273,6 +285,54 @@ namespace Game.Cards
 
         // ---------- Host ----------
 
+        /// <summary>Qualidade atual da carta (vale para todas as cópias).</summary>
+        public CardQuality QualityOf(int cardId) =>
+            cardId >= 0 && cardId < qualityNet.Count ? (CardQuality)qualityNet[cardId] : CardQuality.Good;
+
+        /// <summary>Multiplicador da qualidade nos números da carta (CardsSettings).</summary>
+        public float QualityMultiplier(CardQuality quality) => settings != null ? settings.QualityMultiplier(quality) : 1f;
+
+        /// <summary>O jogador tem a carta (inventário, equipada ou no cinto).</summary>
+        public bool Owns(int cardId)
+        {
+            if (cardId < 0)
+                return false;
+            if (IsServer && loadout != null)
+                return loadout.Has(cardId);
+            if (inventoryView.Contains(cardId))
+                return true;
+            for (int i = 0; i < CardRules.SkillSlots; i++)
+                if (GetSlot(SlotType.Skill, i) == cardId) return true;
+            for (int i = 0; i < CardRules.PassiveSlots; i++)
+                if (GetSlot(SlotType.Passive, i) == cardId) return true;
+            for (int i = 0; i < CardRules.EquipmentSlots; i++)
+                if (GetSlot(SlotType.Equipment, i) == cardId) return true;
+            for (int i = 0; i < CardRules.BeltSlots; i++)
+                if (GetSlot(SlotType.Belt, i) == cardId) return true;
+            return false;
+        }
+
+        /// <summary>Qualidade da carta se o jogador a tem; null se não tem. É o que o sorteio da carta do chão consulta.</summary>
+        public CardQuality? OwnedQuality(int cardId) => Owns(cardId) ? QualityOf(cardId) : (CardQuality?)null;
+
+        /// <summary>Host: entrega as cartas do resultado do dado (nova, melhoria ou cópia; D-051, D-052).</summary>
+        public void ServerApplyGrants(IReadOnlyList<CardGrant> grants)
+        {
+            if (!IsServer || loadout == null || database == null || grants == null)
+                return;
+            foreach (CardGrant grant in grants)
+            {
+                if (database.Get(grant.CardId) == null)
+                    continue;
+                if (grant.Kind != GrantKind.Copy && grant.CardId < qualityNet.Count)
+                    qualityNet[grant.CardId] = (int)grant.Quality;
+                if (grant.Kind != GrantKind.Upgrade)
+                    loadout.AddToInventory(grant.CardId);
+            }
+            Sync();
+            RebuildModifiers();
+        }
+
         /// <summary>Host: põe uma carta no inventário (chão, debug).</summary>
         public void ServerGiveCard(int cardId)
         {
@@ -328,7 +388,7 @@ namespace Game.Cards
             cooldownNet.Value = cooldownState;
             PublishEnergy(true);
 
-            Perform(card, aim);
+            Perform(loadout.Get(SlotType.Skill, skillIndex), card, aim);
             return true;
         }
 
@@ -339,7 +399,8 @@ namespace Game.Cards
             if (beltIndex < 0 || beltIndex >= CardRules.BeltSlots || !CanAct)
                 return false;
 
-            CardData card = database.Get(loadout.Get(SlotType.Belt, beltIndex));
+            int beltCardId = loadout.Get(SlotType.Belt, beltIndex);
+            CardData card = database.Get(beltCardId);
             if (card == null || card.Kind != CardKind.Item || !energy.CanSpend(card.energyCost))
                 return false;
 
@@ -348,13 +409,14 @@ namespace Game.Cards
             Sync();
             PublishEnergy(true);
 
-            Perform(card, aim);
+            Perform(beltCardId, card, aim);
             return true;
         }
 
         /// <summary>Custo em vida, caminho e efeitos, depois que energia e recarga já foram cobradas.</summary>
-        private void Perform(CardData card, Vector3 aim)
+        private void Perform(int cardId, CardData card, Vector3 aim)
         {
+            Potency = QualityMultiplier(QualityOf(cardId));
             aimPoint = aim;
             Vector3 flat = new Vector3(aim.x - transform.position.x, 0f, aim.z - transform.position.z);
             if (flat.sqrMagnitude < 0.0001f)
@@ -383,6 +445,7 @@ namespace Game.Cards
                     Debug.LogException(e, this); // um efeito quebrado não impede os outros
                 }
             }
+            Potency = 1f;
         }
 
         private void ServerEquip(int cardId, SlotType slot, int index)
@@ -448,6 +511,14 @@ namespace Game.Cards
 
         private void OnCooldownChanged(CooldownState previous, CooldownState current) => changedPending = true;
 
+        private void OnQualityChanged(NetworkListEvent<int> change)
+        {
+            RebuildModifiers();
+            changedPending = true;
+            if (change.Type == NetworkListEvent<int>.EventType.Value && change.Value != change.PreviousValue)
+                QualityChanged?.Invoke(change.Index, (CardQuality)change.Value);
+        }
+
         private void OnInventoryChanged(NetworkListEvent<int> change)
         {
             RefreshInventoryView();
@@ -494,11 +565,15 @@ namespace Game.Cards
             CardData card = database.Get(cardId);
             if (card == null)
                 return;
+            float mult = QualityMultiplier(QualityOf(cardId));
             foreach (ModifierEntry entry in card.modifiers)
-                modifiers.Add(entry.ToCore());
+                modifiers.Add(new Modifier(entry.kind, entry.value * mult));
         }
 
         // ---------- ICardUser ----------
+
+        /// <summary>Multiplicador da qualidade da carta em uso (1 fora de um uso). Os efeitos multiplicam seus números por ele.</summary>
+        public float Potency { get; private set; } = 1f;
 
         public void AddEnergy(float amount)
         {

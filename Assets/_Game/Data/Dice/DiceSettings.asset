@@ -1,0 +1,85 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 67ec98b844a6a0f41b32366af996e380, type: 3}
+  m_Name: DiceSettings
+  m_EditorClassIdentifier: Game.Runtime::Game.Dice.DiceSettings
+  bands:
+  - min: 1
+    max: 1
+    rarity: 0
+    quality: 0
+    extraCommons: 0
+    extraQuality: 0
+    cursed: 1
+    danger: 1
+    majorArcana: 0
+  - min: 2
+    max: 6
+    rarity: 0
+    quality: 0
+    extraCommons: 0
+    extraQuality: 0
+    cursed: 0
+    danger: 0
+    majorArcana: 0
+  - min: 7
+    max: 11
+    rarity: 0
+    quality: 1
+    extraCommons: 0
+    extraQuality: 0
+    cursed: 0
+    danger: 0
+    majorArcana: 0
+  - min: 12
+    max: 15
+    rarity: 1
+    quality: 1
+    extraCommons: 0
+    extraQuality: 0
+    cursed: 0
+    danger: 0
+    majorArcana: 0
+  - min: 16
+    max: 18
+    rarity: 1
+    quality: 2
+    extraCommons: 0
+    extraQuality: 0
+    cursed: 0
+    danger: 0
+    majorArcana: 0
+  - min: 19
+    max: 19
+    rarity: 1
+    quality: 2
+    extraCommons: 1
+    extraQuality: 1
+    cursed: 0
+    danger: 0
+    majorArcana: 0
+  - min: 20
+    max: 20
+    rarity: 3
+    quality: 2
+    extraCommons: 0
+    extraQuality: 0
+    cursed: 0
+    danger: 0
+    majorArcana: 1
+  pathBias: 2
+  pathTopTags: 2
+  rollDuration: 2.2
+  grantDelay: 0.6
+  ambushMin: 2
+  ambushMax: 3
+  ambushRadius: 5

@@ -18,6 +18,13 @@ namespace Game.Cards
         /// <summary>Direção no plano, do jogador até o ponto de mira.</summary>
         Vector3 AimDirection { get; }
         NetworkHealth Health { get; }
+
+        /// <summary>
+        /// Multiplicador da qualidade da carta em uso (D-048: gasta, boa, perfeita). Todo efeito multiplica
+        /// por ele os seus números de força (dano, cura, pulso). Leia no começo do Execute: fora de um uso vale 1.
+        /// </summary>
+        float Potency { get; }
+
         void AddEnergy(float amount);
 
         /// <summary>Inimigos vivos (IDamageable que não são jogadores) dentro do raio.</summary>

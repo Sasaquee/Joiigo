@@ -35,7 +35,7 @@ namespace Game.Cards
             if (allowed > 0.01f)
                 Teleport(self, end);
 
-            DamageAlongPath(user, start, end);
+            DamageAlongPath(user, start, end, user.Potency);
             user.BroadcastVisual("dash", start, dir, allowed);
         }
 
@@ -78,11 +78,11 @@ namespace Game.Cards
                 controller.enabled = true;
         }
 
-        private void DamageAlongPath(ICardUser user, Vector3 start, Vector3 end)
+        private void DamageAlongPath(ICardUser user, Vector3 start, Vector3 end, float potency)
         {
             Vector3 mid = (start + end) * 0.5f;
             float half = Vector3.Distance(start, end) * 0.5f;
-            var packet = new DamagePacket(damage, arcaneFraction);
+            var packet = new DamagePacket(damage * potency, arcaneFraction); // qualidade da carta (D-048)
 
             foreach (IDamageable target in user.EnemiesInRadius(mid, half + width * 0.5f + 1f))
             {

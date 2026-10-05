@@ -37,6 +37,10 @@ namespace Game.Enemies
 
         public int WavesReleased => director?.WavesReleased ?? 0;
 
+        /// <summary>Host: uma onda acabou de ser vencida (D-050: deixa uma carta no chão). Recebe o total de ondas vencidas.</summary>
+        public event System.Action<int> WaveCleared;
+        private int clearedSeen;
+
         public void Configure(WaveSettings newSettings, MatchState newMatch)
         {
             settings = newSettings;
@@ -52,9 +56,19 @@ namespace Game.Enemies
                 return;
             }
 
-            director ??= settings.CreateDirector();
+            if (director == null)
+            {
+                director = settings.CreateDirector();
+                clearedSeen = 0;
+            }
             Prune();
-            if (!director.Tick(Time.deltaTime, enemies.Count, requested))
+            bool released = director.Tick(Time.deltaTime, enemies.Count, requested);
+            if (director.WavesCleared != clearedSeen)
+            {
+                clearedSeen = director.WavesCleared;
+                WaveCleared?.Invoke(clearedSeen);
+            }
+            if (!released)
                 return;
 
             foreach (int type in requested)
