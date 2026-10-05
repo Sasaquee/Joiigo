@@ -13,9 +13,10 @@ RPG de ação 2.5D cooperativo (2 a 4 jogadores em LAN) em Unity 6. Este reposit
 | 4 | Combate (golpe em arco, dano mecânico/arcano), 3 inimigos com IA no host, ondas, morte que desmonta; ambientação semi-realista noturna (texturas CC0, fornalhas, vapor) | ✅ |
 | 5 | Cartas de tarô (14, arte dourada), loadout por tiragem (Tab), skills 1–4, cinto Q/E/R, energia, efeitos mecânico-arcanos | ✅ |
 | — | Passe visual: 3D pixelado, andarilho, cartas em pixel art, efeitos e cidade steampunk | ✅ |
-| 6 | Carta no chão e D20 | em andamento |
-| — | Passe de resolução: deixar o jogo menos pixelado em tudo (D-053) | depois da 6 |
-| 7–8 | Aura, ciclo completo e playtest | — |
+| 6 | Carta no chão e D20 (rolagem para todos, tabela de três eixos, críticos 1 e 20, qualidade das cartas) | ✅ |
+| — | Passe de resolução: mundo na resolução da tela, D20 nítido, cartas em alta resolução (D-053, D-056 a D-059) | ✅ |
+| 7 | Aura | próxima |
+| 8 | Ciclo completo e playtest | — |
 
 ## Abrir o projeto
 

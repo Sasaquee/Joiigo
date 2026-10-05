@@ -5,8 +5,8 @@ using UnityEngine.Rendering;
 namespace Game.Cards
 {
     /// <summary>
-    /// Caixa de ferramentas dos efeitos (D-042), só desenho. Tudo pensado para o 3D pixelado (D-039, 640x360 ampliado
-    /// sem suavizar): partículas são quadrados chapados e grandes, anéis e leques são grossos, flashes são fortes.
+    /// Caixa de ferramentas dos efeitos (D-042), só desenho. Pensado para ler bem na câmera de jogo:
+    /// partículas são quadrados chapados e grandes, anéis e leques são grossos, flashes são fortes.
     /// Materiais e malhas são criados uma vez em runtime (URP Unlit / Particles Unlit, sem textura) e compartilhados.
     /// Usado pelo CardVisuals, pelo SwingVisual, pelo HitFeedback e pelo aviso dos inimigos.
     /// </summary>

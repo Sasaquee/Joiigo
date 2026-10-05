@@ -1,3 +1,4 @@
+using Game.Cameras;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -6,14 +7,26 @@ using UnityEngine.Rendering.Universal;
 namespace Game.EditorTools
 {
     /// <summary>
-    /// Instala o 3D pixelado (D-039) no URP: pós-processo de contorno e faixas (FullScreenPass)
-    /// em todos os renderizadores, e ampliação "Point" no asset do pipeline.
+    /// Instala o pós-processo do mundo no URP (D-039, D-056, D-057): contorno e luz em faixas (FullScreenPass)
+    /// em todos os renderizadores, e a qualidade de imagem de ImageQualitySettings (faixas, pontilhado, MSAA).
     /// </summary>
     public static class PixelRenderSetup
     {
         private const string ShaderName = "Hidden/Game/PixelPost";
         private const string MaterialPath = "Assets/_Game/Art/Shaders/PixelPost.mat";
         private const string FeatureName = "PixelPost";
+        public const string QualitySettingsPath = "Assets/_Game/Data/Camera/ImageQualitySettings.asset";
+
+        /// <summary>Carrega (ou cria com os valores padrão) os números de qualidade de imagem.</summary>
+        public static ImageQualitySettings LoadQualitySettings()
+        {
+            var settings = AssetDatabase.LoadAssetAtPath<ImageQualitySettings>(QualitySettingsPath);
+            if (settings != null)
+                return settings;
+            settings = ScriptableObject.CreateInstance<ImageQualitySettings>();
+            AssetDatabase.CreateAsset(settings, QualitySettingsPath);
+            return settings;
+        }
 
         [MenuItem("Game/Setup/Instalar Render Pixelado")]
         public static void Apply()
@@ -36,6 +49,12 @@ namespace Game.EditorTools
                 material.shader = shader;
             }
 
+            var quality = LoadQualitySettings();
+            material.SetFloat("_Levels", quality.lightBands);
+            material.SetFloat("_Dither", quality.dither);
+            material.SetFloat("_BandSoftness", quality.bandSoftness);
+            EditorUtility.SetDirty(material);
+
             foreach (string guid in AssetDatabase.FindAssets("t:UniversalRendererData"))
             {
                 var data = AssetDatabase.LoadAssetAtPath<UniversalRendererData>(AssetDatabase.GUIDToAssetPath(guid));
@@ -49,13 +68,17 @@ namespace Game.EditorTools
                 if (asset == null)
                     continue;
                 asset.upscalingFilter = UpscalingFilterSelection.Point;
-                asset.renderScale = 1f / 3f; // prévia pixelada no editor; em jogo o PixelCamera ajusta pela altura da tela
-                asset.msaaSampleCount = 1;   // pixel nítido: sem suavização de bordas
+                // Prévia no editor igual ao jogo; em jogo o PixelCamera ajusta pela altura da tela.
+                asset.renderScale = quality.worldHeight > 0 ? Mathf.Clamp01(quality.worldHeight / 1080f) : 1f;
+                // Bordas suaves só com o mundo na resolução da tela; no modo pixelado, pixel nítido.
+                asset.msaaSampleCount = quality.worldHeight > 0 ? 1 : ValidMsaa(quality.msaa);
                 EditorUtility.SetDirty(asset);
             }
 
             AssetDatabase.SaveAssets();
         }
+
+        private static int ValidMsaa(int samples) => samples >= 8 ? 8 : samples >= 4 ? 4 : samples >= 2 ? 2 : 1;
 
         private static void EnsureFeature(UniversalRendererData data, Material material)
         {

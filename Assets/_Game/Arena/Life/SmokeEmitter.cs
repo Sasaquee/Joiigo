@@ -7,7 +7,7 @@ namespace Game.Arena.Life
 
     /// <summary>
     /// Emissor de fumaça, vapor, faíscas ou motes arcanos para a cidade steampunk (D-042).
-    /// Partículas grossas e poucas, para ler em 640x360 com filtro point.
+    /// Partículas grossas e poucas, para ler bem na câmera de jogo.
     /// Configure() constrói o ParticleSystem filho na hora (funciona em modo de edição, então serializa na cena);
     /// o Awake só reconstrói se o filho estiver faltando.
     /// </summary>

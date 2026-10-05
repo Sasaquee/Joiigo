@@ -179,8 +179,9 @@ namespace Game.EditorTools
             if (AssetImporter.GetAtPath(BackTexturePath) is TextureImporter importer)
             {
                 importer.textureType = TextureImporterType.Default;
-                importer.filterMode = FilterMode.Point;
-                importer.mipmapEnabled = false;
+                importer.filterMode = FilterMode.Trilinear; // verso em alta resolução (D-059)
+                importer.mipmapEnabled = true;
+                importer.anisoLevel = 4;
                 importer.textureCompression = TextureImporterCompression.Uncompressed;
                 importer.wrapMode = TextureWrapMode.Clamp;
                 importer.SaveAndReimport();

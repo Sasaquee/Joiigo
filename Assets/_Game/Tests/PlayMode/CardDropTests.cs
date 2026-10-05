@@ -85,6 +85,22 @@ namespace Game.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator CartaEntregue_TocaARevelacao()
+        {
+            // Bug: a revelação só existia se a Arena fosse a primeira cena do jogo; recarregada, não aparecia.
+            var reveal = Object.FindFirstObjectByType<Game.UI.CardRevealFx>();
+            Assert.IsNotNull(reveal, "A Arena carregada tem a revelação de carta");
+            yield return PickUpWithRoll(10);
+            float timeout = WaitForGrant + 1f;
+            while (reveal.ActiveCount == 0 && timeout > 0f)
+            {
+                timeout -= Time.deltaTime;
+                yield return null;
+            }
+            Assert.Greater(reveal.ActiveCount, 0, "A carta entregue pelo dado é revelada na tela");
+        }
+
+        [UnityTest]
         public IEnumerator Vinte_EntregaArcanoMaior()
         {
             yield return PickUpWithRoll(20);

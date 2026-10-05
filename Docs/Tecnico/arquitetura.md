@@ -12,6 +12,8 @@
 | `Data/` | ScriptableObjects (cartas, efeitos, inimigos, tabela do D20, números) | — |
 | `Audio/`, `Art/` | Placeholders | — |
 
+O render do jogo usa `PixelCamera` e `PixelPost`, com configurações em `ImageQualitySettings` (D-056 a D-059). Esse ScriptableObject define `worldHeight` (0 = resolução da tela), `msaa` (4), `lightBands` (24), `bandSoftness` (0,25), `dither` (0) e `outlinePixelsAt1080` (2). O `PixelRenderSetup` copia faixas, rampa e pontilhado para o material `PixelPost.mat` e o MSAA para o asset do URP; o `PixelCamera` passa a espessura do contorno ao shader (`_OutlineWidth`, global). O mundo é renderizado na resolução da tela por padrão, com o snap de pixel aplicado somente quando `worldHeight` reduz a contagem de linhas.
+
 Dependências: `Core` ← `Runtime` ← `Debug` / `Editor`. O `Core` não conhece ninguém.
 
 ## Namespaces

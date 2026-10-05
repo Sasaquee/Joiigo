@@ -83,8 +83,10 @@ namespace Game.EditorTools
 
         private static void Render(Camera cam, string path)
         {
-            const int width = 640, height = 360; // mesma resolução do jogo pixelado (D-039)
-            var rt = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32) { antiAliasing = 1, filterMode = FilterMode.Point };
+            const int width = 1920, height = 1080; // mundo na resolução da tela (D-056)
+            var rt = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32) { antiAliasing = 4 };
+            // O PixelCamera não roda fora do Play: passa a espessura do contorno daqui.
+            Shader.SetGlobalFloat("_OutlineWidth", PixelRenderSetup.LoadQualitySettings().OutlinePixels(height));
             var previous = cam.targetTexture;
             cam.targetTexture = rt;
             cam.Render();

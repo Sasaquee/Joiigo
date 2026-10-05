@@ -25,10 +25,11 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
+    - _BandSoftness: 0.25
     - _DepthThreshold: 0.35
-    - _Dither: 0.35
+    - _Dither: 0
     - _InnerEdgeStrength: 0.35
-    - _Levels: 12
+    - _Levels: 24
     - _NormalThreshold: 0.45
     - _OutlineStrength: 0.85
     - _Saturation: 1.12

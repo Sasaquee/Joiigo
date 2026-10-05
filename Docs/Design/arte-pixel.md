@@ -1,12 +1,13 @@
-# Bíblia de arte — 3D pixelado (D-039 a D-042)
+# Bíblia de arte — 3D com contorno (D-039 a D-042, D-056 a D-059)
 
 ## Como o jogo é desenhado
 
-- **Tudo é 3D**, renderizado em **640 × 360** e ampliado sem suavizar. Por cima entram contorno escuro nas bordas, luz quantizada em faixas e paleta limitada.
+- **Tudo é 3D**, renderizado na resolução da tela (D-056), com bordas suavizadas (MSAA 4x). Por cima entram contorno escuro proporcional à tela (2 px em 1080p) e luz em faixas suaves, com rampa curta entre uma faixa e outra e sem pontilhado (D-057). Os números ficam em `Assets/_Game/Data/Camera/ImageQualitySettings.asset`; o modo pixelado de antes (640x360 ampliado sem suavizar) volta pondo `worldHeight` = 360.
+- O D20 da tela aparece no tamanho real, com bordas suaves (D-058). As cartas são arte em alta resolução, 672x1152 (D-059, `Tools/Cards/card_hd.py`).
 - A UI fica fora disso, em resolução cheia.
-- Câmera de jogo: ~14 m de distância, 50° de inclinação, FOV 40°. Nessa câmera, **1 pixel ≈ 3 cm**:
-  - detalhes com menos de **8 cm** somem ou cintilam, então não modele parafusos minúsculos;
-  - prefira formas **grossas, chanfradas e com silhueta clara**.
+- Câmera de jogo: ~14 m de distância, 50° de inclinação, FOV 40°. Nessa câmera, **1 pixel ≈ 1 cm em 1080p**:
+  - detalhes com menos de **2 cm** somem ou cintilam, então não modele parafusos minúsculos;
+  - prefira formas **grossas, chanfradas e com silhueta clara** (não é mais limite técnico).
 - **Sem texturas fotográficas.** As cores vêm dos materiais, que são **cores chapadas** desta paleta. O detalhe vem da forma e da luz.
 - Pilar 4: a máquina e a magia aparecem na **mesma peça**. Exemplos: cristal embutido no cano, engrenagem com núcleo arcano, janela que brilha em ciano porque a casa é movida a cristal.
 

@@ -505,7 +505,7 @@ namespace Game.Enemies
 
         private void UpdateGlow(bool windup, float windupT, float dt)
         {
-            // O cristal sobe até ficar estourado e, na reta final, pisca: dá para ler o ataque chegando em 640x360.
+            // O cristal sobe até ficar estourado e, na reta final, pisca: dá para ler o ataque chegando na câmera de jogo.
             float pulse = windup && windupT > 0.65f && ((int)(Time.time * 16f) & 1) == 0 ? 1.4f : 1f;
             float target = windup ? Mathf.Lerp(1f, glowMultiplier * 1.6f, windupT * windupT) * pulse : 1f;
             float next = windup ? target : Mathf.MoveTowards(glow, 1f, 12f * dt);

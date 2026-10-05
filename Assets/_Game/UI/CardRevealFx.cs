@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Game.Cards;
 using Game.Core.Cards;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace Game.UI
@@ -60,8 +61,15 @@ namespace Game.UI
             return root.gameObject.AddComponent<CardRevealFx>();
         }
 
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void Bootstrap() => EnsureOnCanvas();
+        // A cada cena carregada (não só a primeira): ao voltar pelo F9 ou recarregar a Arena, a Canvas é outra.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private static void Bootstrap()
+        {
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+            SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+
+        private static void OnSceneLoaded(Scene scene, LoadSceneMode mode) => EnsureOnCanvas();
 
         private void Awake()
         {

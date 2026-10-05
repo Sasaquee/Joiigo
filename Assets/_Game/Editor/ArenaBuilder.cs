@@ -346,8 +346,11 @@ namespace Game.EditorTools
             var follow = cam.GetComponent<CameraFollow>();
             if (follow == null)
                 follow = cam.gameObject.AddComponent<CameraFollow>();
-            if (cam.GetComponent<PixelCamera>() == null)
-                cam.gameObject.AddComponent<PixelCamera>(); // 3D pixelado (D-039)
+            var pixel = cam.GetComponent<PixelCamera>();
+            if (pixel == null)
+                pixel = cam.gameObject.AddComponent<PixelCamera>(); // resolução do mundo e contorno (D-039, D-056)
+            pixel.Settings = PixelRenderSetup.LoadQualitySettings();
+            EditorUtility.SetDirty(pixel);
             follow.Settings = settings;
             follow.Target = target;
             follow.Apply(target.position);

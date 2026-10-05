@@ -328,6 +328,18 @@ Registro das perguntas de design feitas ao dono durante o protótipo. A resposta
 - **Resposta literal:** "Cópia extra"
 - **Significa:** ganha uma segunda cópia da carta perfeita (por exemplo, duas granadas no cinto).
 
+### D-054 · Qualidade da comum extra do 19
+- **Pergunta:** No 19, além da incomum perfeita, vem uma comum extra. Em que qualidade ela vem?
+- **Opções:** Boa · Perfeita · Gasta
+- **Resposta literal:** "Boa (Recomendado)"
+- **Significa:** a comum extra do 19 vem boa, como na faixa 7–11 (`DiceSettings`, faixa 19, `extraQuality`).
+
+### D-055 · Números provisórios da Fase 6
+- **Pergunta:** Os números provisórios podem ficar assim? Qualidade gasta ×0,85 / boa ×1,0 / perfeita ×1,15; tema puxado pelas 2 tags mais usadas, com peso 2; emboscada de 2–3 inimigos a 5 m; dado rola 2,2 s e a carta chega 0,6 s depois.
+- **Opções:** Aprovar como estão · Qualidade mais forte (×0,75 / ×1,25) · Dado mais rápido (1,5 s)
+- **Resposta literal:** "Aprovar como estão (Recomendado)"
+- **Significa:** os números ficam como estão em `CardsSettings` e `DiceSettings` e podem ser ajustados depois de jogar.
+
 ### P-009 · Efeito do 20 no coop
 - **Resposta literal:** "Decidir quando o coop voltar (Recomendado)"
 - **Significa:** por enquanto o 20 dá só o arcano maior ou a carta única; o efeito para o grupo continua pendente.
@@ -337,6 +349,34 @@ Registro das perguntas de design feitas ao dono durante o protótipo. A resposta
 ### D-053 · Etapa de resolução
 - **Pedido do dono (literal):** "adicione uma etapa no desenvovilmento do gamer para melhorar a resolução do jogo em tudo, ta muito pixelado"
 - **Significa:** entra no roteiro um **passe de resolução** logo depois de fechar a Fase 6 e antes da Fase 7. Ele revê a nitidez de tudo: mundo 3D, personagem, inimigos, efeitos, cartas, D20 e interface. **Quanto** sobe a resolução e o que muda no estilo de D-039 ainda não foi decidido (P-012, perguntar no início da etapa com imagens de comparação).
+
+## Passe de resolução · 2026-10-05
+
+Pedido do dono antes das perguntas: "vamos focar em melhorar a qualidade de imagem do jogo, por exemplo o dado esta em baixissima resolução, o mesmo serve para o jogo em si e tudo mais". Comparações em `Docs/Capturas/resolucao/`.
+
+### D-056 · Resolução do mundo (resolve P-012; muda D-039)
+- **Pergunta:** Em quanto o mundo 3D deve ser desenhado? (hoje 640x360 ampliado 3x)
+- **Opções:** Tela cheia · 1280x720 · 960x540
+- **Resposta literal:** "Tela cheia (Recomendado)"
+- **Significa:** o mundo é renderizado na resolução da tela, sem ampliar pixel. Continua 3D com contorno; deixa de ser "3D pixelado".
+
+### D-057 · Luz em faixas
+- **Pergunta:** A luz em faixas e o pontilhado continuam?
+- **Opções:** Faixas suaves · Manter como está · Tirar as faixas
+- **Resposta literal:** "Faixas suaves (Recomendado)"
+- **Significa:** a luz continua em degraus, mas com mais degraus e sem o pontilhado.
+
+### D-058 · D20 na tela
+- **Pergunta:** O D20 grande na tela fica como?
+- **Opções:** Tela cheia, suave · Acompanha o mundo
+- **Resposta literal:** "Tela cheia, suave (Recomendado)"
+- **Significa:** o dado é desenhado no tamanho real em que aparece, com bordas suaves.
+
+### D-059 · Cartas em alta resolução (muda D-041)
+- **Pergunta:** As cartas são pixel art de 112x192 ampliada. O que fazemos?
+- **Opções:** Redesenhar em alta · Manter pixel art · Voltar ao dourado HD
+- **Resposta literal:** "Redesenhar em alta (Recomendado)"
+- **Significa:** mesmo desenho e composição de cada carta (e do verso), refeitos com detalhe em resolução alta e bordas limpas. Arte só pelo Opus (D-044).
 
 ---
 
@@ -354,5 +394,5 @@ Registro das perguntas de design feitas ao dono durante o protótipo. A resposta
 | ~~P-008~~ | Como a carta do chão se mostra no mundo | resolvida em D-046 |
 | P-009 | Efeito temporário do 20 no coop | quando o coop voltar |
 | P-010 | Forma e linguagem visual da aura | 7 |
-| P-012 | Passe de resolução (D-053): para quanto sobe o mundo (hoje 640x360: 960x540, 1280x720 ou resolução da tela); se o contorno, a luz em faixas e a paleta de D-039 ficam; se as cartas em pixel art (D-041) ganham versão em mais resolução | passe de resolução |
+| ~~P-012~~ | Passe de resolução (D-053): para quanto sobe o mundo (hoje 640x360: 960x540, 1280x720 ou resolução da tela); se o contorno, a luz em faixas e a paleta de D-039 ficam; se as cartas em pixel art (D-041) ganham versão em mais resolução | resolvida em D-056 a D-059 |
 | ~~P-011~~ | Arte com `kimi-k3` no DeepSeek harness | resolvida em D-043 |

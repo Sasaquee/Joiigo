@@ -1,6 +1,9 @@
-// Pós-processo do 3D pixelado (D-039): roda na resolução baixa, antes da ampliação sem filtro.
-// 1) Contorno escuro onde a profundidade ou a normal mudam de repente (silhuetas e quinas).
-// 2) Cores em faixas (posterização) com pontilhado ordenado leve, para cara de paleta limitada.
+// Pós-processo do mundo (D-039, D-056, D-057): roda na resolução do mundo (a da tela, por padrão).
+// 1) Contorno escuro onde a profundidade ou a normal mudam de repente (silhuetas e quinas), com espessura
+//    _OutlineWidth em pixels (global, passada pelo PixelCamera conforme a altura da tela).
+// 2) Luz em faixas (posterização da luminosidade), com pontilhado ordenado opcional.
+// A transparência da imagem é preservada: câmeras que renderizam com fundo transparente (o palco do D20) continuam
+// transparentes fora do objeto.
 Shader "Hidden/Game/PixelPost"
 {
     Properties
@@ -12,6 +15,7 @@ Shader "Hidden/Game/PixelPost"
         _InnerEdgeStrength ("Força das quinas internas", Range(0, 1)) = 0.35
         _Levels ("Faixas de luz", Float) = 8
         _Dither ("Pontilhado", Range(0, 1)) = 0.3
+        _BandSoftness ("Suavidade entre faixas", Range(0, 0.5)) = 0.2
         _Saturation ("Saturação", Range(0, 2)) = 1.12
     }
 
@@ -38,8 +42,10 @@ Shader "Hidden/Game/PixelPost"
             float _DepthThreshold;
             half _NormalThreshold;
             half _InnerEdgeStrength;
+            float _OutlineWidth; // global (Shader.SetGlobalFloat); 0 quando ninguém definiu = 1 px
             half _Levels;
             half _Dither;
+            half _BandSoftness;
             half _Saturation;
 
             static const float Bayer4[16] =
@@ -59,9 +65,10 @@ Shader "Hidden/Game/PixelPost"
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
                 float2 uv = input.texcoord;
-                float2 texel = 1.0 / _ScreenParams.xy;
+                float2 texel = max(_OutlineWidth, 1.0) / _ScreenParams.xy;
 
-                half3 color = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_PointClamp, uv).rgb;
+                half4 source = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_PointClamp, uv);
+                half3 color = source.rgb;
 
                 // Contorno externo: algum vizinho está bem mais perto (este pixel é o fundo atrás de uma borda).
                 float d = EyeDepth(uv);
@@ -91,7 +98,12 @@ Shader "Hidden/Game/PixelPost"
                 half levels = max(_Levels, 2.0);
                 half lumaLin = max(dot(color, half3(0.2126, 0.7152, 0.0722)), 1e-4);
                 half lumaGamma = pow(lumaLin, 1.0 / 2.2);
-                half bandedGamma = floor(lumaGamma * levels + 0.5 + bayer) / levels;
+                // Degrau com rampa curta entre as faixas (D-057): em resolução cheia, a divisa dura serrilhava
+                // onde a textura do chão tem ruído. _BandSoftness = 0 volta ao degrau seco.
+                half x = lumaGamma * levels + bayer;
+                half step = floor(x);
+                half w = max(_BandSoftness, 0.001);
+                half bandedGamma = (step + smoothstep(0.5 - w, 0.5 + w, x - step)) / levels;
                 bandedGamma = max(bandedGamma, lumaGamma * 0.5); // nunca afunda um tom escuro até o preto
                 half bandedLin = pow(bandedGamma, 2.2);
                 color *= bandedLin / lumaLin;
@@ -99,7 +111,9 @@ Shader "Hidden/Game/PixelPost"
                 // Quina interna clareia de leve (realce de aresta); contorno externo escurece.
                 color = lerp(color, color * 1.25 + 0.03, inner);
                 color = lerp(color, _OutlineColor.rgb, outline * _OutlineStrength);
-                return half4(max(color, 0), 1);
+                // Fundo transparente continua transparente; o contorno em volta do objeto fica visível.
+                half alpha = saturate(source.a + outline * _OutlineStrength);
+                return half4(max(color, 0), alpha);
             }
             ENDHLSL
         }

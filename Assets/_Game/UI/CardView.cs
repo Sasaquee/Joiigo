@@ -32,6 +32,8 @@ namespace Game.UI
         private static readonly Color BackInner = new Color(0.22f, 0.17f, 0.11f, 1f);
         private static readonly Color ShadowColor = new Color(0.01f, 0.01f, 0.02f, 0.72f);
         private static readonly Color ShimmerTint = new Color(0.55f, 1f, 1f, 1f);
+        // Luz da maldição: violeta, como o cristal da carta amaldiçoada (D-041).
+        private static readonly Color CursedShimmerTint = new Color(0.85f, 0.6f, 1f, 1f);
 
         [SerializeField] private RectTransform[] backs = new RectTransform[2];
         [SerializeField] private Image frame;
@@ -183,7 +185,11 @@ namespace Game.UI
             {
                 shimmer.enabled = hasShimmer;
                 if (hasShimmer)
+                {
                     shimmer.texture = data.glow;
+                    Color tint = data.cursed ? CursedShimmerTint : ShimmerTint;
+                    shimmer.color = new Color(tint.r, tint.g, tint.b, shimmer.color.a);
+                }
             }
 
             // Sem imagem pronta, a moldura na cor do naipe e o nome de tarô seguram o lugar.

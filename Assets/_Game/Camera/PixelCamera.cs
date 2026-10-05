@@ -5,17 +5,18 @@ using UnityEngine.Rendering.Universal;
 namespace Game.Cameras
 {
     /// <summary>
-    /// 3D pixelado (D-039): o mundo é renderizado em ~targetHeight linhas e ampliado sem filtro
-    /// (Render Scale + Upscaling "Point" do URP); a UI em Overlay continua nítida.
-    /// A câmera anda de pixel em pixel (snap) para a imagem não "tremer" quando ela se move.
-    /// Roda depois do CameraFollow e soma o tremor do CameraShake.
+    /// Resolução do mundo (D-056): por padrão o mundo é renderizado na resolução da tela, com contorno e luz em
+    /// faixas suaves (PixelPost). Se `ImageQualitySettings.worldHeight` pedir menos linhas, volta ao 3D pixelado de D-039:
+    /// Render Scale + ampliação "Point" do URP, com a câmera andando de pixel em pixel (snap) para a imagem não tremer.
+    /// Também passa a espessura do contorno para o shader. Roda depois do CameraFollow e soma o tremor do CameraShake.
     /// </summary>
     [DefaultExecutionOrder(1000)]
     [RequireComponent(typeof(Camera))]
     public class PixelCamera : MonoBehaviour
     {
-        [Tooltip("Linhas de pixel do mundo na tela (360 = 640x360 em 16:9).")]
-        [SerializeField, Min(90)] private int targetHeight = 360;
+        private static readonly int OutlineWidthId = Shader.PropertyToID("_OutlineWidth");
+
+        [SerializeField] private ImageQualitySettings settings;
         [SerializeField] private bool snapToPixelGrid = true;
 
         private Camera cam;
@@ -23,8 +24,16 @@ namespace Game.Cameras
         private float originalScale = 1f;
         private UpscalingFilterSelection originalFilter;
         private bool applied;
+        private int renderHeight;
 
-        public int TargetHeight => targetHeight;
+        public ImageQualitySettings Settings
+        {
+            get => settings;
+            set => settings = value;
+        }
+
+        /// <summary>Linhas do mundo no último quadro.</summary>
+        public int RenderHeight => renderHeight;
 
         private void OnEnable()
         {
@@ -50,11 +59,15 @@ namespace Game.Cameras
 
         private void LateUpdate()
         {
+            int screen = Mathf.Max(1, Screen.height);
+            renderHeight = settings != null ? settings.RenderHeight(screen) : screen;
             if (pipeline != null)
-                pipeline.renderScale = Mathf.Clamp((float)targetHeight / Mathf.Max(1, Screen.height), 0.1f, 1f);
+                pipeline.renderScale = Mathf.Clamp((float)renderHeight / screen, 0.1f, 1f);
+            float outline = settings != null ? settings.OutlinePixels(renderHeight) : 1f;
+            Shader.SetGlobalFloat(OutlineWidthId, outline);
 
             Vector3 position = transform.position + CameraShake.CurrentOffset;
-            if (snapToPixelGrid)
+            if (snapToPixelGrid && renderHeight < screen)
                 position = Snap(position);
             transform.position = position;
         }
@@ -66,7 +79,7 @@ namespace Game.Cameras
             if (TryGetComponent(out CameraFollow follow) && follow.Settings != null)
                 focusDistance = follow.Settings.distance;
 
-            float worldPerPixel = 2f * focusDistance * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad) / targetHeight;
+            float worldPerPixel = 2f * focusDistance * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad) / renderHeight;
             if (worldPerPixel <= 0f)
                 return position;
 

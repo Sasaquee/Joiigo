@@ -8,8 +8,9 @@ namespace Game.UI
     /// <summary>
     /// D20 grande na tela (D-047): quando alguém pega uma carta do chão, o dado de latão e cristal rola no centro
     /// da tela, desacelera e assenta com o número sorteado de frente e em pé. O jogo segue por trás; nada aqui recebe o mouse.
-    /// O dado é 3D (Art/Models/Dice/D20.fbx) num "palco" longe da arena, renderizado numa textura pequena e ampliada
-    /// sem suavizar, no mesmo pixel do jogo. Todos os jogadores veem a mesma rolagem (CardDropService.RollStarted).
+    /// O dado é 3D (Art/Models/Dice/D20.fbx) num "palco" longe da arena, renderizado numa textura transparente do
+    /// tamanho real em que aparece na tela, com bordas suaves (D-058). Todos os jogadores veem a mesma rolagem
+    /// (CardDropService.RollStarted).
     /// Criado pelo construtor da arena sob a Canvas "UI".
     /// </summary>
     public class DiceRollUi : MonoBehaviour
@@ -18,9 +19,10 @@ namespace Game.UI
         private static readonly Vector3 StagePosition = new Vector3(0f, -500f, 0f);
         private const float CameraDistance = 2.6f;
         private const float CameraFov = 30f;
-        // Tamanho do dado na tela (fração da altura) e pixels do jogo (o jogo renderiza a 360 de altura).
+        // Tamanho do dado na tela (fração da altura) e suavização das bordas da textura do palco.
         private const float ScreenHeightFraction = 0.42f;
-        private const float GamePixelsTall = 360f;
+        private const int TextureAntiAliasing = 8;
+        private const int MinTextureSide = 64;
         // Animação (frações da duração recebida).
         private const float SettleStart = 0.72f;
         private const float FadeTime = 0.35f;
@@ -47,6 +49,8 @@ namespace Game.UI
         /// <summary>Número mostrado na rolagem atual (0 se nenhuma). Para testes.</summary>
         public int ShowingResult => playing ? result : 0;
         public bool IsPlaying => playing;
+        /// <summary>Textura onde o palco desenha o dado (para testes).</summary>
+        public RenderTexture Texture => texture;
 
         public void Configure(GameObject prefab) => diePrefab = prefab;
 
@@ -91,16 +95,16 @@ namespace Game.UI
             stageCamera.farClipPlane = CameraDistance + 2f;
             stageCamera.clearFlags = CameraClearFlags.SolidColor;
             stageCamera.backgroundColor = new Color(0f, 0f, 0f, 0f);
+            // Sem HDR: o buffer HDR do URP não tem canal alfa e o fundo transparente virava um quadrado preto.
+            stageCamera.allowHDR = false;
+            stageCamera.allowMSAA = true;
             stageCamera.enabled = false;
 
             // Luz quente de frente e um contorno ciano atrás: latão e cristal (Pilar 4).
             AddLight(stage, new Vector3(-1.2f, 1.6f, -2f), new Color(1f, 0.85f, 0.6f), 6f);
             AddLight(stage, new Vector3(1.4f, -0.4f, 1.6f), new Color(0.35f, 0.9f, 1f), 5f);
 
-            int side = Mathf.Max(64, Mathf.RoundToInt(GamePixelsTall * ScreenHeightFraction));
-            texture = new RenderTexture(side, side, 16, RenderTextureFormat.ARGB32) { filterMode = FilterMode.Point };
-            texture.Create();
-            stageCamera.targetTexture = texture;
+            EnsureTexture();
 
             var rect = UiFactory.MakeRect("Dado", transform);
             rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.52f);
@@ -109,6 +113,29 @@ namespace Game.UI
             image.texture = texture;
             image.raycastTarget = false;
             image.enabled = false;
+        }
+
+        /// <summary>Textura do tamanho, em pixels, que o dado ocupa na tela (refeita se a janela mudar de tamanho).</summary>
+        private void EnsureTexture()
+        {
+            int side = Mathf.Max(MinTextureSide, Mathf.RoundToInt(Screen.height * ScreenHeightFraction));
+            if (texture != null && texture.width == side)
+                return;
+            if (texture != null)
+            {
+                stageCamera.targetTexture = null;
+                texture.Release();
+                Destroy(texture);
+            }
+            texture = new RenderTexture(side, side, 24, RenderTextureFormat.ARGB32)
+            {
+                filterMode = FilterMode.Bilinear,
+                antiAliasing = TextureAntiAliasing
+            };
+            texture.Create();
+            stageCamera.targetTexture = texture;
+            if (image != null)
+                image.texture = texture;
         }
 
         private static void AddLight(Transform parent, Vector3 localPosition, Color color, float intensity)
@@ -130,6 +157,17 @@ namespace Game.UI
         private void BuildFaceTable()
         {
             faceUp.Clear();
+            foreach (var pair in FaceRotations(die))
+                faceUp[pair.Key] = pair.Value;
+        }
+
+        /// <summary>
+        /// Rotação local do dado para cada número: face N de frente para a câmera do palco (-Z) e número em pé.
+        /// Público para os testes conferirem as 20 faces.
+        /// </summary>
+        public static Dictionary<int, Quaternion> FaceRotations(Transform die)
+        {
+            var table = new Dictionary<int, Quaternion>();
             foreach (Transform t in die.GetComponentsInChildren<Transform>(true))
             {
                 if (!t.name.StartsWith("Centro_") || !int.TryParse(t.name.Substring(7), out int n))
@@ -143,8 +181,9 @@ namespace Game.UI
                     continue;
                 Quaternion faceFrame = Quaternion.LookRotation(normal, up.normalized);
                 Quaternion viewFrame = Quaternion.LookRotation(Vector3.back, Vector3.up); // de frente para a câmera
-                faceUp[n] = viewFrame * Quaternion.Inverse(faceFrame);
+                table[n] = viewFrame * Quaternion.Inverse(faceFrame);
             }
+            return table;
         }
 
         private static Transform FindChild(Transform root, string name)
@@ -155,11 +194,15 @@ namespace Game.UI
             return null;
         }
 
-        private void OnRollStarted(ulong roller, int value, float rollDuration)
+        private void OnRollStarted(ulong roller, int value, float rollDuration) => Play(value, rollDuration);
+
+        /// <summary>Começa a rolagem mostrando `value` no fim. Chamado pela rede (RollStarted) e pelos testes.</summary>
+        public void Play(int value, float rollDuration)
         {
             EnsureStage();
             if (die == null)
                 return;
+            EnsureTexture();
 
             result = value;
             duration = Mathf.Max(0.5f, rollDuration);
