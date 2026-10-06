@@ -54,10 +54,23 @@ namespace Game.Dice
         [Min(0)] public int ambushMax = 3;
         [Tooltip("Distância do jogador onde os inimigos da emboscada surgem (m).")]
         [Min(1f)] public float ambushRadius = 5f;
+        [Tooltip("Raio para puxar o ponto da emboscada até o chão andável da NavMesh (m). Nunca nasce dentro de prédio (passe do mapa).")]
+        [Min(0.1f)] public float ambushNavSampleRadius = 2.5f;
+        [Tooltip("Tentativas por inimigo até achar ponto andável e alcançável a partir do jogador. A cada 3 tentativas o raio encolhe " +
+                 "(ambushRetryRadiusFactor); dentro de cada trio, 0°, +ambushRetryAngle e -ambushRetryAngle.")]
+        [Min(1)] public int ambushTries = 6;
+        [Tooltip("Nas tentativas seguintes, quanto o ângulo gira para um lado e para o outro (graus).")]
+        [Range(0f, 90f)] public float ambushRetryAngle = 30f;
+        [Tooltip("A cada trio de tentativas o raio da emboscada fica multiplicado por isto.")]
+        [Range(0.1f, 1f)] public float ambushRetryRadiusFactor = 0.7f;
+
+        [Header("Carta do fim da onda (D-082)")]
+        [Tooltip("Se o ponto onde caiu o último inimigo não é andável, a carta vai para o ponto andável mais próximo dentro deste raio (m).")]
+        [Min(0.1f)] public float dropNavSampleRadius = 4f;
 
         [Header("O 1 teatral (D-068): só apresentação, a regra do 1 não muda")]
         [Tooltip("Fração da rolagem em que o dado começa a avermelhar e a tela a escurecer (0 = desde o início; 1 = só quando para).")]
-        [Range(0f, 1f)] public float criticalTintStart = 0.45f;
+        [Range(0f, 1f)] public float criticalTintStart = 0.7f;
         [Tooltip("Quanto o véu escuro cobre a tela no máximo (0 a 1). O jogo continua visível por trás (D-047).")]
         [Range(0f, 1f)] public float veilOpacity = 0.55f;
         [Tooltip("Força das bordas vermelhas da tela no máximo (0 a 1).")]

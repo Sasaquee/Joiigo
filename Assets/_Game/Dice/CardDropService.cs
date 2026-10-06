@@ -7,6 +7,7 @@ using Game.Core.Dice;
 using Game.Enemies;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.AI;
 
 namespace Game.Dice
 {
@@ -22,10 +23,8 @@ namespace Game.Dice
         [SerializeField] private CardDatabase database;
         [SerializeField] private WaveSpawner spawner;
         [SerializeField] private FloorCard floorCardPrefab;
-        [Tooltip("Onde a carta aparece no fim da onda (centro da arena).")]
+        [Tooltip("Sem uso desde D-082: a carta do fim da onda surge onde caiu o último inimigo. Fica serializado só para não quebrar a cena e o construtor.")]
         [SerializeField] private Transform dropPoint;
-        [Tooltip("Raio útil da arena: a emboscada nunca nasce além disto a partir do centro (m).")]
-        [SerializeField] private float arenaInnerRadius = 23f;
 
         /// <summary>Em todos: um jogador pegou uma carta e o dado começou a rolar (quem rolou, resultado, duração da rolagem).</summary>
         public static event Action<ulong, int, float> RollStarted;
@@ -104,9 +103,13 @@ namespace Game.Dice
             return pool;
         }
 
-        private void OnWaveCleared(int wavesCleared)
+        /// <summary>D-082: a carta surge onde caiu o último inimigo da onda; se o ponto não é andável, no ponto andável mais próximo.</summary>
+        private void OnWaveCleared(int wavesCleared, Vector3 lastDeathPosition)
         {
-            Vector3 position = dropPoint != null ? dropPoint.position : Vector3.zero;
+            Vector3 position = lastDeathPosition;
+            float radius = settings != null ? settings.dropNavSampleRadius : 4f;
+            if (NavMesh.SamplePosition(lastDeathPosition, out NavMeshHit hit, radius, NavMesh.AllAreas))
+                position = hit.position;
             ServerSpawnFloorCard(position);
         }
 
@@ -180,13 +183,7 @@ namespace Game.Dice
             for (int i = 0; i < count; i++)
             {
                 float angle = (start + i * 360f / Mathf.Max(1, count)) * Mathf.Deg2Rad;
-                Vector3 position = center + new Vector3(Mathf.Sin(angle), 0f, Mathf.Cos(angle)) * radius;
-                var flat = new Vector2(position.x, position.z);
-                if (flat.magnitude > arenaInnerRadius)
-                {
-                    flat = flat.normalized * arenaInnerRadius;
-                    position = new Vector3(flat.x, position.y, flat.y);
-                }
+                Vector3 position = AmbushPosition(center, angle, radius);
                 var def = types[random.Next(0, types.Length)];
                 if (def == null)
                     continue;
@@ -198,6 +195,37 @@ namespace Game.Dice
             // D-068: todos mostram o surgimento junto com o nascimento (sem atrasar nem mudar os inimigos).
             if (revealed.Count > 0)
                 ShowAmbushRpc(revealed.ToArray());
+        }
+
+        /// <summary>
+        /// Onde nasce um inimigo da emboscada. Com NavMesh: ponto andável perto do sorteado e alcançável a pé a partir do jogador,
+        /// sem consumir o sorteio do jogo (a regra do 1 não muda, D-068); tentativas em ordem fixa (a cada trio: 0°, +ângulo, -ângulo;
+        /// depois o raio encolhe). Sem NavMesh (cena antiga), o ponto sorteado como antes.
+        /// </summary>
+        private Vector3 AmbushPosition(Vector3 center, float angle, float radius)
+        {
+            Vector3 Around(float a, float r) => center + new Vector3(Mathf.Sin(a), 0f, Mathf.Cos(a)) * r;
+
+            Vector3 plain = Around(angle, radius);
+            float sampleRadius = settings != null ? settings.ambushNavSampleRadius : 2.5f;
+            if (!NavMesh.SamplePosition(center, out NavMeshHit origin, sampleRadius, NavMesh.AllAreas))
+                return plain;
+
+            int tries = Mathf.Max(1, settings != null ? settings.ambushTries : 6);
+            float retryAngle = (settings != null ? settings.ambushRetryAngle : 30f) * Mathf.Deg2Rad;
+            float retryFactor = settings != null ? settings.ambushRetryRadiusFactor : 0.7f;
+            var path = new NavMeshPath();
+            for (int t = 0; t < tries; t++)
+            {
+                float turn = (t % 3) switch { 1 => retryAngle, 2 => -retryAngle, _ => 0f };
+                float reach = radius * Mathf.Pow(retryFactor, t / 3);
+                if (!NavMesh.SamplePosition(Around(angle + turn, reach), out NavMeshHit hit, sampleRadius, NavMesh.AllAreas))
+                    continue;
+                if (NavMesh.CalculatePath(origin.position, hit.position, NavMesh.AllAreas, path)
+                    && path.status == NavMeshPathStatus.PathComplete)
+                    return hit.position;
+            }
+            return origin.position; // nenhuma tentativa serviu: o chão do próprio jogador, que é andável por definição
         }
 
         [Rpc(SendTo.Everyone)]

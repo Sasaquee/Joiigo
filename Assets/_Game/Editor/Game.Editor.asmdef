@@ -8,6 +8,8 @@
         "Unity.Netcode.Runtime",
         "Unity.RenderPipelines.Core.Runtime",
         "Unity.RenderPipelines.Universal.Runtime",
+        "Unity.AI.Navigation",
+        "Unity.AI.Navigation.Editor",
         "UnityEngine.UI"
     ],
     "includePlatforms": [

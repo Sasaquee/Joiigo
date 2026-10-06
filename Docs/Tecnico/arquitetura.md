@@ -32,6 +32,13 @@ Passe de ajuste pós-playtest (D-067 a D-069, relatório em `relatorio-passe-aju
 - **O 1 do D20:** o `DiceRollUi` deixa o dado vermelho e põe um véu abaixo da HUD só no 1; `Dice/CriticalSounds` sintetiza o baque e o ronco; o `CardDropService` manda `ShowAmbushRpc` com as posições e o `Dice/AmbushFx` mostra o surgimento em todos. A regra do 1 e o momento da emboscada não mudaram.
 - **Cristal no mundo:** `Core/Ambience/CrystalWave` (onda pura, testada em EditMode), `Arena/CrystalPulse` aplica o pulso e a crista de luz por `MaterialPropertyBlock`, `Arena/CrystalAmbienceSettings` guarda os números (`Data/Ambience/`); os veios e a poeira nascem no `AmbienceBuilder` e no `CityBuilder`.
 
+Passe do mapa (D-073 a D-082, relatório em `relatorio-passe-mapa.md`, contrato em `plano-passe-mapa.md`):
+- **Geometria do mapa no Core:** `Core/Map/MapLayout` (praça, avenidas, praças menores, bocas, spawns, portões, andável, região, ponto andável mais próximo e altura máxima de prédio pelo envelope da câmera) e `MapBoundary` (segmentos da vedação). Números em `Data/Map/MapLayoutSettings.asset`. Camadas em `Arena/MapLayers.cs` (camada 8 `Cenario`; rendering layer 8 `Vazavel`).
+- **Construtores:** o `ArenaBuilder` monta o chão andável e a vedação (`Editor/WalkableBuilder`), os portões e marcadores nas bocas, chama o `CityBuilder` (que usa o `CityPlanner` para posicionar os prédios e seus colliders) e o `AmbienceBuilder`, e assa a NavMesh por último (`Editor/ArenaNavMeshBuilder`, grupos de colliders marcados "Not Walkable").
+- **Inimigos:** `Enemies/EnemyPathFollower` calcula o caminho pela NavMesh só no host (sem `NavMeshAgent`); `Core/AI/PathCursor` e `SpawnMouths` são a lógica pura (quinas, recálculo, rodízio das bocas, fila); `WaveSpawner` nasce pelas bocas; o `CardDropService` põe a carta onde caiu o último inimigo.
+- **Prédios translúcidos:** `Camera/SeeThroughDriver` publica os alvos tapados pelas globais `_Vazado*`; o shader `Art/Shaders/LitVazado` recorta o prédio (rendering layer 8) e uma passada `VazadoFantasma` desenha a silhueta fraca no buraco, instalada como feature do renderer pelo `PixelRenderSetup`.
+- **Cena leve:** `Arena/Life/SmokeEmitter` e `AmbienceParticles` montam o `ParticleSystem` só em jogo.
+
 Dependências: `Core` ← `Runtime` ← `Debug` / `Editor`. O `Core` não conhece ninguém.
 
 ## Namespaces

@@ -9,8 +9,8 @@ O trabalho é dividido por **papel**, não por modelo. Cada papel tem um modelo 
 | Papel | O que faz | Claude Code | DeepSeek harness (NVIDIA) | Reserva NVIDIA |
 |---|---|---|---|---|
 | **Orquestrador** | Lê os docs, faz as perguntas ao dono, define contratos e arquitetura, divide as tarefas, integra, abre a Unity, depura, escreve o relatório da fase e faz o commit | Opus 5.5 (agente principal) | `kimi-k3` | `glm-5.3` |
-| **Artista** | Modelagem, arte, shaders, efeitos, UI visual | Opus 5.5 (subagente `artista`) | **nenhum** (D-044: só o modelo mais competente; hoje o Opus) | — |
-| **Programador** | Código C# mecânico a partir de um contrato já definido, ScriptableObjects, ferramentas de editor | Sonnet 5.5 (subagente `programador`) | `glm-5.3` | `deepseek-v4.1-flash` |
+| **Artista** | Modelagem (Blender), texturas e pixel art por script, composição visual de algo novo | Opus 5.5 (subagente `artista`) | **nenhum** (D-044: só o modelo mais competente; hoje o Opus) | — |
+| **Programador** | Código C# a partir de um contrato já definido (inclui código de efeito, shader, UI e construtores de cena, D-078), ScriptableObjects, ferramentas de editor | Sonnet 5.5 (subagente `programador`) | `glm-5.3` | `deepseek-v4.1-flash` |
 | **Testador** | Testes EditMode/PlayMode, teste de regressão para cada bug | Sonnet 5.5 (subagente `testador`) | `deepseek-v4.1-flash` | `glm-5.3` |
 | **Revisor** | Revisão do diff antes do commit: bugs, regras do `AGENTS.md`, números fora de SO | Sonnet 5.5 (subagente `revisor`); Opus em mudança grande | **Nunca o mesmo modelo que escreveu o código**, e de preferência de outra empresa (ex.: código do `glm-5.3`, da Z.ai → revisão do `kimi-k3`, da Moonshot), porque um modelo tende a não ver os próprios erros | `nemotron-3-super-120b-a12b` |
 | **Documentador** | `decisoes.md`, `estacionamento.md`, `arquitetura.md`, README, rascunho do relatório | Sonnet 5.5 (subagente `documentador`) | `deepseek-v4.1-flash` | `glm-5.3-flash` |
@@ -22,7 +22,7 @@ Regras que valem para todos os papéis:
 
 - **Só o orquestrador fala com o dono** e só ele registra decisões. Os outros papéis devolvem dúvidas de design ao orquestrador.
 - **Só o orquestrador abre a Unity** (uma instância por vez; compilar e testar é serial). Os outros escrevem código e o orquestrador integra.
-- **Arte só no modelo mais competente disponível** (D-042, D-044): hoje o Claude Opus, em qualquer modo. Nunca Sonnet, nunca modelo do harness enquanto não for o melhor disponível.
+- **Modelagem e arte só no modelo mais competente disponível** (D-042, D-044, D-078): hoje o Claude Opus, em qualquer modo. Nunca Sonnet, nunca modelo do harness enquanto não for o melhor disponível. Código, inclusive de efeito, shader e UI, pode ser Sonnet (D-078); o orquestrador confere o resultado visual em capturas.
 - Quem escreve não revisa o próprio trabalho: a revisão sai de outro modelo, de preferência de outra empresa (o mesmo modelo tende a repetir os próprios erros).
 
 ## 2. Ordem de uma fase (orquestração)
@@ -210,7 +210,7 @@ Ele escolhe o modelo por papel (`Tools/Agentes/papeis.json`, editável), usa a c
 ## 5. Claude Code
 
 - O agente principal é Opus 5.5 e faz o papel de orquestrador.
-- Os papéis estão em `.claude/agents/` (`artista` em Opus; `programador`, `testador`, `revisor`, `documentador` em Sonnet). O orquestrador chama pelo nome; vários `artista` em paralelo é permitido (D-042).
+- Os papéis estão em `.claude/agents/` (`artista` em Opus, só para modelagem e arte; `programador`, `testador`, `revisor`, `documentador` em Sonnet, inclusive para código de efeito, shader e UI, D-078). O orquestrador chama pelo nome; vários `artista` em paralelo é permitido (D-042).
 - Com mais de uma conta Claude, cada conta é só mais um harness: vale a §3.
 
 ## 6. Pendências

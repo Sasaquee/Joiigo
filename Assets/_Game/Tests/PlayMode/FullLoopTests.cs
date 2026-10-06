@@ -74,6 +74,9 @@ namespace Game.Tests.PlayMode
             Object.FindFirstObjectByType<MatchState>().ServerStart();
             yield return WaitFor(() => spawner.AliveCount > 0, spawner.Settings.firstWaveDelay + 5f);
             Assert.Greater(spawner.AliveCount, 0, "A primeira onda nasceu");
+            // Os inimigos saem pelas bocas numa fila com espaçamento (D-077): espera a onda inteira nascer.
+            yield return WaitFor(() => spawner.PendingCount == 0, 3f);
+            Assert.AreEqual(0, spawner.PendingCount, "A fila das bocas esvaziou");
 
             // 2. Combate: o golpe básico do jogador acerta um inimigo posto à frente dele.
             EnemyController target = spawner.ServerSpawn(spawner.Settings.enemyTypes[0],
@@ -86,12 +89,20 @@ namespace Game.Tests.PlayMode
             yield return WaitFor(() => target.Health.Current < hpBefore, combat.Settings.basicHitDelay + 1f);
             Assert.Less(target.Health.Current, hpBefore, "O golpe do jogador acertou");
 
-            // 3. Fim da onda: o resto cai e uma carta aparece no chão (D-050).
+            // 3. Fim da onda: o resto cai e uma carta aparece no chão, onde caiu o último inimigo (D-050, D-082).
+            var fallen = new List<Vector3>();
             foreach (var enemy in AliveEnemies())
+            {
+                fallen.Add(enemy.transform.position);
                 enemy.Health.ServerApplyDamage(new DamagePacket(enemy.Health.Max * 100f, 0f), NetworkManager.Singleton.LocalClientId);
+            }
             FloorCard floorCard = null;
             yield return WaitFor(() => (floorCard = Object.FindFirstObjectByType<FloorCard>()) != null, 5f);
             Assert.IsNotNull(floorCard, "A carta apareceu no chão no fim da onda");
+            float nearest = float.MaxValue;
+            foreach (Vector3 p in fallen)
+                nearest = Mathf.Min(nearest, new Vector2(p.x - floorCard.transform.position.x, p.z - floorCard.transform.position.z).magnitude);
+            Assert.LessOrEqual(nearest, drops.Settings.dropNavSampleRadius + 0.1f, "A carta surgiu onde caiu um dos últimos inimigos (D-082)");
 
             // 4. Pegar: o D20 rola no host e a carta chega depois da rolagem.
             int before = cards.Inventory.Count;
