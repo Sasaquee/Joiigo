@@ -440,6 +440,84 @@ Pedido do dono antes das perguntas: "vamos focar em melhorar a qualidade de imag
 - **Resposta literal:** "Reforçar o cristal (Recommended)"
 - **Significa:** mais brilho de cristal no mundo (veios luminosos nas máquinas, poeira mágica no ar, cristais das torres pulsando), sem trocar a cidade nem a paleta de D-039 a D-045. Arte e luz só com o Opus (D-044).
 
+### D-073 · A arena se abre para a cidade (resolve P-016)
+- **Contexto:** o dono respondeu, na pergunta sobre onde reforçar o cristal, que "a ambientação da arena podia ser mais para dentro da cidade, deixar o mapa mais rico, não só um círculo". Três perguntas de alcance:
+  1. O que muda para o jogador? Opções: Só o cenário ao redor · A arena se abre para ruas · Várias áreas ligadas. **Resposta literal:** "A arena se abre para ruas".
+  2. Forma do mapa. Opções: Círculo com obstáculos · Contorno irregular · Só o visual da borda. **Resposta literal (Outro):** "a cidade e a arena, e o limite sao predios que nao deixam voce passar".
+  3. Quando? Opções: Antes de mais playtest · Depois de mais playtest · Fase própria do mapa. **Resposta literal:** "Antes de mais playtest".
+- **Significa:** o mapa deixa de ser um círculo fechado por um muro baixo. Parte da cidade vira área jogável (ruas e praças ligadas à arena); o limite do mapa são **prédios que bloqueiam a passagem** do jogador e dos inimigos. Será feito **antes de mais playtest**, como um passe do mapa (pedido do dono, como o passe de resolução em D-053). Forma, tamanho, origem dos inimigos e câmera são decididos nas perguntas do passe. Isso estende o que o protótipo previa ("uma arena de testes, não o mundo", `prompt-prototipo.md` §2) por decisão do dono. O cristal nos postes da praça (opção da pergunta original) fica em espera.
+
+### D-074 · Forma do mapa: praça e avenidas
+- **Pergunta:** Como a arena se abre para a cidade? Hoje é uma praça redonda de ~26 m, com 3 portões e uma plataforma de spawn.
+- **Opções:** Praça e avenidas · Quarteirões em grade · Uma rua longa
+- **Resposta literal:** "Praça e avenidas (Recommended)"
+- **Significa:** a praça atual continua como o coração do mapa. As avenidas que saem dos 3 portões viram ruas jogáveis até praças menores, com prédios dos dois lados que bloqueiam a passagem (D-073). Reaproveita a cidade e a plataforma de spawn.
+
+### D-075 · Tamanho da área jogável: cerca do dobro
+- **Pergunta:** Qual o tamanho da área jogável? Hoje o raio é de ~26 m.
+- **Opções:** Cerca do dobro · Um pouco maior (~35 m) · Bem maior (~80 m)
+- **Resposta literal:** "Cerca do dobro (Recommended)"
+- **Significa:** raio de uns 50 m, com a praça no centro e as avenidas e praças menores até o limite de prédios. O número exato fica em dados do passe.
+
+### D-076 · Prédios altos ficam translúcidos
+- **Pergunta:** Os prédios são o limite do mapa e a câmera é diagonal; como tratar prédios altos perto do jogador?
+- **Opções:** Ficam translúcidos · Altura limitada · Fachada some
+- **Resposta literal:** "Ficam translúcidos (Recommended)"
+- **Significa:** os prédios podem ser altos; quando um tapa o jogador ou um inimigo da visão da câmera, ele fica transparente. A regra de "nenhum prédio pode tapar a praça" (passe visual) deixa de ser por altura e passa a ser por translucidez.
+
+### D-077 · Inimigos entram pelas bocas das ruas
+- **Pergunta:** De onde vêm os inimigos agora que a cidade é jogável? Hoje nascem num anel de 18,5 m dentro da praça.
+- **Opções:** Pelas bocas das ruas · Dos portões e das ruas · Perto do jogador, fora da visão
+- **Resposta literal:** "Pelas bocas das ruas (Recommended)"
+- **Significa:** os inimigos entram pelo fim de cada rua e atravessam a cidade até o jogador. Exige que eles achem caminho entre os prédios (navegação, decisão técnica do orquestrador). A emboscada do 1 (D-049) continua em volta do jogador.
+
+### D-079 · Prédio translúcido: recorte com fantasma
+- **Pergunta:** Como o prédio fica quando tapa o jogador ou um inimigo (D-076)?
+- **Opções:** Recorte com fantasma · Só o recorte · Prédio inteiro a 30%
+- **Resposta literal:** "Recorte com fantasma (Recommended)"
+- **Significa:** abre-se um círculo no prédio em volta de quem está atrás, com a silhueta do prédio fraca (~25%) por cima e contorno na borda do buraco. Mantém o estilo de contorno do jogo.
+
+### D-080 · Inimigos correm quando estão longe
+- **Pergunta:** As bocas das ruas ficam a 60-75 m do jogador (um autômato leva ~20 s e um constructo ~35 s para chegar). O que fazemos?
+- **Opções:** Correm quando estão longe · Velocidade normal · Bocas mais perto
+- **Resposta literal:** "Correm quando estão longe (Recommended)"
+- **Significa:** a mais de ~18 m de todos os jogadores, os inimigos andam o dobro da velocidade; perto, velocidade normal. Os dois números (distância e multiplicador) ficam em dados.
+
+### D-081 · Portões-máquina fecham o fim de cada rua
+- **Pergunta:** Hoje os 3 portões ficam no fundo da praça. No mapa novo, o que são?
+- **Opções:** Fecham o fim de cada rua · Arcos de entrada das avenidas · Tirar os portões
+- **Resposta literal:** "Fecham o fim de cada rua (Recommended)"
+- **Significa:** os portões vão para o fim de cada boca de rua; a largada os acende e o trilho de cristal corre da praça até eles; os inimigos saem deles (D-013, D-077).
+
+### D-082 · A carta do fim da onda cai onde morreu o último inimigo
+- **Pergunta:** A carta do fim da onda (D-050) aparece no centro; agora o centro pode estar a 50 m de onde o jogador lutou. Onde ela aparece?
+- **Opções:** Onde caiu o último inimigo · Perto do jogador mais próximo · Centro da praça, como hoje
+- **Resposta literal:** "Onde caiu o último inimigo (Recommended)"
+- **Significa:** a carta surge no lugar da luta (Pilar 2). Se esse lugar não for andável ou alcançável, usa o ponto andável mais próximo. Substitui o centro fixo de D-050.
+
+### D-078 · Só a modelagem exige o Opus; quem escreve código pode ser Sonnet (ajusta D-044)
+- **Pedido (2026-10-05):** depois de o passe de ajuste usar três agentes Opus para escrever efeitos em código.
+- **Resposta literal:** "os agentes de escrita apenas nao precisa ser opus e sim sonnet, agora os de modelagem ai sim precisa"
+- **Significa:** agentes que escrevem código (inclusive código de efeito, shader, UI e construtor de cena) rodam em **Sonnet**. O **Opus fica para a modelagem e a arte** (modelos do Blender, texturas e pixel art por script, a composição visual de algo novo). A parte do D-044 sobre o harness continua: ele não faz modelagem nem arte. O orquestrador deve conferir o resultado visual (capturas) de qualquer trabalho de código visual feito em Sonnet.
+
+### D-070 · Violeta na poeira mágica
+- **Pergunta:** 12% da poeira mágica (D-069) estava violeta, mas na aura o violeta é o sinal de maldição (D-063). O que fazemos?
+- **Opções:** Tirar o violeta · Manter 12% · Violeta só mais raro (3%)
+- **Resposta literal:** "Violeta só mais raro (3%)"
+- **Significa:** `dustVioletShare` = 0,03 em `CrystalAmbienceSettings`. Um toque de cor, com pouco risco de confundir com a maldição.
+
+### D-071 · Quando o aviso do 1 começa
+- **Pergunta:** O vermelho e o véu do 1 (D-068) começavam aos 45% da rolagem, antes de o dado parar. Quando o aviso deve começar?
+- **Opções:** Crescente, como está · Tudo quando o dado para · Mais tarde (70%)
+- **Resposta literal:** "Mais tarde (70%)"
+- **Significa:** `criticalTintStart` = 0,7 em `DiceSettings`: o dado só avermelha e a tela só escurece depois de 70% da rolagem, perto de o dado parar.
+
+### D-072 · Sem tranco do dado no 1
+- **Pergunta:** Quer que o D20 dê um tranco visual (tremor ou quique) ao bater no 1?
+- **Opções:** Sim, um tranco curto · Não · Só no dado, sem tela
+- **Resposta literal:** "Não (Recommended)"
+- **Significa:** nada muda: o dado continua assentando suave como nos outros números; o baque de som e o véu bastam.
+
 ---
 
 ## Perguntas pendentes (feitas na fase em que travarem)
@@ -461,3 +539,4 @@ Pedido do dono antes das perguntas: "vamos focar em melhorar a qualidade de imag
 | ~~P-013~~ | Energia pouco notada no playtest de 2026-10-05 | resolvida em D-067 |
 | ~~P-014~~ | Peso do 1 no D20 (o dono tirou 1 e não sentiu desastre) | resolvida em D-068 |
 | ~~P-015~~ | Magia pouco visível no mundo (Pilar 4) | resolvida em D-069 |
+| ~~P-016~~ | Cristal das torres fora da câmera e mapa pobre ("mais para dentro da cidade, não só um círculo") | resolvida em D-073 (alcance); detalhes no passe do mapa |

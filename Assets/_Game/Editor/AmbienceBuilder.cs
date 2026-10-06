@@ -1,6 +1,7 @@
 using System.IO;
 using Game.Arena;
-using Game.Cameras;
+using Game.Arena.Life;
+using Game.Core.Map;
 using Game.Net;
 using UnityEditor;
 using UnityEngine;
@@ -12,6 +13,7 @@ namespace Game.EditorTools
     /// <summary>
     /// Ambientação da arena (D-016, D-017): noite arcana escura, cristais ciano, fornalhas laranja e vapor.
     /// Cria o Volume de pós-processamento, luz ambiente, neblina, fornalhas e partículas sob "Ambiente".
+    /// As partículas só guardam parâmetros na cena (AmbienceParticles); o ParticleSystem nasce em jogo.
     /// Chamar depois que a geometria da arena existe e depois de ArenaBuilder.SetupLighting(),
     /// senão o SetupLighting sobrescreve o ambiente e a luz direcional.
     /// </summary>
@@ -66,17 +68,17 @@ namespace Game.EditorTools
         // Poeira arcana perto da plataforma central
         private static readonly Vector3 DustArea = new Vector3(20f, 3f, 20f);
 
-        // ---------- Cristal vivo (D-069): veios, pulso e poeira mágica ----------
+        // ---------- Cristal vivo (D-069): veios, trilhos, lampiões, pulso e poeira mágica ----------
         // Números balanceáveis em Data/Ambience/CrystalAmbienceSettings.asset; aqui só a forma e o lugar das peças.
 
         public const string CrystalSettingsPath = "Assets/_Game/Data/Ambience/CrystalAmbienceSettings.asset";
         private const string MagicDustMaterialPath = AmbienceFolder + "/ParticulaPoeiraMagica.mat";
 
-        // Geometria da arena copiada do ArenaBuilder e de build_props.py (só leitura; se lá mudar, mude aqui).
-        private const float WallRadius = 26f;              // ArenaBuilder.WallRadius
-        private const float WallSegmentOverlap = 0.3f;     // ArenaBuilder.BuildBoundary: +0,3 m por segmento
-        private const float WallPipeHeight = 1f;           // Cano.fbx a 1 m do chão, raio 0,25
-        private const float WallPipeRadius = 0.25f;
+        // O mapa (praça, avenidas, praças menores, portões) vem do MapLayout (Data/Map/MapLayoutSettings.asset).
+        // O muro baixo saiu no passe do mapa (D-073): não há mais veio de muro nem rua do anel.
+        private const string MapLayoutSettingsPath = "Assets/_Game/Data/Map/MapLayoutSettings.asset";
+
+        // Geometria das peças copiada do ArenaBuilder e de build_props.py (só leitura; se lá mudar, mude aqui).
         private const float BoilerBodyRadius = 1.2f;       // Caldeira.fbx: cobre r1,2; faixa de cristal 1,975–2,425 m
         private const float BoilerBandCenter = 2.2f;
         private const float BoilerBandHalf = 0.225f;
@@ -89,37 +91,36 @@ namespace Game.EditorTools
 
         // Veios: fendas de cristal largas o bastante para ler a ~30 m (≥ 4 px em 1080p), finas para não virar parede de luz.
         private const float VeinThickness = 0.04f;
-        private const float WallVeinWidth = 0.11f;         // na quarta parte de cima do cano, virada para a praça
         private const float BoilerVeinWidth = 0.14f;
         private const int BoilerVeinCount = 4;             // entre as hastes de latão (que estão a cada 45°)
         private const float GateVeinWidth = 0.12f;
         private const float GateVeinX = 1.8f;
 
-        // Poeira mágica: rua do anel, logo atrás do muro e baixa (a câmera de jogo não tem horizonte: a borda de cima
-        // da tela cai no chão ~20 m à frente dela, então poeira alta ou longe nunca aparece).
-        // Só no lado longe da câmera: no lado dela, com o jogador encostado no muro, a câmera fica fora do muro e a
-        // poeira entre ela e a praça cobriria o combate. 210° em volta do giro da câmera é o maior arco que, com
-        // altura até 5 m, nunca cai sobre a praça (conferido em todas as posições do jogador; CrystalAmbienceTests).
-        private const string CameraSettingsPath = "Assets/_Game/Data/Camera/CameraSettings.asset";
-        private const float DustArcDegrees = 210f;
-        private const float DustHeightJitter = 0.9f;       // ± em volta de streetDustHeight
-        private const float DustMinLifetime = 8f;
-        private const float DustMaxLifetime = 12f;
-        private const float DustMinSize = 0.1f;
-        private const float DustMaxSize = 0.22f;
-        private const float DustMinRise = 0.02f;           // m/s: sobe no máximo ~0,7 m na vida
-        private const float DustMaxRise = 0.06f;
-        private const float DustNoise = 0.2f;
-        private const float DustPeakAlpha = 0.75f;
-        private const float DustMaxScreenSize = 0.02f;     // fração da tela: perto da câmera não vira borrão
+        // Trilhos de cristal no chão (do núcleo da praça ao portão de cada rua). A câmera olha para o chão: é o cristal
+        // que mais aparece. Base de cobre com o veio de cristal em trechos por cima (cada trecho pulsa sozinho).
+        private const string CopperMaterialPath = MaterialsFolder + "/Cobre.mat";
+        private const float TrailBaseWidth = 0.36f;        // cobre; o veio (trailVeinWidth) fica no meio
+        private const float TrailBaseHeight = 0.09f;       // chão em y = 0; 1 cm acima do TrilhoCobre do ArenaBuilder (topo em 0,08 m)
+        private const float TrailVeinThickness = 0.02f;    // sobre o cobre: topo em 0,11 m
+        private const float TrailSegmentGap = 0.06f;       // vão entre trechos: o cobre aparece e o trilho lê como peças
+        private const float TrailGateGap = 0.1f;           // o trilho para um pouco antes da frente do portão
+
+        // Lampiões de cristal nas avenidas: o LampiaoRua da cidade, com colisão pequena e, em alguns, uma luz fraca.
+        private const string LampModelPath = "Assets/_Game/Art/Models/City/LampiaoRua.fbx";
+        private const float LampBaseRadius = 0.34f;        // base de pedra do LampiaoRua.fbx
+        private const float LampColliderHeight = 3.6f;     // poste até a lanterna
+        private const float LampPlazaMargin = 1.5f;        // o primeiro lampião fica 1,5 m além da quina da fachada da praça
+        private const float LampEndMargin = 0.5f;          // e o último a 0,5 m do fim da avenida
+        private const string LampLightMarker = "LuzCristal"; // marcador da lanterna no modelo
+        private static readonly Color LampLightColor = new Color(0.35f, 0.9f, 1f); // igual aos lampiões do CityBuilder
+
+        // Poeira mágica: baixa e fraca, nas avenidas e nas praças menores, nunca sobre o disco de combate.
+        // Os parâmetros do sistema de partículas (tamanhos, vida, cores) ficam em AmbienceParticles.
         private const float DustFadeNear = 4f;             // some perto da câmera (m)
         private const float DustFadeFar = 9f;
-        private static readonly Color DustCyan = new Color(0.44f, 0.94f, 1f);     // #6FF0FF, o CristalArcano
-        private static readonly Color DustViolet = new Color(0.69f, 0.49f, 1f);   // #B07CFF
-        private static readonly Color DustGold = new Color(1f, 0.82f, 0.48f);     // #FFD27A, latão aceso
 
         private static Material ironMat, brassMat, furnaceMouthMat, emberMat, steamMat, dustMat;
-        private static Material crystalLitMat, crystalOffMat, magicDustMat;
+        private static Material crystalLitMat, crystalOffMat, magicDustMat, copperMat;
         private static CrystalAmbienceSettings crystalSettings;
 
         public static void Build(Transform arenaRoot)
@@ -142,13 +143,23 @@ namespace Game.EditorTools
 
             var steam = new GameObject("Vapor").transform;
             steam.SetParent(root, false);
-            foreach (float angle in BoilerAngles)
-                BuildSteam(steam, "VaporCaldeira", Polar(angle, BoilerRadius) + Vector3.up * BoilerTopHeight, 4f, 1.6f, 3.2f, 0.9f);
+            // O vapor sobe do topo de cada caldeira da cena (a posição vem do ArenaBuilder, não de uma cópia aqui).
+            var boilers = arenaRoot.Find("Caldeiras");
+            if (boilers != null && boilers.childCount > 0)
+            {
+                foreach (Transform boiler in boilers)
+                    BuildSteam(steam, "VaporCaldeira", boiler.position + Vector3.up * BoilerTopHeight, 4f, 1.6f, 3.2f, 0.9f);
+            }
+            else
+            {
+                foreach (float angle in BoilerAngles)
+                    BuildSteam(steam, "VaporCaldeira", Polar(angle, BoilerRadius) + Vector3.up * BoilerTopHeight, 4f, 1.6f, 3.2f, 0.9f);
+            }
             foreach (var v in VentPositions)
                 BuildVent(steam, Polar(v.x, v.y));
 
             BuildArcaneDust(root);
-            BuildLivingCrystal(arenaRoot, root); // D-069: veios, pulso dos cristais e poeira mágica
+            BuildLivingCrystal(arenaRoot, root); // D-069: veios, trilhos, lampiões, pulso dos cristais e poeira mágica
 
             AssetDatabase.SaveAssets();
         }
@@ -293,44 +304,12 @@ namespace Game.EditorTools
 
         private static void BuildEmbers(Transform furnace)
         {
-            var ps = CreateSystem("Brasas", furnace, new Vector3(0f, 1.5f, 0.95f), emberMat);
-            // Aponta o cone para cima (+Y mundo).
-            ps.transform.rotation = Quaternion.Euler(-90f, 0f, 0f);
-
-            var main = ps.main;
-            main.loop = true;
-            main.prewarm = true;
-            main.duration = 5f;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(2.5f, 4f);
-            main.startSpeed = new ParticleSystem.MinMaxCurve(0.6f, 1.4f);
-            main.startSize = new ParticleSystem.MinMaxCurve(0.04f, 0.09f);
-            main.startColor = new ParticleSystem.MinMaxGradient(new Color(1f, 0.6f, 0.2f), new Color(1f, 0.35f, 0.1f));
-            main.gravityModifier = -0.05f;
-            main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.maxParticles = 40;
-
-            var emission = ps.emission;
-            emission.rateOverTime = 6f;
-
-            var shape = ps.shape;
-            shape.shapeType = ParticleSystemShapeType.Cone;
-            shape.angle = 25f;
-            shape.radius = 0.25f;
-
-            var noise = ps.noise;
-            noise.enabled = true;
-            noise.strength = 0.3f;
-            noise.frequency = 0.6f;
-
-            var col = ps.colorOverLifetime;
-            col.enabled = true;
-            col.color = new ParticleSystem.MinMaxGradient(FadeGradient(Color.white, 1f, 0.1f));
-
-            var size = ps.sizeOverLifetime;
-            size.enabled = true;
-            size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 1f, 1f, 0.3f));
-
-            ps.Play();
+            // O sistema nasce em jogo (AmbienceParticles): o cone aponta para cima (+Y mundo) pelo giro da peça.
+            var go = new GameObject("Brasas");
+            go.transform.SetParent(furnace, false);
+            go.transform.localPosition = new Vector3(0f, 1.5f, 0.95f);
+            go.transform.rotation = Quaternion.Euler(-90f, 0f, 0f);
+            go.AddComponent<AmbienceParticles>().ConfigureEmbers(emberMat);
         }
 
         // ---------- Vapor ----------
@@ -344,84 +323,25 @@ namespace Game.EditorTools
             BuildSteam(vent, "VaporChao", position + Vector3.up * 0.1f, 2.5f, 1f, 2f, 1.1f);
         }
 
-        /// <summary>Vapor suave: partículas grandes, lentas e de alfa baixo, cinza azulado.</summary>
+        /// <summary>Vapor suave: partículas grandes, lentas e de alfa baixo, cinza azulado (montado em jogo).</summary>
         private static void BuildSteam(Transform parent, string name, Vector3 worldPosition, float rate,
             float sizeMin, float sizeMax, float speed)
         {
-            var ps = CreateSystem(name, parent, Vector3.zero, steamMat);
-            ps.transform.position = worldPosition;
-            ps.transform.rotation = Quaternion.Euler(-90f, 0f, 0f);
-
-            var main = ps.main;
-            main.loop = true;
-            main.prewarm = true;
-            main.duration = 5f;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(5f, 8f);
-            main.startSpeed = new ParticleSystem.MinMaxCurve(speed * 0.5f, speed);
-            main.startSize = new ParticleSystem.MinMaxCurve(sizeMin, sizeMax);
-            main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
-            main.startColor = new Color(0.62f, 0.68f, 0.75f, 1f);
-            main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.maxParticles = 30;
-
-            var emission = ps.emission;
-            emission.rateOverTime = rate;
-
-            var shape = ps.shape;
-            shape.shapeType = ParticleSystemShapeType.Cone;
-            shape.angle = 10f;
-            shape.radius = 0.35f;
-
-            var noise = ps.noise;
-            noise.enabled = true;
-            noise.strength = 0.4f;
-            noise.frequency = 0.25f;
-
-            var col = ps.colorOverLifetime;
-            col.enabled = true;
-            col.color = new ParticleSystem.MinMaxGradient(FadeGradient(Color.white, 0.14f, 0.25f));
-
-            var size = ps.sizeOverLifetime;
-            size.enabled = true;
-            size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 0.6f, 1f, 1.8f));
-
-            ps.Play();
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.transform.position = worldPosition;
+            go.transform.rotation = Quaternion.Euler(-90f, 0f, 0f);
+            go.AddComponent<AmbienceParticles>().ConfigureSteam(steamMat, rate, sizeMin, sizeMax, speed);
         }
 
         // ---------- Poeira arcana ----------
 
         private static void BuildArcaneDust(Transform parent)
         {
-            var ps = CreateSystem("PoeiraArcana", parent, new Vector3(0f, 1.5f, 0f), dustMat);
-
-            var main = ps.main;
-            main.loop = true;
-            main.prewarm = true;
-            main.duration = 5f;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(6f, 10f);
-            main.startSpeed = new ParticleSystem.MinMaxCurve(0.05f, 0.15f);
-            main.startSize = new ParticleSystem.MinMaxCurve(0.03f, 0.06f);
-            main.startColor = new Color(0.4f, 1f, 1f, 1f);
-            main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.maxParticles = 60;
-
-            var emission = ps.emission;
-            emission.rateOverTime = 5f;
-
-            var shape = ps.shape;
-            shape.shapeType = ParticleSystemShapeType.Box;
-            shape.scale = DustArea;
-
-            var noise = ps.noise;
-            noise.enabled = true;
-            noise.strength = 0.4f;
-            noise.frequency = 0.3f;
-
-            var col = ps.colorOverLifetime;
-            col.enabled = true;
-            col.color = new ParticleSystem.MinMaxGradient(FadeGradient(Color.white, 1f, 0.3f));
-
-            ps.Play();
+            var go = new GameObject("PoeiraArcana");
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = new Vector3(0f, 1.5f, 0f);
+            go.AddComponent<AmbienceParticles>().ConfigureArcaneDust(dustMat, DustArea);
         }
 
         // ---------- Cristal vivo (D-069) ----------
@@ -441,10 +361,11 @@ namespace Game.EditorTools
 
         /// <summary>
         /// Magia lida a olho (Pilar 4): o latão e o cobre da arena ganham veios de cristal na mesma peça.
-        /// A luz sai da faixa de cristal de cada caldeira, sobe e desce pela caldeira e corre pelo cano do muro;
-        /// os portões ganham um circuito de cristal que só acende na largada (como os cristais deles, D-013);
-        /// fornalhas e postes respiram; e uma poeira mágica fraca paira sobre a cidade, fora do muro.
-        /// Nenhuma luz nova: tudo é emissão.
+        /// A luz sai da faixa de cristal de cada caldeira e sobe e desce por ela; um trilho de cristal corre pelo chão
+        /// do núcleo da praça até o portão de cada rua e os portões ganham um circuito (os dois apagados até a largada,
+        /// como os cristais dos portões, D-013 e D-081); lampiões de cristal marcam as avenidas; fornalhas, postes e
+        /// lampiões respiram; e uma poeira mágica fraca paira nas avenidas e praças menores, atrás do combate.
+        /// Luzes novas só nos lampiões (no máximo CrystalAmbienceSettings.lampMaxLights); o resto é emissão.
         /// </summary>
         private static void BuildLivingCrystal(Transform arenaRoot, Transform ambience)
         {
@@ -453,18 +374,35 @@ namespace Game.EditorTools
                 Debug.LogWarning("AmbienceBuilder: CristalArcano.mat não encontrado; cristal vivo (D-069) não construído.");
                 return;
             }
+            var layout = LoadMapLayout();
             var group = new GameObject("CristalVivo").transform;
             group.SetParent(ambience, false);
 
-            BuildBoilerAndWallVeins(arenaRoot, group);
+            BuildBoilerVeins(arenaRoot, group);
             BuildGateVeins(arenaRoot, group);
+            BuildCrystalTrails(group, layout);
+            BuildAvenueLamps(group, layout);
             var posts = arenaRoot.Find("PostesArcanos");
             if (posts != null)
             {
                 foreach (Transform post in posts)
                     PulseMachine(post.gameObject, post);
             }
-            BuildMagicDust(group);
+            BuildMagicDust(group, layout);
+        }
+
+        /// <summary>Geometria do mapa a partir de Data/Map/MapLayoutSettings.asset (criado aqui se o ArenaBuilder ainda não o criou).</summary>
+        private static MapLayout LoadMapLayout()
+        {
+            var settings = AssetDatabase.LoadAssetAtPath<MapLayoutSettings>(MapLayoutSettingsPath);
+            if (settings == null)
+            {
+                EnsureFolder(Path.GetDirectoryName(MapLayoutSettingsPath)!.Replace('\\', '/'));
+                settings = ScriptableObject.CreateInstance<MapLayoutSettings>();
+                AssetDatabase.CreateAsset(settings, MapLayoutSettingsPath);
+                AssetDatabase.SaveAssets();
+            }
+            return settings.ToLayout();
         }
 
         /// <summary>Cristal da peça respira devagar, cada uma no seu tempo (sem luz junto: fica perto do combate).</summary>
@@ -476,12 +414,10 @@ namespace Game.EditorTools
                 MeshRenderers(model), null, null, crystalLitMat);
         }
 
-        private static void BuildBoilerAndWallVeins(Transform arenaRoot, Transform group)
+        private static void BuildBoilerVeins(Transform arenaRoot, Transform group)
         {
             var renderers = new System.Collections.Generic.List<Renderer>();
             var offsets = new System.Collections.Generic.List<float>();
-            var boilerAngles = new System.Collections.Generic.List<float>();
-            float boilerToWall = 0f;
 
             // Caldeiras: a faixa de cristal do modelo é o coração (deslocamento 0); quatro veios sobem e descem dela.
             var boilers = arenaRoot.Find("Caldeiras");
@@ -489,8 +425,6 @@ namespace Game.EditorTools
             {
                 foreach (Transform boiler in boilers)
                 {
-                    boilerAngles.Add(AngleOf(boiler.position));
-                    boilerToWall = WallRadius - Flat(boiler.position).magnitude;
                     foreach (var r in MeshRenderers(boiler))
                     {
                         renderers.Add(r);
@@ -522,30 +456,9 @@ namespace Game.EditorTools
                 }
             }
 
-            // Cano do muro: uma fenda de cristal por segmento, na quarta parte de cima do cano, virada para a praça.
-            // A crista sai da caldeira mais próxima e corre pelo muro nos dois sentidos.
-            var wall = arenaRoot.Find("Limite");
-            if (wall != null && wall.childCount > 0)
-            {
-                float segmentLength = 2f * Mathf.PI * WallRadius / wall.childCount + WallSegmentOverlap;
-                float c = WallPipeRadius + 0.005f;
-                var local = new Vector3(0f, WallPipeHeight + c * Mathf.Sin(45f * Mathf.Deg2Rad), -c * Mathf.Cos(45f * Mathf.Deg2Rad));
-                foreach (Transform segment in wall)
-                {
-                    // +Z local do segmento aponta para fora; Euler(-45) deita a fenda na diagonal de cima, para dentro.
-                    renderers.Add(Vein(segment, local, Quaternion.Euler(-45f, 0f, 0f),
-                        new Vector3(segmentLength - 0.05f, VeinThickness, WallVeinWidth), crystalLitMat));
-                    float angle = AngleOf(segment.position);
-                    float arc = 180f;
-                    foreach (float b in boilerAngles)
-                        arc = Mathf.Min(arc, Mathf.Abs(Mathf.DeltaAngle(b, angle)));
-                    offsets.Add(boilerToWall + arc * Mathf.Deg2Rad * WallRadius);
-                }
-            }
-
             if (renderers.Count == 0)
                 return;
-            var go = new GameObject("VeiosCaldeirasMuro");
+            var go = new GameObject("VeiosCaldeiras");
             go.transform.SetParent(group, false);
             go.AddComponent<CrystalPulse>().Configure(crystalSettings, CrystalPulseRole.Veio, renderers.ToArray(),
                 offsets.ToArray(), null, crystalLitMat);
@@ -553,7 +466,9 @@ namespace Game.EditorTools
 
         /// <summary>
         /// Circuito de cristal na frente de cada portão-máquina: um veio na viga de cobre, dois descendo pela carcaça
-        /// e quatro ligando as gemas das colunas ao anel da engrenagem. Apagado até a largada (D-013).
+        /// e quatro ligando as gemas das colunas ao anel da engrenagem. Apagado até a largada (D-013). Os portões
+        /// ficam no fim de cada boca de rua (D-081) e são achados pelo GateActivation, onde quer que estejam. O
+        /// deslocamento começa na distância do portão ao núcleo: a crista que corre pelo trilho entra no circuito.
         /// </summary>
         private static void BuildGateVeins(Transform arenaRoot, Transform group)
         {
@@ -561,18 +476,18 @@ namespace Game.EditorTools
             // Sem sessão na cena não há largada para esperar: o circuito nasce aceso.
             var startMat = session != null && crystalOffMat != null ? crystalOffMat : crystalLitMat;
             float z = GateFront + VeinThickness * 0.25f;
-            foreach (Transform gate in arenaRoot)
+            foreach (var activation in arenaRoot.GetComponentsInChildren<GateActivation>(true))
             {
-                if (!gate.name.StartsWith("PortaoMaquina"))
-                    continue;
+                var gate = activation.transform;
                 var renderers = new System.Collections.Generic.List<Renderer>();
                 var offsets = new System.Collections.Generic.List<float>();
                 var heart = new Vector2(0f, 2f); // centro da engrenagem: a crista sai dela
+                float entry = Mathf.Max(0f, Flat(gate.position).magnitude - GateFront); // distância da frente do portão ao núcleo
 
                 void Add(Vector3 pos, Vector3 size)
                 {
                     renderers.Add(Vein(gate, pos, Quaternion.identity, size, startMat));
-                    offsets.Add(Vector2.Distance(new Vector2(pos.x, pos.y), heart));
+                    offsets.Add(entry + Vector2.Distance(new Vector2(pos.x, pos.y), heart));
                 }
 
                 // Viga de cobre do alto (a frente dela fica recuada em relação à carcaça).
@@ -601,90 +516,210 @@ namespace Game.EditorTools
         }
 
         /// <summary>
-        /// Poeira mágica: partículas fracas na rua do anel, logo atrás do muro, no lado longe da câmera. Aparece nas
-        /// bordas da tela, na frente das fachadas, quando o jogador chega perto do muro; nunca cai sobre a praça
-        /// (inimigos, golpes, cartas e aura). Some perto da câmera e tem tamanho máximo na tela.
+        /// Trilho de cristal de cada rua (D-069, D-081): o TrilhoCobre do núcleo continua pelo meio da avenida e da boca
+        /// de rua até a frente do portão. Base de cobre com o veio de cristal em trechos por cima; o deslocamento de
+        /// cada trecho é a distância até o núcleo, então a crista corre da praça para os portões. Apagado até a
+        /// largada, como o circuito do portão. Fica no chão: a câmera de jogo o vê em quase toda posição do jogador.
         /// </summary>
-        private static void BuildMagicDust(Transform parent)
+        private static void BuildCrystalTrails(Transform group, MapLayout layout)
         {
             var s = crystalSettings;
-            if (s == null || s.streetDustMax <= 0)
-                return;
-            float inner = s.streetDustInnerRadius;
-            float outer = Mathf.Max(s.streetDustOuterRadius, inner + 0.5f);
-            var cameraSettings = AssetDatabase.LoadAssetAtPath<CameraSettings>(CameraSettingsPath);
-            float cameraYaw = cameraSettings != null ? cameraSettings.yaw : 30f;
+            var session = Object.FindFirstObjectByType<MatchState>();
+            var startMat = session != null && crystalOffMat != null ? crystalOffMat : crystalLitMat;
+            var trails = new GameObject("TrilhosCristal").transform;
+            trails.SetParent(group, false);
 
-            var ps = CreateSystem("PoeiraMagica", parent, new Vector3(0f, s.streetDustHeight, 0f), magicDustMat);
-            // O círculo do Shape fica no plano XY local; Euler(-90) deita no chão (+X local = leste, +Y local = sul).
-            ps.transform.rotation = Quaternion.Euler(-90f, 0f, 0f);
+            float end = layout.Params.GateS - GateFront - TrailGateGap;
+            for (int i = 0; i < layout.StreetCount; i++)
+            {
+                var axis = layout.Avenues[i].Axis;
+                var dir = new Vector3(axis.X, 0f, axis.Y);
+                float start = Mathf.Min(s.trailStartS, end - 1f);
+                float length = end - start;
+                var rotation = Quaternion.LookRotation(dir);
 
-            var main = ps.main;
-            main.loop = true;
-            main.prewarm = true;
-            main.duration = 8f;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(DustMinLifetime, DustMaxLifetime);
-            main.startSpeed = 0f;
-            main.startSize = new ParticleSystem.MinMaxCurve(DustMinSize, DustMaxSize);
-            main.startColor = new ParticleSystem.MinMaxGradient(DustColors(s)) { mode = ParticleSystemGradientMode.RandomColor };
-            main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.maxParticles = s.streetDustMax;
+                var street = new GameObject($"Trilho{i + 1}").transform;
+                street.SetParent(trails, false);
+                if (copperMat != null)
+                {
+                    var rail = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    rail.name = "TrilhoCobre";
+                    rail.transform.SetParent(street, false);
+                    rail.transform.localPosition = dir * ((start + end) * 0.5f) + Vector3.up * (TrailBaseHeight * 0.5f);
+                    rail.transform.localRotation = rotation;
+                    rail.transform.localScale = new Vector3(TrailBaseWidth, TrailBaseHeight, length);
+                    Object.DestroyImmediate(rail.GetComponent<Collider>());
+                    rail.GetComponent<MeshRenderer>().sharedMaterial = copperMat;
+                    rail.isStatic = true;
+                }
 
-            var emission = ps.emission;
-            emission.rateOverTime = s.streetDustPerSecond;
+                int count = Mathf.Max(1, Mathf.RoundToInt(length / s.trailSegmentLength));
+                float segment = length / count;
+                var renderers = new Renderer[count];
+                var offsets = new float[count];
+                for (int k = 0; k < count; k++)
+                {
+                    float along = start + (k + 0.5f) * segment;
+                    renderers[k] = Vein(street, dir * along + Vector3.up * (TrailBaseHeight + TrailVeinThickness * 0.5f), rotation,
+                        new Vector3(s.trailVeinWidth, TrailVeinThickness, Mathf.Max(0.1f, segment - TrailSegmentGap)), startMat);
+                    offsets[k] = along; // distância ao núcleo (na origem)
+                }
 
-            var shape = ps.shape;
-            shape.shapeType = ParticleSystemShapeType.Circle;
-            shape.radius = outer;
-            shape.radiusThickness = Mathf.Clamp01((outer - inner) / outer); // só o anel da rua, nada dentro do muro
-            shape.arc = DustArcDegrees;
-            // O arco começa no +X local (bússola 90°) e cresce no sentido horário visto de cima (para o sul).
-            // Girar o Shape em Z desloca o começo: o arco fica centrado no giro da câmera (o lado longe dela).
-            shape.rotation = new Vector3(0f, 0f, cameraYaw - DustArcDegrees * 0.5f - 90f);
-            shape.randomPositionAmount = DustHeightJitter;
-
-            // Sobe devagar, como fagulha fria saindo da rua.
-            var velocity = ps.velocityOverLifetime;
-            velocity.enabled = true;
-            velocity.space = ParticleSystemSimulationSpace.World;
-            velocity.x = new ParticleSystem.MinMaxCurve(0f, 0f);
-            velocity.y = new ParticleSystem.MinMaxCurve(DustMinRise, DustMaxRise);
-            velocity.z = new ParticleSystem.MinMaxCurve(0f, 0f);
-
-            var noise = ps.noise;
-            noise.enabled = true;
-            noise.strength = DustNoise;
-            noise.frequency = 0.15f;
-
-            var col = ps.colorOverLifetime;
-            col.enabled = true;
-            col.color = new ParticleSystem.MinMaxGradient(FadeGradient(Color.white, DustPeakAlpha, 0.2f));
-
-            var renderer = ps.GetComponent<ParticleSystemRenderer>();
-            renderer.maxParticleSize = DustMaxScreenSize;
-
-            ps.Play();
+                var go = new GameObject($"VeiosTrilho{i + 1}");
+                go.transform.SetParent(street, false);
+                go.AddComponent<CrystalPulse>().Configure(crystalSettings, CrystalPulseRole.Veio, renderers, offsets, null,
+                    crystalLitMat, crystalOffMat, session);
+            }
         }
 
-        /// <summary>Cores sorteadas por partícula: ciano na maior parte, um pouco de violeta e de dourado.</summary>
-        private static Gradient DustColors(CrystalAmbienceSettings s)
+        /// <summary>
+        /// Lampiões de cristal ao longo das avenidas (D-069): o LampiaoRua da cidade, um a cada lampSpacing m em cada
+        /// lado, intercalados, na borda da avenida (a lampFacadeGap da fachada; o corredor andável fica livre). Colisão
+        /// de cápsula pequena na camada Cenario e o cristal respirando. Só um lampião em lampLightEvery recebe uma luz
+        /// fraca, sem sombra, até lampMaxLights no mapa todo.
+        /// </summary>
+        private static void BuildAvenueLamps(Transform group, MapLayout layout)
         {
-            float gold = Mathf.Clamp01(s.dustGoldShare);
-            float violet = Mathf.Clamp(s.dustVioletShare, 0f, 1f - gold);
-            float cyanEnd = 1f - gold - violet;
-            // Modo Fixed: cada ponto do gradiente usa a próxima chave, então as faixas não se misturam.
-            var keys = new System.Collections.Generic.List<GradientColorKey>();
-            if (cyanEnd > 0.001f)
-                keys.Add(new GradientColorKey(DustCyan, cyanEnd));
-            if (violet > 0.001f)
-                keys.Add(new GradientColorKey(DustViolet, 1f - gold));
-            if (gold > 0.001f)
-                keys.Add(new GradientColorKey(DustGold, 1f));
-            if (keys.Count == 0)
-                keys.Add(new GradientColorKey(DustCyan, 1f));
-            var g = new Gradient { mode = GradientMode.Fixed };
-            g.SetKeys(keys.ToArray(), new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(1f, 1f) });
-            return g;
+            var s = crystalSettings;
+            var model = AssetDatabase.LoadAssetAtPath<GameObject>(LampModelPath);
+            if (model == null)
+            {
+                Debug.LogWarning($"AmbienceBuilder: {LampModelPath} não encontrado; lampiões de cristal não construídos.");
+                return;
+            }
+            var lamps = new GameObject("LampioesCristal").transform;
+            lamps.SetParent(group, false);
+
+            int number = 0, withLight = 0;
+            for (int i = 0; i < layout.StreetCount; i++)
+            {
+                var avenue = layout.Avenues[i];
+                float across = avenue.Width * 0.5f - s.lampFacadeGap - LampBaseRadius;
+                if (across <= 0f)
+                    continue;
+                float facade = layout.PlazaFacadeRadius;
+                float first = Mathf.Sqrt(Mathf.Max(0f, facade * facade - across * across)) + LampPlazaMargin;
+                float last = avenue.EndS - LampEndMargin;
+
+                // x = distância s ao longo da avenida, y = lado (-1 esquerda, +1 direita); o lado direito vem meio espaçamento depois.
+                var spots = new System.Collections.Generic.List<Vector2>();
+                for (int k = 0; k < 2; k++)
+                {
+                    for (float along = first + k * s.lampSpacing * 0.5f; along <= last + 0.001f; along += s.lampSpacing)
+                        spots.Add(new Vector2(along, k == 0 ? -1f : 1f));
+                }
+                spots.Sort((a, b) => a.x.CompareTo(b.x));
+
+                for (int n = 0; n < spots.Count; n++)
+                {
+                    bool light = n % s.lampLightEvery == 0 && withLight < s.lampMaxLights;
+                    var spot = avenue.PointAt(spots[n].x, spots[n].y * across);
+                    var side = avenue.Rect.Side;
+                    var toAxis = new Vector3(-side.X, 0f, -side.Y) * spots[n].y; // o braço da lanterna aponta para o meio da rua
+                    BuildLamp(lamps, model, $"Lampiao{++number}", new Vector3(spot.X, 0f, spot.Y), toAxis, light);
+                    if (light)
+                        withLight++;
+                }
+            }
+        }
+
+        private static void BuildLamp(Transform parent, GameObject model, string name, Vector3 position, Vector3 facing, bool withLight)
+        {
+            var lamp = new GameObject(name);
+            lamp.transform.SetParent(parent, false);
+            lamp.transform.position = position;
+            lamp.transform.rotation = Quaternion.LookRotation(facing); // +Z local = braço da lanterna
+            lamp.layer = MapLayers.Cenario; // a colisão entra na NavMesh e no recorte dos prédios como o resto do cenário
+
+            var capsule = lamp.AddComponent<CapsuleCollider>();
+            capsule.radius = LampBaseRadius;
+            capsule.height = LampColliderHeight;
+            capsule.center = new Vector3(0f, LampColliderHeight * 0.5f, 0f);
+
+            var instance = (GameObject)PrefabUtility.InstantiatePrefab(model, lamp.transform);
+            instance.transform.localPosition = Vector3.zero;
+            instance.transform.localRotation = Quaternion.identity;
+            foreach (var r in instance.GetComponentsInChildren<MeshRenderer>(true))
+                r.gameObject.isStatic = true;
+            PulseMachine(lamp, instance.transform);
+
+            if (!withLight)
+                return;
+            Transform marker = null;
+            foreach (var t in instance.GetComponentsInChildren<Transform>(true))
+            {
+                if (t.name.StartsWith(LampLightMarker))
+                {
+                    marker = t;
+                    break;
+                }
+            }
+            var lightGo = new GameObject("Luz");
+            lightGo.transform.SetParent(marker != null ? marker : lamp.transform, false);
+            if (marker == null)
+                lightGo.transform.localPosition = new Vector3(0f, 3.2f, 0.9f);
+            var light = lightGo.AddComponent<Light>();
+            light.type = LightType.Point;
+            light.color = LampLightColor;
+            light.range = crystalSettings.lampLightRange;
+            light.intensity = crystalSettings.lampLightIntensity;
+            light.shadows = LightShadows.None;
+        }
+
+        /// <summary>
+        /// Poeira mágica (D-069, D-070): partículas fracas e baixas nas avenidas (caixa com a largura da avenida,
+        /// encostada na ponta de fora) e nas praças menores (círculo do tamanho da praça). Os emissores ficam além do
+        /// disco de combate (dustCombatRadius): com a câmera de jogo, a poeira nunca cai sobre a praça nem fica na
+        /// frente do combate (CrystalAmbienceTests). Some perto da câmera e tem tamanho máximo na tela. O sistema de
+        /// partículas nasce em jogo (AmbienceParticles), então nada disso pesa na cena.
+        /// </summary>
+        private static void BuildMagicDust(Transform parent, MapLayout layout)
+        {
+            var s = crystalSettings;
+            if (s == null || magicDustMat == null)
+                return;
+            var dust = new GameObject("PoeiraMagica").transform;
+            dust.SetParent(parent, false);
+
+            for (int i = 0; i < layout.StreetCount; i++)
+            {
+                var avenue = layout.Avenues[i];
+                // Avenida: a caixa termina na ponta de fora e nunca começa antes do disco de combate.
+                float start = Mathf.Max(avenue.EndS - s.avenueDustLength, s.dustCombatRadius);
+                float length = avenue.EndS - start;
+                if (s.avenueDustMax > 0 && length >= 1f)
+                {
+                    var c = avenue.Axis * ((start + avenue.EndS) * 0.5f);
+                    var go = new GameObject($"PoeiraAvenida{i + 1}");
+                    go.transform.SetParent(dust, false);
+                    go.transform.position = new Vector3(c.X, s.dustMidHeight, c.Y);
+                    go.transform.rotation = Quaternion.Euler(0f, avenue.AngleDeg, 0f); // +Z local ao longo da avenida
+                    go.AddComponent<AmbienceParticles>().ConfigureMagicDust(magicDustMat, AmbienceDustShape.Box,
+                        new Vector3(avenue.Width, s.avenueDustBoxHeight, length), 0f, s.avenueDustMax,
+                        s.avenueDustPerSecond, s.dustVioletShare, s.dustGoldShare);
+                }
+                else if (s.avenueDustMax > 0)
+                {
+                    Debug.LogWarning($"AmbienceBuilder: avenida {i + 1} sem espaço para poeira além do disco de combate (r {s.dustCombatRadius}).");
+                }
+
+                // Praça menor: o círculo inteiro tem de ficar além do disco de combate.
+                var plaza = layout.SmallPlazas[i];
+                float nearest = new Vector2(plaza.Center.X, plaza.Center.Y).magnitude - plaza.Radius;
+                if (s.plazaDustMax > 0 && nearest >= s.dustCombatRadius)
+                {
+                    var go = new GameObject($"PoeiraPraca{i + 1}");
+                    go.transform.SetParent(dust, false);
+                    go.transform.position = new Vector3(plaza.Center.X, s.dustMidHeight, plaza.Center.Y);
+                    go.transform.rotation = Quaternion.Euler(-90f, 0f, 0f); // o círculo deita no chão
+                    go.AddComponent<AmbienceParticles>().ConfigureMagicDust(magicDustMat, AmbienceDustShape.Disc,
+                        Vector3.one, plaza.Radius, s.plazaDustMax, s.plazaDustPerSecond, s.dustVioletShare, s.dustGoldShare);
+                }
+                else if (s.plazaDustMax > 0)
+                {
+                    Debug.LogWarning($"AmbienceBuilder: praça menor {i + 1} dentro do disco de combate (r {s.dustCombatRadius}); sem poeira.");
+                }
+            }
         }
 
         /// <summary>Faixa de cristal sem collider e sem sombra, filha da máquina (anda com ela).</summary>
@@ -709,43 +744,6 @@ namespace Game.EditorTools
 
         private static Vector2 Flat(Vector3 p) => new Vector2(p.x, p.z);
 
-        private static float AngleOf(Vector3 p) => Mathf.Atan2(p.x, p.z) * Mathf.Rad2Deg;
-
-        // ---------- Partículas: utilitários ----------
-
-        private static ParticleSystem CreateSystem(string name, Transform parent, Vector3 localPos, Material mat)
-        {
-            var go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            go.transform.localPosition = localPos;
-
-            var ps = go.AddComponent<ParticleSystem>();
-            // Os módulos só aceitam mudanças de duração com o sistema parado.
-            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-
-            var renderer = go.GetComponent<ParticleSystemRenderer>();
-            renderer.sharedMaterial = mat;
-            renderer.renderMode = ParticleSystemRenderMode.Billboard;
-            renderer.shadowCastingMode = ShadowCastingMode.Off;
-            renderer.receiveShadows = false;
-            return ps;
-        }
-
-        /// <summary>Alfa sobe rápido até o pico e desce até zero no fim da vida.</summary>
-        private static Gradient FadeGradient(Color color, float peakAlpha, float fadeInTime)
-        {
-            var g = new Gradient();
-            g.SetKeys(
-                new[] { new GradientColorKey(color, 0f), new GradientColorKey(color, 1f) },
-                new[]
-                {
-                    new GradientAlphaKey(0f, 0f),
-                    new GradientAlphaKey(peakAlpha, fadeInTime),
-                    new GradientAlphaKey(0f, 1f)
-                });
-            return g;
-        }
-
         // ---------- Materiais ----------
 
         private static void LoadMaterials()
@@ -768,6 +766,7 @@ namespace Game.EditorTools
             crystalSettings = LoadCrystalSettings();
             crystalLitMat = AssetDatabase.LoadAssetAtPath<Material>($"{MaterialsFolder}/CristalArcano.mat");
             crystalOffMat = AssetDatabase.LoadAssetAtPath<Material>($"{MaterialsFolder}/CristalApagado.mat");
+            copperMat = AssetDatabase.LoadAssetAtPath<Material>(CopperMaterialPath);
             // Poeira mágica: aditiva, branca (a cor vem de cada partícula) e com o brilho dos dados.
             float b = crystalSettings.dustBrightness;
             magicDustMat = GetOrCreateParticleMaterial(MagicDustMaterialPath, soft, new Color(b, b, b, 1f), true);

@@ -21,6 +21,7 @@ namespace Game.EditorTools
         private const string PrefabFolder = "Assets/_Game/Enemies/Prefabs";
         private const string ModelsFolder = "Assets/_Game/Art/Models";
         private const string MaterialsFolder = "Assets/_Game/Art/Materials";
+        private const string NavigationSettingsPath = DataFolder + "/EnemyNavigationSettings.asset";
         private const string NetworkPrefabsPath = "Assets/DefaultNetworkPrefabs.asset";
         private const string SpawnerName = "Inimigos";
 
@@ -36,6 +37,7 @@ namespace Game.EditorTools
             EnsureFolder(DataFolder);
             EnsureFolder(PrefabFolder);
 
+            EnsureNavigationSettings();
             var particleMaterial = CreateParticleMaterial();
             var projectile = BuildProjectilePrefab(crystalLit, particleMaterial);
 
@@ -114,6 +116,17 @@ namespace Game.EditorTools
             return def;
         }
 
+        /// <summary>
+        /// Navegação dos inimigos (D-077, D-080). Cria o asset com os valores padrão da classe só na primeira vez:
+        /// depois, o que o dono ajustar no asset é mantido.
+        /// </summary>
+        private static void EnsureNavigationSettings()
+        {
+            var settings = LoadOrCreate<EnemyNavigationSettings>(NavigationSettingsPath);
+            EditorUtility.SetDirty(settings);
+            AssetDatabase.SaveAssetIfDirty(settings);
+        }
+
         private static WaveSettings BuildWaveSettings(EnemyDefinition automato, EnemyDefinition drone, EnemyDefinition constructo)
         {
             var waves = LoadOrCreate<WaveSettings>($"{DataFolder}/WaveSettings.asset");
@@ -161,6 +174,13 @@ namespace Game.EditorTools
             so.FindProperty("particleMaterial").objectReferenceValue = particleMaterial;
             so.FindProperty("projectilePrefab").objectReferenceValue = projectilePrefab;
             so.ApplyModifiedPropertiesWithoutUndo();
+
+            // Caminho entre prédios (só no host). Recarrega o asset pelo caminho: o objeto criado antes pode ter virado referência morta.
+            var follower = root.AddComponent<EnemyPathFollower>();
+            var followerSo = new SerializedObject(follower);
+            followerSo.FindProperty("settings").objectReferenceValue =
+                AssetDatabase.LoadAssetAtPath<EnemyNavigationSettings>(NavigationSettingsPath);
+            followerSo.ApplyModifiedPropertiesWithoutUndo();
 
             BuildVisual(kind, root.transform, crystalLit);
 

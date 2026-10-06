@@ -1,12 +1,15 @@
 using System.Collections;
+using System.Collections.Generic;
 using Game.Cards;
 using Game.Core.Cards;
+using Game.Core.Combat;
 using Game.Dice;
 using Game.Enemies;
 using Game.Net;
 using NUnit.Framework;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.TestTools;
 
 namespace Game.Tests.PlayMode
@@ -271,6 +274,172 @@ namespace Game.Tests.PlayMode
                     upgraded++;
             Assert.AreEqual(1, upgraded, "Uma das comuns subiu de gasta para boa (D-051)");
             Assert.AreEqual(countBefore, cards.Inventory.Count, "Melhoria não cria carta nova");
+        }
+
+        // ---------- A carta do fim da onda surge onde caiu o último inimigo (D-082) ----------
+
+        /// <summary>Largada e espera a primeira onda inteira nascer (a fila das bocas esvazia).</summary>
+        private IEnumerator StartFirstWave()
+        {
+            Object.FindFirstObjectByType<MatchState>().ServerStart();
+            float timeout = spawner.Settings.firstWaveDelay + 5f;
+            while ((spawner.AliveCount == 0 || spawner.PendingCount > 0) && timeout > 0f)
+            {
+                timeout -= Time.deltaTime;
+                yield return null;
+            }
+            Assert.Greater(spawner.AliveCount, 1, "A primeira onda nasceu");
+            Assert.AreEqual(0, spawner.PendingCount, "A fila das bocas esvaziou");
+        }
+
+        private static List<EnemyController> AliveEnemies()
+        {
+            var list = new List<EnemyController>();
+            foreach (var enemy in Object.FindObjectsByType<EnemyController>(FindObjectsSortMode.None))
+                if (enemy.IsAlive)
+                    list.Add(enemy);
+            return list;
+        }
+
+        private static void Kill(EnemyController enemy) =>
+            enemy.Health.ServerApplyDamage(new DamagePacket(enemy.Health.Max * 100f, 0f), NetworkManager.Singleton.LocalClientId);
+
+        private static float Planar(Vector3 a, Vector3 b) => new Vector2(a.x - b.x, a.z - b.z).magnitude;
+
+        private static IEnumerator WaitForCard(System.Action<FloorCard> found, float timeout)
+        {
+            FloorCard card = null;
+            while ((card = Object.FindFirstObjectByType<FloorCard>()) == null && timeout > 0f)
+            {
+                timeout -= Time.deltaTime;
+                yield return null;
+            }
+            found(card);
+        }
+
+        [UnityTest]
+        public IEnumerator CartaDoFimDaOnda_SurgeOndeCaiuOUltimoInimigo()
+        {
+            // Vale na arena atual (sem NavMesh a carta usa a posição de morte) e no mapa novo (ponto andável).
+            yield return StartFirstWave();
+
+            var alive = AliveEnemies();
+            for (int i = 1; i < alive.Count; i++)
+                Kill(alive[i]);
+            yield return null;
+            yield return null;
+            Assert.IsNull(Object.FindFirstObjectByType<FloorCard>(), "Com um inimigo em pé a onda não acabou: nada de carta ainda");
+
+            Vector3 deathPoint = alive[0].transform.position;
+            Kill(alive[0]);
+            FloorCard card = null;
+            yield return WaitForCard(c => card = c, 3f);
+            Assert.IsNotNull(card, "A carta apareceu no fim da onda (D-050)");
+
+            float radius = service.Settings.dropNavSampleRadius;
+            bool walkableHere = NavMesh.SamplePosition(deathPoint, out _, 0.1f, NavMesh.AllAreas);
+            bool navMeshNear = NavMesh.SamplePosition(deathPoint, out _, radius, NavMesh.AllAreas);
+            float distance = Planar(card.transform.position, deathPoint);
+            if (walkableHere || !navMeshNear)
+                Assert.Less(distance, 0.15f, "A carta surge exatamente onde caiu o último inimigo (D-082)");
+            else
+                Assert.LessOrEqual(distance, radius + 0.1f, "Ponto não andável: a carta vai para o andável mais próximo");
+        }
+
+        [UnityTest]
+        public IEnumerator CartaDoFimDaOnda_PontoNaoAndavel_VaiParaOChaoAndavelMaisProximo()
+        {
+            // precisa do mapa novo (P2/P3) e do bake da NavMesh
+            yield return StartFirstWave();
+
+            // Um ponto logo fora da NavMesh, junto à borda do chão andável: a borda fica a uma folga das paredes, então meio
+            // metro para o outro lado dela ainda é chão físico, mas já não é NavMesh.
+            Assert.IsTrue(NavMesh.SamplePosition(cards.transform.position, out NavMeshHit onMesh, 3f, NavMesh.AllAreas),
+                "Sem NavMesh perto do jogador (precisa do mapa novo e do bake)");
+            Assert.IsTrue(NavMesh.FindClosestEdge(onMesh.position, out NavMeshHit edge, NavMesh.AllAreas), "A NavMesh tem borda");
+
+            Vector3 outside = default;
+            bool found = false;
+            foreach (float side in new[] { 1f, -1f })
+            {
+                Vector3 candidate = edge.position + edge.normal * (0.5f * side);
+                candidate.y = edge.position.y;
+                if (!NavMesh.SamplePosition(candidate, out _, 0.05f, NavMesh.AllAreas))
+                {
+                    outside = candidate;
+                    found = true;
+                    break;
+                }
+            }
+            Assert.IsTrue(found, "Achei um ponto fora da NavMesh junto da borda");
+
+            // Os da onda caem, menos um; um inimigo posto no ponto de fora é o último a cair.
+            var alive = AliveEnemies();
+            for (int i = 1; i < alive.Count; i++)
+                Kill(alive[i]);
+            var last = spawner.ServerSpawn(spawner.Settings.enemyTypes[0], outside);
+            Assert.IsNotNull(last, "Inimigo nasceu");
+            last.enabled = false; // parado no ponto de fora: sem a IA ele não anda para a NavMesh antes de cair
+            yield return null;
+            Kill(alive[0]);
+            yield return null;
+            yield return null;
+            Assert.IsNull(Object.FindFirstObjectByType<FloorCard>(), "Ainda há um inimigo em pé");
+
+            Vector3 deathPoint = last.transform.position;
+            Kill(last);
+            FloorCard card = null;
+            yield return WaitForCard(c => card = c, 3f);
+            Assert.IsNotNull(card, "A carta apareceu");
+
+            Assert.IsTrue(NavMesh.SamplePosition(card.transform.position, out _, 0.1f, NavMesh.AllAreas),
+                "A carta fica em chão andável, mesmo com o último inimigo caído fora dele");
+            Assert.LessOrEqual(Planar(card.transform.position, deathPoint), service.Settings.dropNavSampleRadius + 0.1f,
+                "E perto de onde ele caiu");
+        }
+
+        // ---------- Emboscada em chão andável (D-049, passe do mapa) ----------
+
+        [UnityTest]
+        public IEnumerator Emboscada_JuntoDaParede_ContinuaComDoisATresInimigosEmChaoAndavel()
+        {
+            // precisa do mapa novo (P2/P3) e do bake da NavMesh
+            Assert.IsTrue(NavMesh.SamplePosition(cards.transform.position, out NavMeshHit onMesh, 3f, NavMesh.AllAreas),
+                "Sem NavMesh perto do jogador (precisa do mapa novo e do bake)");
+            Assert.IsTrue(NavMesh.FindClosestEdge(onMesh.position, out NavMeshHit edge, NavMesh.AllAreas), "A NavMesh tem borda");
+
+            // Jogador na borda do chão andável: parte do anel de 5 m da emboscada cai dentro de prédio ou fora da NavMesh.
+            var controller = cards.GetComponent<CharacterController>();
+            controller.enabled = false;
+            cards.transform.position = edge.position;
+            controller.enabled = true;
+            yield return null;
+
+            var floor = service.ServerSpawnFloorCard(cards.transform.position);
+            Assert.IsNotNull(floor, "A carta apareceu no chão");
+            yield return null;
+
+            CardDropService.DebugForceNextRoll(1);
+            floor.ServerInteract(NetworkManager.Singleton.LocalClientId);
+            float timeout = WaitForGrant + 1f;
+            while (ambushSeen == null && timeout > 0f)
+            {
+                timeout -= Time.deltaTime;
+                yield return null;
+            }
+
+            Assert.IsNotNull(ambushSeen, "A emboscada nasceu");
+            Assert.That(ambushSeen.Length, Is.InRange(service.Settings.ambushMin, service.Settings.ambushMax),
+                "A emboscada continua com 2 a 3 inimigos (D-049)");
+
+            var path = new NavMeshPath();
+            foreach (Vector3 position in ambushSeen)
+            {
+                Assert.IsTrue(NavMesh.SamplePosition(position, out NavMeshHit hit, 0.3f, NavMesh.AllAreas),
+                    $"Inimigo da emboscada nasceu fora do chão andável: {position}");
+                Assert.IsTrue(NavMesh.CalculatePath(edge.position, hit.position, NavMesh.AllAreas, path));
+                Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status, $"O jogador alcança o inimigo em {position}");
+            }
         }
     }
 }

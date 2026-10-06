@@ -106,6 +106,7 @@ namespace Game.Enemies
         private CharacterController controller;
         private NetworkHealth health;
         private EnemyBrain brain;
+        private EnemyPathFollower follower; // opcional: sem ele (ou sem NavMesh) o inimigo anda reto, como antes
 
         // Host
         private float verticalSpeed;
@@ -153,6 +154,7 @@ namespace Game.Enemies
         {
             controller = GetComponent<CharacterController>();
             health = GetComponent<NetworkHealth>();
+            TryGetComponent(out follower);
             CacheVisuals();
         }
 
@@ -231,7 +233,19 @@ namespace Game.Enemies
             ResyncController();
 
             NetworkHealth target = EnemyTargets.Nearest(transform.position, out float distance);
-            BrainOutput output = brain.Tick(target != null, distance, dt);
+
+            // Linha de visão só contra o cenário (prédios): jogador e inimigo não tapam. Sem alvo ou sem o seguidor vale como livre.
+            // Quem atira orbe usa a espessura dele: com raio fino o drone via o jogador rente a uma quina e o orbe batia nela.
+            float sightThickness = definition.usesProjectile ? definition.projectileRadius : 0f;
+            bool sight = target == null || follower == null
+                || follower.HasLineOfSight(transform.position, target.transform.position, sightThickness);
+
+            // O drone sem linha de visão não ataca através de prédio: o cérebro (Core) vê o alvo fora do alcance e continua perseguindo.
+            float brainDistance = distance;
+            if (!sight && definition.usesProjectile)
+                brainDistance = Mathf.Max(distance, definition.attackRange + 0.01f);
+
+            BrainOutput output = brain.Tick(target != null, brainDistance, dt);
 
             Vector3 toTarget = Vector3.zero;
             if (target != null)
@@ -242,19 +256,37 @@ namespace Game.Enemies
                     toTarget = d.normalized;
             }
 
-            if (toTarget != Vector3.zero && output.State != BrainState.Recover)
-                Face(toTarget, dt);
-
-            Vector3 moveDir = output.Move switch
+            bool followingPath = false;
+            Vector3 moveDir = Vector3.zero;
+            switch (output.Move)
             {
-                BrainMove.Toward => toTarget,
-                BrainMove.Away => -toTarget,
-                _ => Vector3.zero
-            };
-            Move(moveDir == Vector3.zero ? moveDir : Steer(moveDir), dt);
+                case BrainMove.Toward:
+                    moveDir = Approach(toTarget, target, sight, distance, dt, out followingPath);
+                    break;
+                case BrainMove.Away:
+                    moveDir = Retreat(-toTarget);
+                    follower?.Release();
+                    break;
+                default:
+                    follower?.Release();
+                    break;
+            }
+
+            // Contornando prédio, olha para onde anda; senão, para o alvo.
+            Vector3 faceDir = followingPath && !sight && moveDir != Vector3.zero ? moveDir : toTarget;
+            if (faceDir != Vector3.zero && output.State != BrainState.Recover)
+                Face(faceDir, dt);
+
+            // D-080: longe de todos os jogadores, corre.
+            float speedMultiplier = 1f;
+            var nav = follower != null ? follower.Settings : null;
+            if (target != null && nav != null)
+                speedMultiplier = EnemySpeed.FarSprintMultiplier(distance, nav.farSprintDistance, nav.farSprintMultiplier);
+
+            Move(moveDir, dt, speedMultiplier);
 
             if (output.AttackReleased)
-                ServerAttack(target);
+                ServerAttack(target, sight);
 
             byte published = (byte)ToPhase(output.State);
             if (phase.Value != published)
@@ -279,10 +311,48 @@ namespace Game.Enemies
             }
         }
 
-        private void Move(Vector3 direction, float dt)
+        /// <summary>
+        /// Aproximação: com linha de visão e perto, reto (Steer desvia de pilar); senão segue as quinas do caminho da NavMesh
+        /// (sem Steer). Sem NavMesh, ou fora dela, como antes: reto + Steer.
+        /// </summary>
+        private Vector3 Approach(Vector3 toTarget, NetworkHealth target, bool sight, float distance, float dt, out bool followingPath)
+        {
+            followingPath = false;
+            if (toTarget == Vector3.zero)
+                return Vector3.zero;
+
+            var nav = follower != null ? follower.Settings : null;
+            if (nav == null)
+                return Steer(toTarget);
+
+            if (sight && distance <= nav.straightRange)
+            {
+                follower.Release();
+                return Steer(toTarget);
+            }
+
+            if (follower.TryGetDirection(transform.position, target.transform.position, dt, out Vector3 along))
+            {
+                followingPath = true;
+                return along;
+            }
+            return Steer(toTarget);
+        }
+
+        /// <summary>Recuo do drone: com NavMesh, olha a borda à frente e, se ela bate, fica parado; sem NavMesh, desvio antigo.</summary>
+        private Vector3 Retreat(Vector3 away)
+        {
+            if (away == Vector3.zero)
+                return Vector3.zero;
+            if (follower != null && follower.TryGetRetreat(transform.position, away, out Vector3 direction))
+                return direction;
+            return Steer(away);
+        }
+
+        private void Move(Vector3 direction, float dt, float speedMultiplier)
         {
             verticalSpeed = controller.isGrounded ? -1f : verticalSpeed + Physics.gravity.y * dt;
-            Vector3 velocity = direction * definition.moveSpeed;
+            Vector3 velocity = direction * (definition.moveSpeed * speedMultiplier);
             controller.Move(new Vector3(velocity.x, verticalSpeed, velocity.z) * dt);
             lastPosition = transform.position;
             hasLastPosition = true;
@@ -336,7 +406,7 @@ namespace Game.Enemies
             return false;
         }
 
-        private void ServerAttack(NetworkHealth target)
+        private void ServerAttack(NetworkHealth target, bool lineOfSight)
         {
             var packet = new DamagePacket(definition.damage, definition.arcaneFraction);
 
@@ -351,7 +421,8 @@ namespace Game.Enemies
 
             if (definition.usesProjectile)
             {
-                SpawnProjectile(aim);
+                if (lineOfSight) // perdeu o alvo atrás de um prédio durante o aviso: o tiro se perde, não atravessa
+                    SpawnProjectile(aim);
                 return;
             }
 

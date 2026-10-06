@@ -26,7 +26,7 @@ MonoBehaviour:
   dustMaxParticles: 160
   dustPerSecond: 10
   dustBrightness: 1.2
-  dustVioletShare: 0.12
+  dustVioletShare: 0.03
   dustGoldShare: 0.1
   dustInnerRadius: 31
   dustOuterRadius: 60

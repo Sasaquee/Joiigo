@@ -2,6 +2,7 @@ using System.IO;
 using Game.Arena;
 using Game.Cameras;
 using Game.Combat;
+using Game.Core.Map;
 using Game.Net;
 using Game.Player;
 using Unity.Netcode;
@@ -15,8 +16,11 @@ using UnityEngine.Rendering;
 namespace Game.EditorTools
 {
     /// <summary>
-    /// Constrói a arena de protótipo (D-008: anel em volta do centro) com os modelos do Blender
-    /// (Tools/Blender/build_props.py) e primitivas para pisos e paredes.
+    /// Constrói a arena de protótipo com os modelos do Blender (Tools/Blender/build_props.py) e primitivas.
+    /// O mapa vem do <see cref="MapLayout"/> (passe do mapa, D-073 a D-082; números em Data/Map/MapLayoutSettings.asset):
+    /// praça central, 3 avenidas, 3 praças menores e 3 bocas de rua, com chão e vedação só nas regiões andáveis
+    /// (<see cref="WalkableBuilder"/>), portões fechando as bocas, spawn dos inimigos nas bocas e a NavMesh dos
+    /// caminhos (<see cref="ArenaNavMeshBuilder"/>).
     /// Tudo mostra a fusão: cobre com cristal embutido, engrenagem com núcleo arcano, poste com luz arcana.
     /// Rodar de novo reconstrói a arena do zero. Batchmode: -executeMethod Game.EditorTools.ArenaBuilder.Build
     /// </summary>
@@ -24,17 +28,18 @@ namespace Game.EditorTools
     {
         private const string MaterialsFolder = "Assets/_Game/Art/Materials";
         private const string ModelsFolder = "Assets/_Game/Art/Models";
+        private const string CityModelsFolder = ModelsFolder + "/City";
         private const string DataFolder = "Assets/_Game/Data";
         private const string PlayerPrefabPath = "Assets/_Game/Player/Player.prefab";
         private const string InputActionsPath = "Assets/_Game/Player/Input/GameControls.inputactions";
         private const string RootName = "Arena";
+        private const string MapLayoutSettingsPath = DataFolder + "/Map/MapLayoutSettings.asset";
+        private const string SeeThroughSettingsPath = DataFolder + "/Camera/SeeThroughSettings.asset";
 
-        // Layout em metros e graus a partir de +Z. É geometria de placeholder, não balanceamento.
+        // Peças da praça em metros e graus a partir de +Z (geometria de placeholder, não balanceamento). O mapa em si
+        // (praça, avenidas, bocas, portões, spawns dos inimigos) vem do MapLayout.
         private const float PlatformRadius = 12f;
-        private const float WallRadius = 26f;
-        private const float GateRadius = 22f;
-        private const float EnemySpawnRadius = 18.5f;
-        private static readonly float[] GateAngles = { -45f, 0f, 45f };
+        private const float BoilerRadius = 23f;
         private const float PlayerSpawnAngle = 180f;
         private const float PlayerSpawnRadius = 18f;
         private const float CardAlcoveAngle = -115f;
@@ -43,7 +48,8 @@ namespace Game.EditorTools
         // Nomes iguais aos materiais do Blender, para o remapeamento na importação.
         private static readonly string[] SharedMaterialNames = { "Cobre", "Latao", "FerroEscuro", "CristalArcano", "PersonagemNeutro", "MarcadorLocal", "BrasaFornalha" };
 
-        private static Material copper, brass, darkIron, floorStone, crystal, crystalDim, crystalOff, playerBody, grate, corrugated;
+        private static Material copper, brass, darkIron, floorStone, crystal, crystalDim, crystalOff, playerBody, grate;
+        private static MapLayout layout;
 
         // Objetos de cena gerados que são substituídos a cada reconstrução.
         private static readonly string[] GeneratedRoots = { RootName, "Player", "NetworkManager", "Sessao", "UI", "EventSystem" };
@@ -58,8 +64,8 @@ namespace Game.EditorTools
             PixelPalette.Apply();      // cores chapadas do 3D pixelado (D-039), no lugar das texturas PBR
             PixelRenderSetup.Apply();  // contorno, faixas e ampliação sem filtro
             grate = AssetDatabase.LoadAssetAtPath<Material>($"{MaterialsFolder}/PisoGrade.mat") ?? darkIron;
-            corrugated = AssetDatabase.LoadAssetAtPath<Material>($"{MaterialsFolder}/FerroCorrugado.mat") ?? darkIron;
             ConfigureModelImports();
+            layout = LoadOrCreate<MapLayoutSettings>(MapLayoutSettingsPath).ToLayout(); // fonte única da geometria do mapa
             var movement = LoadOrCreate<MovementSettings>($"{DataFolder}/Player/MovementSettings.asset");
             var interaction = LoadOrCreate<InteractionSettings>($"{DataFolder}/Player/InteractionSettings.asset");
             var cameraSettings = LoadOrCreate<CameraSettings>($"{DataFolder}/Camera/CameraSettings.asset");
@@ -83,14 +89,14 @@ namespace Game.EditorTools
 
             var arena = new GameObject(RootName).transform;
             BuildFloor(arena);
-            BuildBoundary(arena);
+            WalkableBuilder.BuildFence(arena, layout); // vedação invisível nas bordas da região andável (D-073)
             var spawnPoints = BuildPlayerSpawn(arena, matchState, interaction);
-            for (int i = 0; i < GateAngles.Length; i++)
-                BuildEnemyGate(arena, GateAngles[i], i, matchState);
+            for (int i = 0; i < layout.StreetCount; i++)
+                BuildEnemyGate(arena, i, matchState); // portão fechando cada boca e o marcador de spawn dos inimigos (D-077, D-081)
             BuildCardAlcove(arena);
             BuildLampPosts(arena);
             BuildBoilers(arena);
-            CityBuilder.Build(arena); // cidade steampunk em volta da praça (D-042)
+            CityBuilder.Build(arena); // cidade steampunk em volta da praça e das avenidas (D-042, D-073); depois do chão e dos portões
             SetupLighting();
             AmbienceBuilder.Build(arena); // noite arcana com fornalhas (D-017); sobrescreve a luz acima
 
@@ -103,6 +109,9 @@ namespace Game.EditorTools
 
             SetupCamera(cameraSettings, spawnPoints.transform);
 
+            // Por último: a NavMesh junta os colliders de tudo que já está na cena (chão, portões, prédios, vedação, máquinas).
+            ArenaNavMeshBuilder.Bake(arena, layout);
+
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
             AssetDatabase.SaveAssets();
@@ -114,7 +123,9 @@ namespace Game.EditorTools
         private static void BuildFloor(Transform parent)
         {
             var group = Group("Chao", parent);
-            Box("Piso", group, new Vector3(0f, -0.1f, 0f), new Vector3(WallRadius * 2.4f, 0.2f, WallRadius * 2.4f), floorStone);
+            // Piso só visual (sem collider): cobre as frestas sob as fachadas. O chão que segura o personagem é o andável.
+            WalkableBuilder.Disc("Piso", group, 0f, 0f, layout.PlazaFacadeRadius + 0.5f, -0.03f, floorStone, collider: false);
+            WalkableBuilder.BuildGround(group, layout, floorStone);
 
             var center = Group("CentroCombate", group);
             Marker(center, ArenaMarkerKind.CombatCenter, PlatformRadius);
@@ -122,37 +133,12 @@ namespace Game.EditorTools
             Disc("AnelArcano", center, new Vector3(0f, 0.01f, 0f), PlatformRadius + 0.35f, 0.04f, crystalDim);
             Disc("Plataforma", center, new Vector3(0f, 0.03f, 0f), PlatformRadius, 0.06f, grate);
             Disc("NucleoArcano", center, new Vector3(0f, 0.065f, 0f), 1.4f, 0.02f, crystal);
-            // Trilhos de cobre que levam a energia do núcleo até cada portão.
-            foreach (float angle in GateAngles)
+            // Trilhos de cobre que levam a energia do núcleo até cada avenida (o ambiente continua cada um até o portão).
+            foreach (var avenue in layout.Avenues)
             {
-                var rail = Box("TrilhoCobre", center, Polar(angle, PlatformRadius * 0.55f) + Vector3.up * 0.07f,
+                var rail = Box("TrilhoCobre", center, Polar(avenue.AngleDeg, PlatformRadius * 0.55f) + Vector3.up * 0.07f,
                     new Vector3(0.25f, 0.02f, PlatformRadius * 0.9f), copper, collider: false);
-                rail.transform.rotation = Quaternion.Euler(0f, angle, 0f);
-            }
-        }
-
-        private static void BuildBoundary(Transform parent)
-        {
-            var group = Group("Limite", parent);
-            const int segments = 28;
-            float segmentLength = 2f * Mathf.PI * WallRadius / segments + 0.3f;
-            float pieceScale = segmentLength / 6f; // 3 peças de 2 m por segmento
-
-            for (int i = 0; i < segments; i++)
-            {
-                float angle = i * 360f / segments;
-                var seg = Group($"Segmento{i:00}", group);
-                seg.position = Polar(angle, WallRadius);
-                seg.rotation = Quaternion.Euler(0f, angle, 0f); // +Z local aponta para fora
-
-                Box("Parede", seg, new Vector3(0f, 1.5f, 0.6f), new Vector3(segmentLength, 3f, 0.6f), corrugated);
-                for (int p = -1; p <= 1; p++)
-                {
-                    // O cristal fica dentro do cano, não ao lado dele (Pilar 4).
-                    string model = p == 0 && i % 2 == 0 ? "CanoCristal" : "Cano";
-                    Model(model, seg, new Vector3(p * segmentLength / 3f, 1f, 0f), Quaternion.identity,
-                        new Vector3(pieceScale, 1f, 1f));
-                }
+                rail.transform.rotation = Quaternion.Euler(0f, avenue.AngleDeg, 0f);
             }
         }
 
@@ -162,6 +148,7 @@ namespace Game.EditorTools
             spawn.position = Polar(PlayerSpawnAngle, PlayerSpawnRadius);
             spawn.rotation = Quaternion.LookRotation(-spawn.position.normalized); // +Z local aponta para o centro
             Marker(spawn, ArenaMarkerKind.PlayerSpawn, 3f);
+            CheckWalkable("SpawnJogadores", spawn.position, 3f);
             Disc("PlataformaLatao", spawn, new Vector3(0f, 0.02f, 0f), 3f, 0.04f, brass);
             Disc("RunaCentral", spawn, new Vector3(0f, 0.045f, 0f), 0.8f, 0.01f, crystalDim);
 
@@ -189,6 +176,7 @@ namespace Game.EditorTools
             lever.localPosition = new Vector3(0f, 0f, -2.4f);
             lever.localRotation = Quaternion.identity;
             lever.gameObject.AddComponent<NetworkObject>();
+            CheckWalkable("AlavancaLargada", lever.position, 0.7f);
             AddBoxCollider(lever, new Vector3(0f, 0.6f, 0f), new Vector3(1f, 1.2f, 0.8f));
 
             var baseModel = Model("AlavancaBase", lever, Vector3.zero, Quaternion.identity, Vector3.one, isStatic: false);
@@ -200,11 +188,17 @@ namespace Game.EditorTools
                 baseModel.GetComponentsInChildren<Renderer>(), crystalOff, crystal);
         }
 
-        private static void BuildEnemyGate(Transform parent, float angle, int index, MatchState session)
+        /// <summary>
+        /// Portão-máquina que fecha o fim da boca de rua <paramref name="index"/>, virado para o centro (D-081), e o marcador
+        /// de spawn dos inimigos no meio da boca (D-077). Os nomes PortaoMaquina1..N (filhos diretos da Arena) são
+        /// procurados pelo AmbienceBuilder; SpawnInimigo1..N, pelo WaveSpawner.
+        /// </summary>
+        private static void BuildEnemyGate(Transform parent, int index, MatchState session)
         {
+            var mapGate = layout.Gates[index];
             var gate = Group($"PortaoMaquina{index + 1}", parent);
-            gate.position = Polar(angle, GateRadius);
-            gate.rotation = Quaternion.LookRotation(-gate.position.normalized); // +Z local aponta para o centro
+            gate.position = new Vector3(mapGate.Position.X, 0f, mapGate.Position.Y);
+            gate.rotation = Quaternion.Euler(0f, mapGate.YawDeg, 0f); // +Z local aponta para o centro
 
             Model("PortaoMaquina", gate, Vector3.zero, Quaternion.identity, Vector3.one);
             AddBoxCollider(gate, new Vector3(0f, 2.2f, 0f), new Vector3(5.6f, 4.4f, 1.6f));
@@ -222,9 +216,11 @@ namespace Game.EditorTools
             gate.gameObject.AddComponent<GateActivation>().Configure(session, spinner,
                 gate.GetComponentsInChildren<Renderer>(), crystal, crystalOff);
 
-            var spawn = Group("SpawnInimigo", parent);
-            spawn.position = Polar(angle, EnemySpawnRadius);
-            Marker(spawn, ArenaMarkerKind.EnemySpawn, 1.5f);
+            var spawn = Group($"SpawnInimigo{index + 1}", parent);
+            var spawnPoint = layout.EnemySpawns[index];
+            spawn.position = new Vector3(spawnPoint.X, 0f, spawnPoint.Y);
+            Marker(spawn, ArenaMarkerKind.EnemySpawn, layout.Params.EnemySpawnRadius);
+            CheckWalkable("SpawnInimigo", spawn.position, layout.Params.EnemySpawnRadius);
         }
 
         private static void BuildCardAlcove(Transform parent)
@@ -233,6 +229,7 @@ namespace Game.EditorTools
             alcove.position = Polar(CardAlcoveAngle, CardAlcoveRadius);
             alcove.rotation = Quaternion.LookRotation(-alcove.position.normalized); // +Z local aponta para o centro
             Marker(alcove, ArenaMarkerKind.CardTestArea, 4f);
+            CheckWalkable("AlcovaCartas", alcove.position, 4f);
 
             Disc("Piso", alcove, new Vector3(0f, 0.02f, 0f), 4f, 0.04f, darkIron);
             Disc("CirculoArcano", alcove, new Vector3(0f, 0.045f, 0f), 3.2f, 0.01f, crystalDim);
@@ -257,6 +254,7 @@ namespace Game.EditorTools
 
                 Model("PosteArcano", post, Vector3.zero, Quaternion.identity, Vector3.one);
                 AddCapsuleCollider(post, 0.35f, 3.6f);
+                CheckWalkable("PosteArcano", post.position, 0.35f);
 
                 var lightGo = new GameObject("LuzArcana");
                 lightGo.transform.SetParent(post, false);
@@ -277,9 +275,10 @@ namespace Game.EditorTools
             foreach (float angle in new[] { 120f, -150f })
             {
                 var boiler = Group("Caldeira", group);
-                boiler.position = Polar(angle, WallRadius - 3f);
+                boiler.position = Polar(angle, BoilerRadius);
                 Model("Caldeira", boiler, Vector3.zero, Quaternion.identity, Vector3.one);
                 AddCapsuleCollider(boiler, 1.3f, 5f);
+                CheckWalkable("Caldeira", boiler.position, 1.3f);
             }
         }
 
@@ -351,6 +350,14 @@ namespace Game.EditorTools
                 pixel = cam.gameObject.AddComponent<PixelCamera>(); // resolução do mundo e contorno (D-039, D-056)
             pixel.Settings = PixelRenderSetup.LoadQualitySettings();
             EditorUtility.SetDirty(pixel);
+            // Recorte dos prédios que tapam jogador ou inimigo (D-076, D-079); depois do PixelCamera. O asset é
+            // carregado pelo caminho aqui, perto do uso, porque reimportações anteriores deixam referências mortas.
+            var seeThroughSettings = LoadOrCreate<SeeThroughSettings>(SeeThroughSettingsPath);
+            var seeThrough = cam.GetComponent<SeeThroughDriver>();
+            if (seeThrough == null)
+                seeThrough = cam.gameObject.AddComponent<SeeThroughDriver>();
+            seeThrough.Configure(seeThroughSettings);
+            EditorUtility.SetDirty(seeThrough);
             follow.Settings = settings;
             follow.Target = target;
             follow.Apply(target.position);
@@ -465,6 +472,8 @@ namespace Game.EditorTools
             foreach (string guid in AssetDatabase.FindAssets("t:Model", new[] { ModelsFolder }))
             {
                 string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (path.StartsWith(CityModelsFolder + "/"))
+                    continue; // os modelos da cidade são reimportados pelo CityBuilder
                 if (AssetImporter.GetAtPath(path) is not ModelImporter importer)
                     continue;
 
@@ -518,6 +527,13 @@ namespace Game.EditorTools
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
             return go.transform;
+        }
+
+        /// <summary>Avisa se uma peça de gameplay (spawn, alcova, caldeira, poste) caiu fora da região andável do mapa.</summary>
+        private static void CheckWalkable(string what, Vector3 position, float radius)
+        {
+            if (!layout.IsWalkable(position.x, position.z, radius))
+                Debug.LogWarning($"ArenaBuilder: {what} em ({position.x:0.#}, {position.z:0.#}) com raio {radius:0.#} m não cabe na região andável do mapa; ajuste a posição.");
         }
 
         private static void Marker(Transform t, ArenaMarkerKind kind, float radius)

@@ -3,13 +3,14 @@ using Game.Combat;
 using Game.Enemies;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.InputSystem;
 
 namespace Game.DevTools
 {
     /// <summary>
     /// Só em editor/development build (§4.7). No host:
-    /// F4 = gerar 1 inimigo a 6 m à frente do jogador local, em ciclo pelos tipos do WaveSpawner;
+    /// F4 = gerar 1 inimigo a 6 m à frente do jogador local (no ponto andável mais próximo da NavMesh, se houver), em ciclo pelos tipos do WaveSpawner;
     /// F5 = dano de 25% da vida máxima em si; F6 = cura total em si.
     /// Os dois números abaixo são da ferramenta de debug, não de jogo: ficam aqui mesmo, comentados.
     /// As ações SpawnEnemy, DamageSelf e HealSelf também estão no GameControls (mapa Debug) como
@@ -20,6 +21,7 @@ namespace Game.DevTools
     {
         // Números da ferramenta de debug, não de jogo: não vão para ScriptableObject (§4.7).
         private const float SpawnAheadDistance = 6f;    // metros à frente do jogador local (F4)
+        private const float SpawnSampleRadius = 6f;     // raio para puxar o ponto do F4 até o chão andável da NavMesh (m)
         private const float SelfDamageFraction = 0.25f; // fração da vida máxima ferida em si (F5)
 
         private static bool created;
@@ -94,6 +96,8 @@ namespace Game.DevTools
             Vector3 forward = player.transform.forward;
             forward.y = 0f;
             Vector3 position = player.transform.position + (forward.sqrMagnitude > 0.01f ? forward.normalized : Vector3.forward) * SpawnAheadDistance;
+            if (NavMesh.SamplePosition(position, out NavMeshHit hit, SpawnSampleRadius, NavMesh.AllAreas))
+                position = hit.position; // no mapa novo, 6 m à frente pode cair dentro de um prédio
             spawner.ServerSpawn(def, position);
             Debug.Log($"[Debug] Inimigo gerado: {def.name} (tipo {Num(index + 1)} de {Num(types.Length)}).");
         }

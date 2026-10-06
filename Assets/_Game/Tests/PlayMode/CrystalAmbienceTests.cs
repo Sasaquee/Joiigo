@@ -1,8 +1,11 @@
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using Game.Arena;
 using Game.Arena.Life;
 using Game.Cameras;
+using Game.Core.Map;
+using Game.Net;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -13,16 +16,23 @@ using UnityEditor;
 namespace Game.Tests.PlayMode
 {
     /// <summary>
-    /// Cristal vivo no mundo (D-069): o construtor cria os veios nas máquinas, o pulso das torres e a poeira mágica,
-    /// sem acender os portões antes da largada (D-013) e sem pôr a poeira na frente da praça na câmera de jogo.
-    /// Os números vêm da cena e dos modelos (não fixos), para avisar se o ArenaBuilder ou o build_props.py mudarem.
-    /// Depende da cena gerada por Game → Setup → Construir Arena.
+    /// Cristal vivo no mundo (D-069) no mapa novo (D-073 a D-082): veios nas máquinas, trilhos de cristal do núcleo
+    /// até os portões (apagados antes da largada, D-013 e D-081), lampiões nas avenidas, pulso das torres e poeira
+    /// mágica nas avenidas e praças menores, sem pôr a poeira na frente do combate na câmera de jogo, e cristal visível
+    /// da câmera real em cada foco do mapa.
+    /// Os números vêm da cena, dos modelos e dos assets (não fixos), para avisar se o ArenaBuilder, o CityBuilder ou o
+    /// build_props.py mudarem. Depende da cena gerada por Game → Setup → Construir Arena.
     /// </summary>
     public class CrystalAmbienceTests
     {
         private const string ModelsFolder = "Assets/_Game/Art/Models/";
+        private const string MapLayoutPath = "Assets/_Game/Data/Map/MapLayoutSettings.asset";
+        private const string CrystalSettingsPath = "Assets/_Game/Data/Ambience/CrystalAmbienceSettings.asset";
         // Folga para "rente": o veio encosta na superfície da peça com no máximo 2 cm de erro.
         private const float FlushTolerance = 0.02f;
+        // O PortaoMaquina.fbx tem a frente a 0,8 m do centro (AmbienceBuilder.GateFront).
+        private const float GateFront = 0.8f;
+        private const float LampMinFacadeGap = 0.6f;
 
         [UnitySetUp]
         public IEnumerator CarregaArena()
@@ -38,41 +48,62 @@ namespace Game.Tests.PlayMode
 
         private static CrystalPulse[] Pulses() => Object.FindObjectsByType<CrystalPulse>(FindObjectsSortMode.None);
 
-        private static Transform Wall()
-        {
-            var wall = GameObject.Find("Limite");
-            Assert.IsNotNull(wall, "Muro da arena");
-            return wall.transform;
-        }
-
-        /// <summary>Raio do muro lido da cena (centro dos segmentos).</summary>
-        private static float WallRadius()
-        {
-            var wall = Wall();
-            float sum = 0f;
-            foreach (Transform segment in wall)
-                sum += new Vector2(segment.position.x, segment.position.z).magnitude;
-            return sum / wall.childCount;
-        }
+        private static CrystalPulse[] TrailPulses()
+            => Pulses().Where(p => p.name.StartsWith("VeiosTrilho")).OrderBy(p => p.name).ToArray();
 
         private static Transform[] Children(Transform parent, string name)
             => parent.Cast<Transform>().Where(t => t.name == name).ToArray();
 
+        /// <summary>Geometria do mapa lida do asset (a mesma que o construtor usou); sem o asset, o padrão do plano.</summary>
+        private static MapLayout Layout()
+        {
+#if UNITY_EDITOR
+            var settings = AssetDatabase.LoadAssetAtPath<MapLayoutSettings>(MapLayoutPath);
+            if (settings != null)
+                return settings.ToLayout();
+#endif
+            return new MapLayout();
+        }
+
+        /// <summary>Números do cristal lidos do asset; sem ele, os padrões do código.</summary>
+        private static CrystalAmbienceSettings Settings()
+        {
+#if UNITY_EDITOR
+            var settings = AssetDatabase.LoadAssetAtPath<CrystalAmbienceSettings>(CrystalSettingsPath);
+            if (settings != null)
+                return settings;
+#endif
+            return ScriptableObject.CreateInstance<CrystalAmbienceSettings>();
+        }
+
+        private static Vector2 Flat(Vector3 p) => new Vector2(p.x, p.z);
+
         // ---------- Veios ----------
 
         [Test]
-        public void Veios_CaldeirasEMuroTemVeioPorSegmento()
+        public void Veios_CaldeirasTemVeiosPulsando()
         {
-            var wall = Wall();
-            int segments = wall.childCount;
-            int wallVeins = wall.GetComponentsInChildren<Transform>().Count(t => t.name == "VeioCristal");
-            Assert.AreEqual(segments, wallVeins, "Um veio de cristal no cano de cada segmento do muro");
+            var boilers = GameObject.Find("Caldeiras");
+            Assert.IsNotNull(boilers, "Caldeiras da arena");
+            int boilerCount = boilers.transform.childCount;
+            Assert.Greater(boilerCount, 0);
 
-            var boilerPulse = Pulses().FirstOrDefault(p => p.name == "VeiosCaldeirasMuro");
-            Assert.IsNotNull(boilerPulse, "Pulso dos veios das caldeiras e do muro");
-            Assert.AreEqual(CrystalPulseRole.Veio, boilerPulse.Role);
-            Assert.GreaterOrEqual(boilerPulse.RendererCount, segments + 2, "Muro e caldeiras no mesmo veio");
-            Assert.AreEqual(0, boilerPulse.LightCount, "Veios são só emissão, sem luz nova");
+            var pulse = Pulses().FirstOrDefault(p => p.name == "VeiosCaldeiras");
+            Assert.IsNotNull(pulse, "Pulso dos veios das caldeiras");
+            Assert.AreEqual(CrystalPulseRole.Veio, pulse.Role);
+            // Por caldeira: o cobre do modelo e 4 veios de 4 trechos.
+            Assert.GreaterOrEqual(pulse.RendererCount, boilerCount * (1 + 4 * 4), "Veios de cada caldeira");
+            Assert.AreEqual(0, pulse.LightCount, "Veios são só emissão, sem luz nova");
+        }
+
+        [Test]
+        public void Muro_NaoTemMaisVeios()
+        {
+            // O muro baixo saiu no passe do mapa (D-073): nem veio de muro nem o pulso que o ligava às caldeiras.
+            Assert.IsFalse(Pulses().Any(p => p.name == "VeiosCaldeirasMuro"), "Pulso do muro sumiu");
+            var wall = GameObject.Find("Limite");
+            if (wall != null)
+                Assert.AreEqual(0, wall.GetComponentsInChildren<CrystalPulse>(true).Length, "Nada de cristal no muro");
         }
 
         [UnityTest]
@@ -80,8 +111,10 @@ namespace Game.Tests.PlayMode
         {
             yield return null;
             yield return null;
-            var vein = Wall().GetComponentsInChildren<Renderer>().First(r => r.name == "VeioCristal");
-            Assert.IsTrue(vein.HasPropertyBlock(), "O veio do muro recebe o pulso de emissão");
+            var boilers = GameObject.Find("Caldeiras");
+            Assert.IsNotNull(boilers, "Caldeiras da arena");
+            var vein = boilers.GetComponentsInChildren<Renderer>().First(r => r.name == "VeioCristal");
+            Assert.IsTrue(vein.HasPropertyBlock(), "O veio da caldeira recebe o pulso de emissão");
         }
 
         /// <summary>
@@ -93,7 +126,8 @@ namespace Game.Tests.PlayMode
         public IEnumerator Maquina_EmissaoVariaDeVerdadeEmRendererEstatico()
         {
             yield return null;
-            var machine = Pulses().Where(p => p.Role == CrystalPulseRole.Maquina)
+            // Fornalhas e postes (os lampiões têm só uma gema pequena: a diferença some no resto da peça).
+            var machine = Pulses().Where(p => p.Role == CrystalPulseRole.Maquina && !p.name.StartsWith("Lampiao"))
                 .SelectMany(p => p.Renderers).Where(r => r != null).ToArray();
             Assert.IsNotEmpty(machine, "Fornalhas e postes pulsam");
             var target = machine.FirstOrDefault(r => r.isPartOfStaticBatch) ?? machine.FirstOrDefault(r => r.gameObject.isStatic);
@@ -102,7 +136,7 @@ namespace Game.Tests.PlayMode
             foreach (var light in Object.FindObjectsByType<Light>(FindObjectsSortMode.None))
                 light.enabled = false;
 
-            int layer = Enumerable.Range(8, 24).Reverse().First(i => string.IsNullOrEmpty(LayerMask.LayerToName(i)));
+            int layer = Enumerable.Range(9, 23).Reverse().First(i => string.IsNullOrEmpty(LayerMask.LayerToName(i)));
             target.gameObject.layer = layer;
 
             var camGo = new GameObject("CameraTesteCristal");
@@ -152,15 +186,23 @@ namespace Game.Tests.PlayMode
 
         // ---------- Portões ----------
 
+        /// <summary>Um circuito de cristal por portão, achado pelo nome do portão (VeiosPortaoMaquinaN).</summary>
+        private static CrystalPulse[] GatePulses()
+            => Pulses().Where(p => p.name.StartsWith("VeiosPortao")).ToArray();
+
         [UnityTest]
         public IEnumerator Portoes_VeiosApagadosAteALargada()
         {
             yield return null;
             var gates = Object.FindObjectsByType<GateActivation>(FindObjectsSortMode.None);
-            var gatePulses = Pulses().Where(p => p.WaitsForStart).ToArray();
+            var gatePulses = GatePulses();
+            Assert.AreEqual(Layout().StreetCount, gates.Length, "Um portão por rua");
             Assert.AreEqual(gates.Length, gatePulses.Length, "Um circuito de cristal por portão");
             foreach (var pulse in gatePulses)
+            {
+                Assert.IsTrue(pulse.WaitsForStart, $"{pulse.name} espera a largada");
                 Assert.IsFalse(pulse.IsLit, "Circuito do portão apagado antes da largada (D-013)");
+            }
 
             int veins = 0;
             foreach (var gate in gates)
@@ -174,6 +216,220 @@ namespace Game.Tests.PlayMode
                 }
             }
             Assert.Greater(veins, 0, "Os portões têm veios");
+        }
+
+        [Test]
+        public void Portoes_FicamNoFimDeCadaBoca()
+        {
+            var layout = Layout();
+            var gates = Object.FindObjectsByType<GateActivation>(FindObjectsSortMode.None);
+            for (int i = 0; i < layout.StreetCount; i++)
+            {
+                var expected = new Vector2(layout.Gates[i].Position.X, layout.Gates[i].Position.Y);
+                var nearest = gates.OrderBy(g => Vector2.Distance(Flat(g.transform.position), expected)).First();
+                Assert.Less(Vector2.Distance(Flat(nearest.transform.position), expected), 1f,
+                    $"Portão da rua {i + 1} no fim da boca (o AmbienceBuilder acha os portões pelo GateActivation)");
+            }
+        }
+
+        // ---------- Trilhos de cristal ----------
+
+        /// <summary>Quanto o ponto avança a partir do centro ao longo do eixo (vetor unitário no plano XZ: x = X, y = Z).</summary>
+        private static float Along(Vector3 p, Vector2 axis) => p.x * axis.x + p.z * axis.y;
+
+        private static IEnumerable<Renderer> TrailVeins(CrystalPulse pulse) => pulse.Renderers.Where(r => r != null);
+
+        [Test]
+        public void Trilhos_UmPorRua_DoNucleoAteAFrenteDoPortao()
+        {
+            var layout = Layout();
+            var settings = Settings();
+            var trails = TrailPulses();
+            Assert.AreEqual(layout.StreetCount, trails.Length, "Um trilho de cristal por rua");
+            var gates = Object.FindObjectsByType<GateActivation>(FindObjectsSortMode.None);
+
+            for (int i = 0; i < layout.StreetCount; i++)
+            {
+                var pulse = trails[i];
+                var axis2 = layout.Avenues[i].Axis;
+                var axis = new Vector2(axis2.X, axis2.Y);
+                var side = new Vector2(axis2.Y, -axis2.X);
+                Assert.AreEqual(CrystalPulseRole.Veio, pulse.Role, pulse.name);
+                Assert.AreEqual(0, pulse.LightCount, "Trilho é só emissão");
+
+                var veins = TrailVeins(pulse).OrderBy(r => Along(r.transform.position, axis)).ToArray();
+                Assert.GreaterOrEqual(veins.Length, 8, $"{pulse.name}: trechos de veio");
+                float start = float.MaxValue, end = float.MinValue, previousEnd = float.NaN;
+                foreach (var v in veins)
+                {
+                    float center = Along(v.transform.position, axis);
+                    float half = v.transform.localScale.z * 0.5f;
+                    start = Mathf.Min(start, center - half);
+                    end = Mathf.Max(end, center + half);
+                    Assert.AreEqual(0f, Along(v.transform.position, side), 0.02f, $"{pulse.name}: veio fora do eixo da rua");
+                    Assert.AreEqual(settings.trailVeinWidth, v.transform.localScale.x, 0.001f, "Largura do veio");
+                    if (!float.IsNaN(previousEnd))
+                        Assert.LessOrEqual(center - half - previousEnd, 0.1f, $"{pulse.name}: buraco no meio do trilho");
+                    previousEnd = center + half;
+                }
+                Assert.AreEqual(settings.trailStartS, start, 0.1f, $"{pulse.name}: começa logo depois do núcleo");
+
+                // O trilho termina na frente do portão da mesma rua.
+                var gatePos = new Vector2(layout.Gates[i].Position.X, layout.Gates[i].Position.Y);
+                var gate = gates.OrderBy(g => Vector2.Distance(Flat(g.transform.position), gatePos)).First();
+                var front = gate.transform.position + gate.transform.forward * GateFront;
+                Assert.AreEqual(Along(front, axis), end, 0.3f, $"{pulse.name}: termina na frente do portão");
+            }
+        }
+
+        [Test]
+        public void Trilhos_FicamRentesAoChao()
+        {
+            Physics.SyncTransforms();
+            var layout = Layout();
+            var trails = TrailPulses();
+            Assert.AreEqual(layout.StreetCount, trails.Length);
+            int checkedVeins = 0;
+            foreach (var pulse in trails)
+            {
+                foreach (var v in TrailVeins(pulse))
+                {
+                    var p = v.transform.position;
+                    if (Flat(p).magnitude < 14f)
+                        continue; // dentro da plataforma de combate o chão sobe 6 cm
+                    Assert.IsTrue(Physics.Raycast(p + Vector3.up * 3f, Vector3.down, out var hit, 6f, ~0,
+                        QueryTriggerInteraction.Ignore), $"{pulse.name} em {p}: sem chão (collider) debaixo do trilho");
+                    float baseHeight = v.bounds.min.y - hit.point.y; // altura da base de cobre
+                    Assert.That(baseHeight, Is.InRange(0.06f, 0.12f), $"{pulse.name} em {p}: trilho flutua ou afunda no chão (topo do chão em y {hit.point.y:0.000})");
+                    checkedVeins++;
+                }
+            }
+            Assert.Greater(checkedVeins, 20, "Trechos conferidos fora da plataforma");
+        }
+
+        [UnityTest]
+        public IEnumerator Trilhos_ApagadosAntesDaLargada()
+        {
+            yield return null;
+            yield return null;
+            var trails = TrailPulses();
+            Assert.AreEqual(Layout().StreetCount, trails.Length);
+            foreach (var pulse in trails)
+            {
+                Assert.IsTrue(pulse.WaitsForStart, $"{pulse.name} espera a largada");
+                Assert.IsFalse(pulse.IsLit, $"{pulse.name}: apagado antes da largada (D-013, D-081)");
+                foreach (var v in TrailVeins(pulse))
+                    StringAssert.StartsWith("CristalApagado", v.sharedMaterial.name, $"{pulse.name}: veio apagado");
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Largada_AcendeTrilhosEPortoesJuntos()
+        {
+            yield return null;
+            var session = Object.FindFirstObjectByType<NetSession>();
+            Assert.IsTrue(session.Host(), "Host iniciou");
+            var match = Object.FindFirstObjectByType<MatchState>();
+            float timeout = 5f;
+            while (!match.IsServer && timeout > 0f)
+            {
+                timeout -= Time.unscaledDeltaTime;
+                yield return null;
+            }
+            match.ServerStart();
+            yield return null;
+            yield return null;
+            Assert.IsTrue(match.IsStarted, "Largada dada pelo host");
+
+            var waiting = Pulses().Where(p => p.WaitsForStart).ToArray();
+            Assert.AreEqual(Layout().StreetCount * 2, waiting.Length, "Um trilho e um circuito de portão por rua");
+            foreach (var pulse in waiting)
+            {
+                Assert.IsTrue(pulse.IsLit, $"{pulse.name}: aceso depois da largada");
+                foreach (var v in pulse.Renderers.Where(r => r != null))
+                    Assert.AreEqual("CristalArcano", v.sharedMaterial.name, $"{pulse.name}: veio aceso");
+            }
+        }
+
+        // ---------- Lampiões ----------
+
+        private static Transform[] Lamps()
+        {
+            var group = GameObject.Find("LampioesCristal");
+            Assert.IsNotNull(group, "Lampiões de cristal das avenidas");
+            return group.transform.Cast<Transform>().ToArray();
+        }
+
+        [Test]
+        public void Lampioes_TemColisaoPequenaEmCenarioEPulsam()
+        {
+            var lamps = Lamps();
+            Assert.GreaterOrEqual(lamps.Length, Layout().StreetCount * 2, "Ao menos dois lampiões por avenida");
+            foreach (var lamp in lamps)
+            {
+                Assert.AreEqual(MapLayers.Cenario, lamp.gameObject.layer, $"{lamp.name}: camada Cenario");
+                var capsule = lamp.GetComponent<CapsuleCollider>();
+                Assert.IsNotNull(capsule, $"{lamp.name}: CapsuleCollider");
+                Assert.IsFalse(capsule.isTrigger, $"{lamp.name}: bloqueia de verdade");
+                Assert.LessOrEqual(capsule.radius, 0.5f, $"{lamp.name}: colisão pequena");
+                var pulse = lamp.GetComponent<CrystalPulse>();
+                Assert.IsNotNull(pulse, $"{lamp.name}: o cristal respira");
+                Assert.Greater(pulse.RendererCount, 0, $"{lamp.name}: peças do modelo");
+                Assert.IsTrue(pulse.Renderers.Any(r => r.sharedMaterials.Any(m => m != null && m.name == "CristalArcano")),
+                    $"{lamp.name}: a gema usa o material CristalArcano (senão o pulso não acha o cristal)");
+            }
+        }
+
+        [Test]
+        public void Lampioes_FicamNaBordaDaAvenida_ECorredorFicaLivre()
+        {
+            var layout = Layout();
+            var lamps = Lamps();
+            var inwardEdge = new float[layout.StreetCount];
+            for (int i = 0; i < inwardEdge.Length; i++)
+                inwardEdge[i] = float.MaxValue;
+
+            foreach (var lamp in lamps)
+            {
+                var p = lamp.position;
+                int street = -1;
+                float across = 0f;
+                for (int i = 0; i < layout.StreetCount; i++)
+                {
+                    if (!layout.Avenues[i].Rect.Contains(p.x, p.z))
+                        continue;
+                    layout.Avenues[i].Rect.ToLocal(p.x, p.z, out _, out across);
+                    street = i;
+                }
+                Assert.GreaterOrEqual(street, 0, $"{lamp.name} em {p}: fora de toda avenida");
+
+                float radius = lamp.GetComponent<CapsuleCollider>().radius;
+                float facadeGap = layout.Avenues[street].Width * 0.5f - (Mathf.Abs(across) + radius);
+                Assert.GreaterOrEqual(facadeGap, LampMinFacadeGap - 0.001f, $"{lamp.name}: a menos de {LampMinFacadeGap} m da fachada");
+                Assert.GreaterOrEqual(Flat(p).magnitude, layout.PlazaFacadeRadius, $"{lamp.name}: dentro da praça");
+                inwardEdge[street] = Mathf.Min(inwardEdge[street], Mathf.Abs(across) - radius);
+            }
+
+            for (int i = 0; i < inwardEdge.Length; i++)
+            {
+                // Largura livre entre os pés dos lampiões dos dois lados: sobra um corredor de pelo menos 6 m.
+                Assert.GreaterOrEqual(inwardEdge[i] * 2f, 6f, $"Avenida {i + 1}: corredor andável entre os lampiões");
+            }
+        }
+
+        [Test]
+        public void Lampioes_LuzesFracasSemSombraEPoucas()
+        {
+            var lights = Lamps().SelectMany(l => l.GetComponentsInChildren<Light>(true)).ToArray();
+            Assert.LessOrEqual(lights.Length, 6, "No máximo ~6 luzes novas (o CityBuilder já usa ~34)");
+            Assert.Greater(lights.Length, 0, "Ao menos um lampião acende uma luz");
+            foreach (var light in lights)
+            {
+                Assert.AreEqual(LightType.Point, light.type);
+                Assert.AreEqual(LightShadows.None, light.shadows, "Sem sombra");
+                Assert.LessOrEqual(light.intensity, 5f, "Mais fraca que a dos lampiões da cidade (5)");
+                Assert.LessOrEqual(light.range, 10f);
+            }
         }
 
         // ---------- Geometria copiada do ArenaBuilder / build_props.py ----------
@@ -245,25 +501,6 @@ namespace Game.Tests.PlayMode
         }
 
         [Test]
-        public void Muro_VeioRenteAoCano()
-        {
-#if UNITY_EDITOR
-            float radius = PartBounds("Cano", "Cobre").extents.y; // cano ao longo de X: raio = meia altura
-            foreach (Transform segment in Wall())
-            {
-                var vein = Children(segment, "VeioCristal").Single();
-                var pipe = segment.Cast<Transform>().First(t => t.name == "Cano" || t.name == "CanoCristal");
-                var axis = new Vector2(pipe.localPosition.y, pipe.localPosition.z);
-                var p = new Vector2(vein.localPosition.y, vein.localPosition.z) - axis;
-                AssertFlush(p.magnitude, vein.localScale.y, radius, segment.name);
-                Assert.Less(p.y, 0f, $"{segment.name}: o veio fica do lado da praça (−Z local)");
-            }
-#else
-            Assert.Ignore("Lê os modelos pelo AssetDatabase (só no editor).");
-#endif
-        }
-
-        [Test]
         public void Caldeiras_VeiosRentesAoCobre()
         {
 #if UNITY_EDITOR
@@ -303,33 +540,196 @@ namespace Game.Tests.PlayMode
             }
         }
 
-        // ---------- Poeira ----------
+        // ---------- Cristal visível da câmera real ----------
 
         /// <summary>
-        /// Com a câmera de jogo real (CameraFollow e CameraSettings da cena) em cada ponto da praça, nenhuma partícula
-        /// de poeira visível (além da distância em que some perto da câmera) pode cair sobre o chão da praça.
-        /// Confere as partículas de verdade e onde elas estarão quando subirem até o fim da vida.
+        /// Em cada foco do mapa (spawn dos jogadores, centro da praça, meio de cada avenida, cada praça menor) a câmera
+        /// de jogo real (CameraFollow e CameraSettings da cena, em 16:9 e 21:9) vê ao menos dois renderers de
+        /// CrystalPulse dentro do frustum. O foco é onde o jogador estaria: a câmera segue o jogador.
         /// </summary>
         [UnityTest]
-        public IEnumerator PoeiraMagica_NuncaFicaNaFrenteDaPraca()
+        public IEnumerator Cristal_AparecenaCameraReal_EmCadaFoco()
         {
             yield return null;
-            var dust = GameObject.Find("PoeiraMagica");
-            Assert.IsNotNull(dust, "Poeira mágica");
-            var ps = dust.GetComponent<ParticleSystem>();
-            Assert.LessOrEqual(ps.main.maxParticles, 400, "Poeira barata");
-            var particles = new ParticleSystem.Particle[ps.main.maxParticles];
-            int count = ps.GetParticles(particles);
-            Assert.Greater(count, 0, "A poeira já existe ao carregar (prewarm)");
-
             var cam = Camera.main;
             var follow = cam.GetComponent<CameraFollow>();
             Assert.IsNotNull(follow, "Câmera de jogo com CameraFollow");
             Assert.IsNotNull(follow.Settings, "Câmera de jogo configurada");
-            float rise = ps.velocityOverLifetime.y.constantMax * ps.main.startLifetime.constantMax;
-            var mat = dust.GetComponent<ParticleSystemRenderer>().sharedMaterial;
-            float fadeNear = mat != null && mat.HasProperty("_CameraNearFadeDistance") ? mat.GetFloat("_CameraNearFadeDistance") : 0f;
-            float arena = WallRadius() - 0.5f;
+            var layout = Layout();
+
+            var foci = new List<KeyValuePair<string, Vector3>>();
+            var spawn = Object.FindObjectsByType<ArenaMarker>(FindObjectsSortMode.None).First(m => m.Kind == ArenaMarkerKind.PlayerSpawn);
+            foci.Add(new KeyValuePair<string, Vector3>("spawn dos jogadores", spawn.transform.position));
+            foci.Add(new KeyValuePair<string, Vector3>("centro da praça", Vector3.zero));
+            for (int i = 0; i < layout.StreetCount; i++)
+            {
+                var a = layout.Avenues[i];
+                var mid = a.PointAt((a.StartS + a.EndS) * 0.5f);
+                foci.Add(new KeyValuePair<string, Vector3>($"meio da avenida {i + 1}", new Vector3(mid.X, 0f, mid.Y)));
+                var plaza = layout.SmallPlazas[i];
+                foci.Add(new KeyValuePair<string, Vector3>($"praça menor {i + 1}", new Vector3(plaza.Center.X, 0f, plaza.Center.Y)));
+            }
+
+            var renderers = Pulses().SelectMany(p => p.Renderers).Where(r => r != null).Distinct().ToArray();
+            float savedAspect = cam.aspect;
+            var problems = new List<string>();
+            try
+            {
+                foreach (float aspect in new[] { 16f / 9f, 21f / 9f })
+                {
+                    cam.aspect = aspect;
+                    foreach (var focus in foci)
+                    {
+                        follow.Apply(focus.Value);
+                        var planes = GeometryUtility.CalculateFrustumPlanes(cam);
+                        int visible = renderers.Count(r => r.enabled && r.gameObject.activeInHierarchy
+                                                           && GeometryUtility.TestPlanesAABB(planes, r.bounds));
+                        if (visible < 2)
+                            problems.Add($"{focus.Key} ({aspect:0.00}): {visible} renderer(s) de cristal na vista");
+                    }
+                }
+            }
+            finally
+            {
+                cam.aspect = savedAspect;
+            }
+            Assert.IsEmpty(problems, string.Join("; ", problems));
+        }
+
+        // ---------- Poeira ----------
+
+        private static AmbienceParticles[] MagicDust()
+            => Object.FindObjectsByType<AmbienceParticles>(FindObjectsSortMode.None)
+                .Where(d => d.Kind == AmbienceParticleKind.MagicDust).OrderBy(d => d.name).ToArray();
+
+        /// <summary>
+        /// Pontos da região de emissão do sistema: a caixa (Box) ou o disco (Circle) do módulo Shape, em coordenadas do
+        /// mundo, em grade. A altura inclui o salto aleatório do disco (±0,9 m).
+        /// </summary>
+        private static List<Vector3> EmissionSamples(ParticleSystem ps)
+        {
+            var shape = ps.shape;
+            var t = ps.transform;
+            var points = new List<Vector3>();
+            if (shape.shapeType == ParticleSystemShapeType.Box)
+            {
+                var s = shape.scale;
+                for (int ix = 0; ix <= 4; ix++)
+                    for (int iy = 0; iy <= 2; iy++)
+                        for (int iz = 0; iz <= 4; iz++)
+                            points.Add(t.TransformPoint(Vector3.Scale(s, new Vector3(ix / 4f - 0.5f, iy / 2f - 0.5f, iz / 4f - 0.5f))));
+            }
+            else
+            {
+                float jitter = shape.randomPositionAmount;
+                float r = shape.radius;
+                for (int ring = 0; ring <= 3; ring++)
+                {
+                    int count = ring == 0 ? 1 : 12;
+                    for (int k = 0; k < count; k++)
+                    {
+                        float a = k * 2f * Mathf.PI / count;
+                        var local = new Vector3(Mathf.Cos(a), Mathf.Sin(a), 0f) * (r * ring / 3f);
+                        var p = t.TransformPoint(local);
+                        foreach (float dy in new[] { -jitter, 0f, jitter })
+                            points.Add(p + Vector3.up * dy);
+                    }
+                }
+            }
+            return points;
+        }
+
+        [UnityTest]
+        public IEnumerator PoeiraMagica_UmEmissorPorAvenidaEPracaMenor_AlemDoDiscoDeCombate()
+        {
+            yield return null;
+            var layout = Layout();
+            var settings = Settings();
+            var dust = MagicDust();
+            Assert.AreEqual(layout.StreetCount * 2, dust.Length, "Um emissor por avenida e um por praça menor");
+            var old = GameObject.Find("PoeiraMagica");
+            Assert.IsNotNull(old, "Grupo da poeira mágica");
+            Assert.IsNull(old.GetComponent<ParticleSystem>(), "O anel antigo da rua do anel saiu");
+
+            int avenues = 0, plazas = 0;
+            foreach (var d in dust)
+            {
+                Assert.IsNotNull(d.Particles, $"{d.name}: sistema montado em jogo");
+                var ps = d.Particles;
+                Assert.LessOrEqual(ps.main.maxParticles, 200, $"{d.name}: poeira barata");
+                foreach (var p in EmissionSamples(ps))
+                    Assert.GreaterOrEqual(Flat(p).magnitude, settings.dustCombatRadius - 0.01f,
+                        $"{d.name}: emite sobre o disco de combate (r < {settings.dustCombatRadius}) em {p}");
+
+                if (d.name.StartsWith("PoeiraAvenida"))
+                {
+                    avenues++;
+                    Assert.AreEqual(ParticleSystemShapeType.Box, ps.shape.shapeType, d.name);
+                    var scale = ps.shape.scale;
+                    Assert.AreEqual(layout.Avenues[0].Width, scale.x, 0.01f, $"{d.name}: largura da avenida");
+                    Assert.AreEqual(settings.avenueDustBoxHeight, scale.y, 0.01f, $"{d.name}: altura");
+                    Assert.AreEqual(settings.avenueDustLength, scale.z, 0.01f, $"{d.name}: comprimento");
+                }
+                else
+                {
+                    plazas++;
+                    Assert.AreEqual(ParticleSystemShapeType.Circle, ps.shape.shapeType, d.name);
+                    Assert.AreEqual(layout.SmallPlazas[0].Radius, ps.shape.radius, 0.01f, $"{d.name}: círculo do tamanho da praça");
+                }
+            }
+            Assert.AreEqual(layout.StreetCount, avenues, "Avenidas");
+            Assert.AreEqual(layout.StreetCount, plazas, "Praças menores");
+        }
+
+        [UnityTest]
+        public IEnumerator PoeiraMagica_ViolaSoA3PorCentoEPausaForaDaTela()
+        {
+            yield return null;
+            var settings = Settings();
+            foreach (var d in MagicDust())
+            {
+                var main = d.Particles.main;
+                Assert.AreEqual(ParticleSystemCullingMode.Pause, main.cullingMode, $"{d.name}: pausa fora da tela");
+                var keys = main.startColor.gradient.colorKeys;
+                // Fixed: [ciano até 1 - violeta - dourado, violeta até 1 - dourado, dourado até 1].
+                Assert.AreEqual(3, keys.Length, $"{d.name}: ciano, violeta e dourado");
+                float violet = keys[1].time - keys[0].time;
+                Assert.AreEqual(settings.dustVioletShare, violet, 0.001f, $"{d.name}: fatia de violeta (D-070)");
+                Assert.AreEqual(0.03f, settings.dustVioletShare, 0.001f, "D-070: violeta a 3%");
+            }
+        }
+
+        /// <summary>
+        /// Com a câmera de jogo real (CameraFollow e CameraSettings da cena) em cada ponto do disco de combate, nenhuma
+        /// partícula de poeira visível (além da distância em que some perto da câmera) pode cair sobre o chão do disco
+        /// de combate: a poeira fica sempre atrás do combate, nunca na frente do jogador. Confere a região de emissão
+        /// de cada emissor e onde as partículas estarão quando subirem até o fim da vida.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator PoeiraMagica_NuncaFicaNaFrenteDoCombate()
+        {
+            yield return null;
+            var dust = MagicDust();
+            Assert.IsNotEmpty(dust, "Poeira mágica");
+            var settings = Settings();
+            var cam = Camera.main;
+            var follow = cam.GetComponent<CameraFollow>();
+            Assert.IsNotNull(follow, "Câmera de jogo com CameraFollow");
+            Assert.IsNotNull(follow.Settings, "Câmera de jogo configurada");
+
+            // Pontos de emissão e quanto cada partícula sobe até o fim da vida (a subida mais o desvio do ruído).
+            var samples = new List<Vector3>();
+            float rise = 0f;
+            float fadeNear = 0f;
+            foreach (var d in dust)
+            {
+                samples.AddRange(EmissionSamples(d.Particles));
+                rise = Mathf.Max(rise, d.Particles.velocityOverLifetime.y.constantMax * d.Particles.main.startLifetime.constantMax);
+                var mat = d.GetComponent<ParticleSystemRenderer>().sharedMaterial;
+                if (mat != null && mat.HasProperty("_CameraNearFadeDistance"))
+                    fadeNear = Mathf.Max(fadeNear, mat.GetFloat("_CameraNearFadeDistance"));
+            }
+            float combat = settings.dustCombatRadius;
             float savedAspect = cam.aspect;
             cam.aspect = 16f / 9f;
 
@@ -337,25 +737,26 @@ namespace Game.Tests.PlayMode
             string example = null;
             try
             {
-                for (float r = 0f; r <= arena - 0.5f; r += 1.25f)
+                for (float r = 0f; r <= combat - 0.5f; r += 1.25f)
                 {
-                    for (float a = 0f; a < 360f; a += 5f)
+                    for (float a = 0f; a < 360f; a += 10f)
                     {
                         var player = new Vector3(Mathf.Sin(a * Mathf.Deg2Rad) * r, 0f, Mathf.Cos(a * Mathf.Deg2Rad) * r);
                         follow.Apply(player);
                         var c = cam.transform.position;
-                        for (int i = 0; i < count; i++)
+                        foreach (var sample in samples)
                         {
                             foreach (float up in new[] { 0f, rise })
                             {
-                                var p = particles[i].position + Vector3.up * up;
+                                var p = sample + Vector3.up * up;
                                 var vp = cam.WorldToViewportPoint(p);
                                 if (vp.z <= 0f || vp.x < 0f || vp.x > 1f || vp.y < 0f || vp.y > 1f)
                                     continue;
                                 if ((p - c).magnitude <= fadeNear || p.y >= c.y)
                                     continue;
+                                // Onde o raio da câmera por esta partícula toca o chão: ali é o que ela "cobre" na tela.
                                 var ground = c + (p - c) * (c.y / (c.y - p.y));
-                                if (new Vector2(ground.x, ground.z).magnitude < arena)
+                                if (new Vector2(ground.x, ground.z).magnitude < combat)
                                 {
                                     bad++;
                                     example ??= $"jogador em {player}, partícula em {p}";
@@ -369,7 +770,21 @@ namespace Game.Tests.PlayMode
             {
                 cam.aspect = savedAspect;
             }
-            Assert.AreEqual(0, bad, $"Poeira na frente da praça ({example})");
+            Assert.AreEqual(0, bad, $"Poeira na frente do combate ({example})");
+        }
+
+        [UnityTest]
+        public IEnumerator Particulas_NascemEmJogoComPausaForaDaTela()
+        {
+            yield return null;
+            var all = Object.FindObjectsByType<AmbienceParticles>(FindObjectsSortMode.None);
+            // 4 fornalhas (brasas) + caldeiras e respiradouros (vapor) + poeira arcana + poeira mágica das ruas.
+            Assert.GreaterOrEqual(all.Length, 4 + 2 + 3 + 1 + Layout().StreetCount * 2, "Emissores de ambientação");
+            foreach (var p in all)
+            {
+                Assert.IsNotNull(p.Particles, $"{p.name}: ParticleSystem criado em jogo");
+                Assert.AreEqual(ParticleSystemCullingMode.Pause, p.Particles.main.cullingMode, $"{p.name}: pausa fora da tela");
+            }
         }
     }
 }

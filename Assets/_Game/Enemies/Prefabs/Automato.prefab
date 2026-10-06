@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 9218282087999442819}
   - component: {fileID: 5734495587996146895}
   - component: {fileID: 6352027362650329643}
+  - component: {fileID: 7024592647036084272}
   m_Layer: 0
   m_Name: Automato
   m_TagString: Untagged
@@ -58,7 +59,7 @@ MonoBehaviour:
   SynchronizeTransform: 1
   m_InScenePlaced: 0
   ActiveSceneSynchronization: 0
-  SceneMigrationSynchronization: 0
+  SceneMigrationSynchronization: 1
   SpawnWithObservers: 1
   DontDestroyWithOwner: 0
   AutoObjectParentSync: 1
@@ -171,6 +172,19 @@ MonoBehaviour:
   lungeDistance: 0.25
   flashDuration: 0.12
   flashColor: {r: 1, g: 0.92, b: 0.75, a: 1}
+--- !u!114 &7024592647036084272
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3629289665645413065}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2308973977ba71c478f1ceb404dd577a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Runtime::Game.Enemies.EnemyPathFollower
+  settings: {fileID: 11400000, guid: 8a89071ae175bcc4f84c1735e6e8aac7, type: 2}
 --- !u!1001 &7535586643829553446
 PrefabInstance:
   m_ObjectHideFlags: 0

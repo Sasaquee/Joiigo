@@ -1,7 +1,8 @@
 using System.Collections.Generic;
 using Game.Arena;
 using Game.Arena.Life;
-using Game.Cameras;
+using Game.Core.Map;
+using Game.Core.Math;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -9,15 +10,18 @@ using UnityEngine.Rendering;
 namespace Game.EditorTools
 {
     /// <summary>
-    /// Cidade steampunk-mágica em volta da praça (D-042), com o kit de Tools/Blender/build_city.py.
-    /// Cria "Cidade" sob a raiz da arena: calçamento, três anéis de prédios fora do muro, pontes de canos,
-    /// torre do relógio ao norte, pilões arcanos, mercado na rua do anel, dirigíveis no céu,
+    /// Cidade steampunk-mágica do mapa novo (D-042, passe do mapa D-073 a D-082), com o kit de Tools/Blender/build_city.py.
+    /// Cria "Cidade" sob a raiz da arena: chão visual até r 85, prédios em volta da praça central, ao longo das três avenidas,
+    /// nas praças menores, nas bocas das ruas e no fundo (os prédios SÃO o limite do mapa e bloqueiam a passagem), torre do
+    /// relógio e pilões arcanos no meio das praças menores, pontes de canos sobre as avenidas, dirigíveis no céu,
     /// partículas (SmokeEmitter), pulsos, janelas, balanços e poucas luzes pontuais.
     ///
-    /// Regra da câmera: nada pode tapar a praça. Cada peça só entra se a altura dela couber abaixo da linha
-    /// entre a câmera de jogo (CameraSettings) e qualquer ponto da arena (AllowedHeight). Por isso o lado sul/oeste
-    /// (o lado da câmera) fica baixo ou vazio perto do muro, e o lado norte/leste recebe os prédios altos.
-    /// Nada fora do muro tem collider (o jogador não chega lá).
+    /// Onde cada prédio fica é decidido pelo <see cref="CityPlanner"/> (puro, sem UnityEngine) a partir do
+    /// <see cref="MapLayout"/> (Data/Map/MapLayoutSettings.asset). Aqui só se instancia:
+    ///  - Cidade/Predios: os modelos; Cidade/Colisores: um BoxCollider por prédio (corpo x fundo x altura, 0,3 m à frente da
+    ///    fachada), na camada Cenario e fora de qualquer transform espelhado; Cidade/ColisoresMarcos: os da torre e dos pilões.
+    ///  - Altura: o limite vem de MapLayout.MaxBuildingHeight (planta que toca o envelope da câmera: 10,2 m; o resto é livre).
+    ///    A translucidez (D-076) resolve a oclusão: as peças que podem tapar o jogador recebem a rendering layer 8 (VazadoLayer).
     /// Chamar depois da geometria da arena: CityBuilder.Build(arena).
     /// </summary>
     public static class CityBuilder
@@ -26,7 +30,8 @@ namespace Game.EditorTools
 
         private const string ModelsFolder = "Assets/_Game/Art/Models/City";
         private const string MaterialsFolder = "Assets/_Game/Art/Materials";
-        private const string CameraSettingsPath = "Assets/_Game/Data/Camera/CameraSettings.asset";
+        private const string MapSettingsFolder = "Assets/_Game/Data/Map";
+        private const string MapSettingsPath = MapSettingsFolder + "/MapLayoutSettings.asset";
         private const string RootName = "Cidade";
         private const int Seed = 4207;
 
@@ -38,67 +43,41 @@ namespace Game.EditorTools
             "CristalArcano", "BrasaFornalha"
         };
 
-        // Muro da arena (ArenaBuilder): segmentos em r26 com 0,6 m de espessura para fora.
-        private const float WallOuterRadius = 26.9f;
-        private const float WallHeight = 3f;
-
-        // Anéis de prédios (raio da fachada da frente). O terceiro anel só existe no lado longe da câmera.
-        private const float Ring1Radius = 30.6f;
-        private const float Ring2Radius = 44f;
-        private const float Ring3Radius = 57f;
-        private const float Ring3MinAngle = -80f;
-        private const float Ring3MaxAngle = 140f;
-        private const float BackStreetInner = 41f;
+        // Chão visual: um disco só, um pouco abaixo dos pisos andáveis (que são da arena), sem collider.
         private const float GroundOuterRadius = 85f;
+        private const float GroundY = -0.04f;
 
-        // Ruas radiais: ângulo (graus a partir de +Z, horário) e largura (m). A avenida norte leva à torre.
-        private static readonly Vector2[] Streets =
-        {
-            new Vector2(0f, 7f), new Vector2(52f, 4f), new Vector2(105f, 4.5f), new Vector2(160f, 5f),
-            new Vector2(215f, 4f), new Vector2(270f, 5f), new Vector2(320f, 4f)
-        };
-        private const float AvenueRing2Width = 15f; // praça da torre no fim da avenida
-        private const float TowerRadius = 50.5f;
+        // Marcos no meio das praças menores: base de colisão (m). Torre 7,2 m (sobra um anel andável de ~3,9 m), pilão 3 m.
+        private const float TowerBase = 7.2f;
+        private const float PylonBase = 3f;
 
-        // Câmera: margem de segurança e raio da área que nunca pode ser tapada.
-        private const float VisibleRadius = 25.5f;
-        private const float HeightMargin = 0.9f;
+        // Pontes de canos sobre as avenidas: pelo menos 6 m de altura, entram 0,2 m na parede, sem collider.
+        private const float BridgeMinHeight = 6f;
+        private const float BridgeInset = 0.2f;
+        private const float BridgeEaveMargin = 1.4f; // a ponte fica abaixo do beiral
+        private const float BridgeChance = 1f;
+        private const float BridgeMinSpacing = 6f;
+        private const int BridgesPerAvenue = 2;
+        private const float BridgeMaxLength = 12f;
 
-        // Orçamento de desempenho.
-        private const int MaxPointLights = 22;
-        private const int MaxSmokeEmitters = 56;
+        // Bueiros de vapor ao longo das avenidas, nas praças menores e na borda da praça (nunca no disco de combate, r < 26).
+        private const int ManholesPerAvenue = 2;
+        private const int ManholesPerSmallPlaza = 1;
+        private const int ManholesInPlaza = 5;
+        private const float PlazaManholeRadius = 27.2f;
+
+        // Vãos da borda andável: banca de mercado nos vãos longos, Caixotes nos curtos (bloqueio só visual).
+        private const float StallMinGap = 3.4f;
+
+        // Orçamento de desempenho (mapa maior que o anterior: 22 luzes e 56 emissores).
+        private const int MaxPointLights = 34;
+        private const int MaxSmokeEmitters = 90;
         private const float MinLightSpacing = 7f;
+        private const float LightReach = 12f; // distância da área andável (m) em que a prioridade de luz e fumaça cai a zero
 
         private static readonly Color WarmLight = new Color(1f, 0.7f, 0.4f);
         private static readonly Color CrystalLight = new Color(0.35f, 0.9f, 1f);
         private static readonly Color FurnaceLight = new Color(1f, 0.45f, 0.15f);
-
-        // ---------- Catálogo do kit ----------
-
-        private sealed class Piece
-        {
-            public string Name;
-            public float Width;   // ao longo da fachada (com canos e placas que saem dos lados)
-            public float Body;    // largura da parede em si
-            public float Depth;   // para trás da fachada
-            public float Height;  // total (com chaminés)
-            public float Eave;    // altura da parede (para apoiar pontes de canos)
-            public float Weight;  // peso base no sorteio
-            public float FarBias; // quanto o peso cresce no lado longe da câmera
-            public bool Centered; // pivô no centro (e não na fachada)
-            public int MinRing = 1;
-        }
-
-        private static readonly Piece[] Buildings =
-        {
-            new Piece { Name = "Oficina", Width = 8.7f, Body = 8f, Depth = 7.5f, Height = 8.9f, Eave = 4.6f, Weight = 1.1f, FarBias = -0.5f },
-            new Piece { Name = "CasaLarga", Width = 10.9f, Body = 10f, Depth = 9.3f, Height = 12.4f, Eave = 7.4f, Weight = 1f, FarBias = 0f },
-            new Piece { Name = "CasaEstreitaA", Width = 6.8f, Body = 6f, Depth = 8.5f, Height = 15.2f, Eave = 10.4f, Weight = 1f, FarBias = 0.2f },
-            new Piece { Name = "CasaEstreitaB", Width = 6.8f, Body = 6f, Depth = 8.5f, Height = 18.4f, Eave = 13.6f, Weight = 0.7f, FarBias = 0.5f },
-            new Piece { Name = "CasaAlta", Width = 7.6f, Body = 7f, Depth = 8.3f, Height = 21.6f, Eave = 17.3f, Weight = 0.4f, FarBias = 0.8f },
-            new Piece { Name = "Fabrica", Width = 14.4f, Body = 14f, Depth = 10.2f, Height = 20.4f, Eave = 7f, Weight = 0.25f, FarBias = 0.5f },
-            new Piece { Name = "TanqueAgua", Width = 4.6f, Body = 4.2f, Depth = 4.6f, Height = 10.1f, Eave = 0f, Weight = 0.35f, FarBias = 0f, Centered = true, MinRing = 2 },
-        };
 
         private const float BridgeModelLength = 6f;   // PonteCanos.fbx
 
@@ -114,14 +93,6 @@ namespace Game.EditorTools
 
         // ---------- Estado da construção ----------
 
-        private sealed class Placed
-        {
-            public Piece Piece;
-            public Transform Transform;
-            public float Angle;
-            public int Ring;
-        }
-
         private struct Request
         {
             public Transform Target;
@@ -131,15 +102,13 @@ namespace Game.EditorTools
         }
 
         private static System.Random rng;
-        private static Vector2 camOffset;
-        private static float camHeight;
-        private static Material stoneMat, darkStoneMat, ironMat, crystalMat;
+        private static MapLayout layout;
+        private static Material darkStoneMat, crystalMat;
         private static CrystalAmbienceSettings crystalSettings;
         private static List<Transform> towers;
-        private static List<Placed> placed;
         private static List<Request> smokeRequests, lightRequests;
         private static HashSet<string> missingModels;
-        private static List<Vector2> streetSlots; // ocupação da rua do anel: x = ângulo, y = meia largura (graus)
+        private static Vector3 clockTowerPosition;
 
         public static void Build(Transform arenaRoot)
         {
@@ -149,345 +118,254 @@ namespace Game.EditorTools
 
             ConfigureImports();
             LoadMaterials();
-            LoadCamera();
+            layout = LoadLayout();
             rng = new System.Random(Seed);
-            placed = new List<Placed>();
             smokeRequests = new List<Request>();
             lightRequests = new List<Request>();
             missingModels = new HashSet<string>();
-            streetSlots = new List<Vector2>();
             towers = new List<Transform>();
 
             var root = new GameObject(RootName).transform;
             root.SetParent(arenaRoot, false);
 
             BuildGround(Group("Chao", root));
+
+            var planner = new CityPlanner(layout, Seed);
+            planner.Plan();
             var buildings = Group("Predios", root);
-            FillRing(buildings, 1, Ring1Radius, -180f, 180f);
-            FillRing(buildings, 2, Ring2Radius, -180f, 180f);
-            FillRing(buildings, 3, Ring3Radius, Ring3MinAngle, Ring3MaxAngle);
-            BuildLandmarks(Group("Marcos", root));
-            BuildBridges(Group("PontesCanos", root));
-            BuildStreetLife(Group("RuaDoAnel", root));
+            var counts = PlaceBuildings(buildings, Group("Colisores", root), planner.Buildings);
+
+            var landmarks = Group("Marcos", root);
+            BuildLandmarks(landmarks, Group("ColisoresMarcos", root));
+            var bridges = Group("PontesCanos", root);
+            BuildBridges(bridges, planner.Buildings);
+            var gapProps = Group("Vaos", root);
+            BuildGapProps(gapProps, planner.Gaps);
+            BuildManholes(Group("Bueiros", root));
             BuildSky(Group("Ceu", root));
             ApplySmoke();
             ApplyLights();
             ApplyTowerPulse();
 
+            // Tudo que pode tapar o jogador pode vazar (D-076); personagem, inimigos, máquinas, chão e céu não.
+            foreach (var group in new[] { buildings, landmarks, bridges, gapProps })
+                VazadoLayer.MarkAll(group.gameObject);
+
             foreach (string name in missingModels)
                 Debug.LogWarning($"CityBuilder: {name}.fbx não encontrado em {ModelsFolder}. Rode Tools/Blender/build_city.py.");
-            Debug.Log($"Cidade construída: {placed.Count} prédios.");
+            var summary = new System.Text.StringBuilder();
+            foreach (var pair in counts)
+                summary.Append($" {pair.Key}={pair.Value}");
+            Debug.Log($"Cidade construída: {planner.Buildings.Count} prédios ({summary.ToString().Trim()}), {planner.Gaps.Count} vãos fechados com props.");
+        }
+
+        // ---------- Mapa ----------
+
+        /// <summary>Layout do mapa lido de Data/Map/MapLayoutSettings.asset (criado com os números padrão se ainda não existir).</summary>
+        private static MapLayout LoadLayout()
+        {
+            var settings = AssetDatabase.LoadAssetAtPath<MapLayoutSettings>(MapSettingsPath);
+            if (settings == null)
+            {
+                if (!AssetDatabase.IsValidFolder(MapSettingsFolder))
+                    AssetDatabase.CreateFolder("Assets/_Game/Data", "Map");
+                settings = ScriptableObject.CreateInstance<MapLayoutSettings>();
+                AssetDatabase.CreateAsset(settings, MapSettingsPath);
+                AssetDatabase.SaveAssets();
+            }
+            return settings.ToLayout();
         }
 
         // ---------- Chão ----------
 
         private static void BuildGround(Transform parent)
         {
-            // Anéis por cima do piso da arena (que é um quadrado): fora do muro manda o calçamento da cidade.
-            Annulus("RuaDoAnel", parent, WallOuterRadius - 0.1f, Ring1Radius - 0.2f, 0.012f, darkStoneMat);
-            Annulus("Calcada", parent, Ring1Radius - 0.2f, GroundOuterRadius, 0.012f, stoneMat);
-            Annulus("RuaDeTras", parent, BackStreetInner, Ring2Radius - 0.2f, 0.016f, darkStoneMat);
-            foreach (var s in Streets)
-            {
-                float length = GroundOuterRadius - Ring1Radius;
-                var street = Box("RuaRadial", parent, Polar(s.x, Ring1Radius + length * 0.5f) + Vector3.up * 0.01f,
-                    new Vector3(s.y, 0.02f, length), darkStoneMat);
-                street.transform.localRotation = Quaternion.Euler(0f, s.x, 0f);
-            }
+            // Os pisos andáveis são da arena (ArenaBuilder); aqui só o chão visual por baixo deles, até onde a câmera alcança.
+            Annulus("Calcada", parent, 0f, GroundOuterRadius, GroundY, darkStoneMat);
         }
 
         // ---------- Prédios ----------
 
-        private static void FillRing(Transform parent, int ring, float radius, float minAngle, float maxAngle)
+        private static SortedDictionary<string, int> PlaceBuildings(Transform parent, Transform colliders, IReadOnlyList<BuildingPlan> plans)
         {
-            var group = Group($"Anel{ring}", parent);
-            for (int i = 0; i < Streets.Length; i++)
+            var counts = new SortedDictionary<string, int>();
+            var groups = new Dictionary<string, Transform>();
+            for (int i = 0; i < plans.Count; i++)
             {
-                var a = Streets[i];
-                var b = Streets[(i + 1) % Streets.Length];
-                float start = a.x + HalfAngle(StreetWidth(a, ring) * 0.5f + 0.4f, radius);
-                float end = (b.x <= a.x ? b.x + 360f : b.x) - HalfAngle(StreetWidth(b, ring) * 0.5f + 0.4f, radius);
-                FillSector(group, ring, radius, start, end, minAngle, maxAngle);
-            }
-        }
-
-        private static float StreetWidth(Vector2 street, int ring)
-            => ring == 2 && Mathf.Approximately(street.x, 0f) ? AvenueRing2Width : street.y;
-
-        private static void FillSector(Transform parent, int ring, float radius, float start, float end, float minAngle, float maxAngle)
-        {
-            float cursor = start;
-            Piece previous = null;
-            int guard = 0;
-            while (guard++ < 64)
-            {
-                float remaining = (end - cursor) * Mathf.Deg2Rad * radius;
-                if (remaining < 4f)
-                    break;
-                float step = 4f / radius * Mathf.Rad2Deg;
-                if (!InRange(Mathf.DeltaAngle(0f, cursor + step), minAngle, maxAngle))
+                var plan = plans[i];
+                if (!groups.TryGetValue(plan.Region, out var group))
                 {
-                    cursor += step;
-                    continue;
-                }
-                float far = Farness(cursor);
-                var piece = PickBuilding(ring, far, previous, remaining, cursor, radius);
-                if (piece == null)
-                {
-                    // Nada alto cabe sem tapar a câmera (lado sul perto do muro): fica uma banca baixa ou a rua aberta.
-                    if (ring == 1)
-                        LowFiller(parent, cursor + 2.5f / radius * Mathf.Rad2Deg, radius);
-                    cursor += 5.5f / radius * Mathf.Rad2Deg;
-                    previous = null;
-                    continue;
-                }
-                if (!InRange(Mathf.DeltaAngle(0f, cursor + HalfAngle(piece.Width, radius)), minAngle, maxAngle))
-                {
-                    cursor += step;
-                    continue;
+                    group = Group(plan.Region, parent);
+                    groups[plan.Region] = group;
                 }
 
-                float center = cursor + HalfAngle(piece.Width * 0.5f, radius);
-                var go = PlaceBuilding(parent, piece, ring, radius, center);
-                if (go != null)
-                    placed.Add(new Placed { Piece = piece, Transform = go.transform, Angle = Mathf.DeltaAngle(0f, center), Ring = ring });
-
-                // Vão entre prédios; às vezes um beco com canos, placa e bueiro.
-                float gap = Range(0.25f, 0.7f);
-                if (ring == 1 && rng.NextDouble() < 0.2 && go != null)
+                var pos = new Vector3(plan.Pivot.X, 0f, plan.Pivot.Y);
+                var rot = Quaternion.LookRotation(new Vector3(plan.Forward.X, 0f, plan.Forward.Y));
+                // Espelhar varia a fachada (porta e placa trocam de lado) sem custo; o collider fica fora do espelho.
+                var scale = new Vector3(plan.Mirror ? -plan.ScaleX : plan.ScaleX, 1f, 1f);
+                var go = Model(plan.Piece.Name, group, pos, rot, scale);
+                if (go != null && Find(go.transform, "JanelaAndar") != null && rng.NextDouble() < 0.45)
                 {
-                    gap = Range(2.4f, 3.2f);
-                    float alleyAngle = center + HalfAngle(piece.Width * 0.5f, radius) + HalfAngle(gap * 0.5f, radius);
-                    BuildAlley(parent, go.transform, piece, alleyAngle, radius);
+                    go.AddComponent<WindowFlicker>().Configure(Range(0.12f, 0.35f));
+                    ClearStatic(go.transform, "Janela");
                 }
-                cursor = center + HalfAngle(piece.Width * 0.5f, radius) + gap / radius * Mathf.Rad2Deg;
-                previous = piece;
+                AddBuildingCollider(colliders, plan, i);
+
+                string key = plan.Region.StartsWith("Avenida") ? "Avenida"
+                    : plan.Region.StartsWith("Boca") ? "Boca"
+                    : plan.Region.StartsWith("PracaMenor") ? "PracaMenor"
+                    : plan.Region;
+                counts[key] = counts.TryGetValue(key, out int n) ? n + 1 : 1;
             }
+            return counts;
         }
 
-        private static void LowFiller(Transform parent, float angle, float radius)
+        /// <summary>
+        /// Um BoxCollider por prédio (camada Cenario), fora do transform espelhado: caixa do corpo (largura da parede) x fundo,
+        /// com a frente 0,3 m adiante da fachada. A altura é a do prédio todo: a linha da câmera para o jogador (SeeThroughDriver)
+        /// precisa bater também no telhado e nas chaminés.
+        /// </summary>
+        private static void AddBuildingCollider(Transform parent, BuildingPlan plan, int index)
         {
-            var pos = Polar(angle, radius);
-            if (AllowedHeight(pos + pos.normalized * 1.2f) < 3f || AllowedHeight(pos - pos.normalized * 1.2f) < 3f)
-                return;
-            var rot = Quaternion.LookRotation(-pos.normalized) * Quaternion.Euler(0f, Range(-10f, 10f), 0f);
-            var stall = Model("BancaMercado", parent, pos, rot, Vector3.one);
-            if (stall != null)
-                lightRequests.Add(new Request { Target = Find(stall.transform, "LuzQuente"), Kind = 0, Priority = Visibility(pos) * 0.7f });
-            var cratePos = Polar(angle + 3.2f / radius * Mathf.Rad2Deg, radius + 0.8f);
-            if (AllowedHeight(cratePos) >= 1.9f)
-                Model("Caixotes", parent, cratePos, Quaternion.Euler(0f, Range(0f, 360f), 0f), Vector3.one * 0.9f);
-        }
-
-        private static Piece PickBuilding(int ring, float far, Piece previous, float remaining, float cursor, float radius)
-        {
-            var candidates = new List<Piece>();
-            var weights = new List<float>();
-            foreach (var p in Buildings)
-            {
-                if (ring < p.MinRing || p.Width > remaining)
-                    continue;
-                float center = cursor + HalfAngle(p.Width * 0.5f, radius);
-                Footprint(p, radius, center, out var pos, out var rot);
-                if (FootprintAllowedHeight(pos, rot, p) < p.Height)
-                    continue;
-                float w = Mathf.Max(0.05f, p.Weight + p.FarBias * far);
-                if (ring == 1 && p.Name == "Fabrica")
-                    w *= 0.6f;
-                if (ring == 3)
-                    w *= p.Height > 14f ? 1.6f : 0.6f; // silhueta alta ao fundo
-                if (p == previous)
-                    w *= 0.25f;
-                candidates.Add(p);
-                weights.Add(w);
-            }
-            if (candidates.Count == 0)
-                return null;
-
-            float total = 0f;
-            foreach (float w in weights)
-                total += w;
-            float roll = Range(0f, total);
-            for (int i = 0; i < candidates.Count; i++)
-            {
-                roll -= weights[i];
-                if (roll <= 0f)
-                    return candidates[i];
-            }
-            return candidates[candidates.Count - 1];
-        }
-
-        private static void Footprint(Piece p, float radius, float angle, out Vector3 pos, out Quaternion rot)
-        {
-            float r = p.Centered ? radius + p.Depth * 0.5f : radius;
-            pos = Polar(angle, r);
-            rot = Quaternion.LookRotation(-pos.normalized); // +Z local (frente do kit) olha para a praça
-        }
-
-        private static GameObject PlaceBuilding(Transform parent, Piece piece, int ring, float radius, float angle)
-        {
-            Footprint(piece, radius, angle, out var pos, out var rot);
-            if (piece.Centered)
-                rot *= Quaternion.Euler(0f, Range(0f, 90f), 0f);
-            // Espelhar varia a fachada (porta e placa trocam de lado) sem custo.
-            var scale = new Vector3(!piece.Centered && rng.NextDouble() < 0.5 ? -1f : 1f, 1f, 1f);
-            var go = Model(piece.Name, parent, pos, rot, scale);
-            if (go == null)
-                return null;
-            if (Find(go.transform, "JanelaAndar") != null && rng.NextDouble() < 0.45)
-            {
-                go.AddComponent<WindowFlicker>().Configure(Range(0.12f, 0.35f));
-                ClearStatic(go.transform, "Janela");
-            }
-            return go;
-        }
-
-        private static void BuildAlley(Transform parent, Transform building, Piece piece, float alleyAngle, float radius)
-        {
-            // Lado do prédio virado para o beco.
-            var alleyPoint = Polar(alleyAngle, radius + 2f);
-            var right = building.right;
-            float side = Vector3.Dot(alleyPoint - building.localPosition, right) >= 0f ? 1f : -1f;
-            var wallDir = right * side;
-            var back = -building.forward;
-            var wallBase = building.localPosition + wallDir * (piece.Body * 0.5f);
-
-            Model("CanosParede", parent, wallBase + back * Range(2.2f, 4f), Quaternion.LookRotation(wallDir), Vector3.one);
-            Model("PlacaPendurada", parent, wallBase + back * 0.7f + Vector3.up * 3.4f, Quaternion.LookRotation(wallDir), Vector3.one);
-            Model("BueiroVapor", parent, Polar(alleyAngle, radius + 1.2f), Quaternion.identity, Vector3.one);
+            var rect = plan.Collider;
+            float height = plan.ColliderHeight;
+            var go = new GameObject($"Col_{plan.Piece.Name}_{index:000}");
+            go.transform.SetParent(parent, false);
+            go.transform.position = new Vector3(rect.Center.X, 0f, rect.Center.Y);
+            go.transform.rotation = Quaternion.LookRotation(new Vector3(rect.Axis.X, 0f, rect.Axis.Y));
+            go.layer = MapLayers.Cenario;
+            go.isStatic = true;
+            var box = go.AddComponent<BoxCollider>();
+            box.size = new Vector3(rect.Width, height, rect.Length);
+            box.center = new Vector3(0f, height * 0.5f, 0f);
         }
 
         // ---------- Marcos ----------
 
-        private static void BuildLandmarks(Transform parent)
+        private static void BuildLandmarks(Transform parent, Transform colliders)
         {
-            // Torre do relógio no fim da avenida norte, com o mostrador virado para a praça.
-            var towerPos = Polar(0f, TowerRadius);
-            var tower = Model("TorreRelogio", parent, towerPos, Quaternion.LookRotation(-towerPos.normalized), Vector3.one);
-            if (tower != null)
-                lightRequests.Add(new Request { Target = Find(tower.transform, "LuzCristal"), Kind = 3, Priority = 0.35f });
-
-            // Pilões arcanos nos cruzamentos da rua de trás com as ruas radiais.
-            float crossRadius = (BackStreetInner + Ring2Radius) * 0.5f;
-            foreach (float angle in new[] { 52f, 105f, 320f, 270f, 160f })
+            // Torre do relógio no centro da praça menor da avenida do meio (a mais perto de 0°); pilões nas outras.
+            int towerIndex = 0;
+            float best = float.MaxValue;
+            for (int i = 0; i < layout.StreetCount; i++)
             {
-                var pos = Polar(angle, crossRadius);
-                if (AllowedHeight(pos) < 14.5f)
-                    continue;
-                var pylon = Model("PilaoArcano", parent, pos, Quaternion.Euler(0f, Range(0f, 90f), 0f), Vector3.one);
-                if (pylon != null)
-                    lightRequests.Add(new Request { Target = Find(pylon.transform, "LuzCristal"), Kind = 3, Priority = 0.4f });
+                float a = Mathf.Abs(layout.Avenues[i].AngleDeg);
+                if (a < best)
+                {
+                    best = a;
+                    towerIndex = i;
+                }
+            }
+
+            for (int i = 0; i < layout.StreetCount; i++)
+            {
+                var center = layout.SmallPlazas[i].Center;
+                var pos = new Vector3(center.X, 0f, center.Y);
+                bool isTower = i == towerIndex;
+                // O mostrador da torre fica virado para a praça central (e para a câmera, que olha do sul).
+                var rot = isTower
+                    ? Quaternion.LookRotation(-pos.normalized)
+                    : Quaternion.Euler(0f, Range(0f, 90f), 0f);
+                var go = Model(isTower ? "TorreRelogio" : "PilaoArcano", parent, pos, rot, Vector3.one);
+                if (isTower)
+                    clockTowerPosition = pos;
+                if (go != null)
+                    lightRequests.Add(new Request { Target = Find(go.transform, "LuzCristal"), Kind = 3, Priority = 0.9f });
+
+                // Collider da base (a torre inteira, para a oclusão da câmera), na camada Cenario.
+                float baseSize = isTower ? TowerBase : PylonBase;
+                float height = 12f;
+                if (go != null)
+                {
+                    var bounds = new Bounds(pos, Vector3.zero);
+                    foreach (var r in go.GetComponentsInChildren<Renderer>(true))
+                        bounds.Encapsulate(r.bounds);
+                    height = Mathf.Max(2f, bounds.max.y);
+                }
+                var col = new GameObject(isTower ? $"ColTorre_{i}" : $"ColPilao_{i}");
+                col.transform.SetParent(colliders, false);
+                col.transform.position = pos;
+                col.transform.rotation = rot;
+                col.layer = MapLayers.Cenario;
+                col.isStatic = true;
+                var box = col.AddComponent<BoxCollider>();
+                box.size = new Vector3(baseSize, height, baseSize);
+                box.center = new Vector3(0f, height * 0.5f, 0f);
             }
         }
 
         // ---------- Pontes de canos ----------
 
-        private static void BuildBridges(Transform parent)
+        /// <summary>
+        /// Sobre as avenidas, entre dois prédios que se olham (um de cada lado), a pelo menos 6 m do chão e abaixo dos dois
+        /// beirais. Sem collider: passam por cima de quem anda.
+        /// </summary>
+        private static void BuildBridges(Transform parent, IReadOnlyList<BuildingPlan> plans)
         {
-            // 1) Sobre as ruas radiais, entre os prédios vizinhos de cada anel.
-            foreach (int ring in new[] { 1, 2 })
+            for (int i = 0; i < layout.StreetCount; i++)
             {
-                foreach (var s in Streets)
+                var left = new List<BuildingPlan>();
+                var right = new List<BuildingPlan>();
+                foreach (var p in plans)
                 {
-                    Placed left = null, right = null;
-                    float bestL = 30f, bestR = 30f;
-                    foreach (var p in placed)
+                    if (p.Region != $"Avenida{i}")
+                        continue;
+                    (p.Side < 0 ? left : right).Add(p);
+                }
+                left.Sort((a, b) => a.Along.CompareTo(b.Along));
+
+                var avenue = layout.Avenues[i];
+                float halfWall = avenue.Width * 0.5f + CityPlanner.FacadeSetback - BridgeInset;
+                int made = 0;
+                float lastS = float.NegativeInfinity;
+                foreach (var l in left)
+                {
+                    if (made >= BridgesPerAvenue)
+                        break;
+                    float s = l.Along;
+                    if (s - lastS < BridgeMinSpacing || rng.NextDouble() > BridgeChance)
+                        continue;
+                    BuildingPlan r = null;
+                    foreach (var c in right)
                     {
-                        if (p.Ring != ring || p.Piece.Centered)
-                            continue;
-                        float d = Mathf.DeltaAngle(s.x, p.Angle);
-                        if (d < 0f && -d < bestL) { bestL = -d; left = p; }
-                        if (d > 0f && d < bestR) { bestR = d; right = p; }
+                        // As duas paredes precisam existir nesse ponto da avenida.
+                        float reach = Mathf.Min(c.Piece.Body * c.ScaleX, l.Piece.Body * l.ScaleX) * 0.5f - 0.3f;
+                        if (Mathf.Abs(c.Along - s) <= reach)
+                        {
+                            r = c;
+                            break;
+                        }
                     }
-                    if (left == null || right == null || rng.NextDouble() < 0.25)
+                    if (r == null)
                         continue;
-                    float height = Mathf.Min(left.Piece.Eave, right.Piece.Eave) - 1.4f;
-                    if (height < 5.5f)
+                    float height = Mathf.Min(WallHeight(l.Piece), WallHeight(r.Piece)) - BridgeEaveMargin;
+                    if (height < BridgeMinHeight - 0.01f)
                         continue;
-                    float depth = Mathf.Min(left.Piece.Depth, right.Piece.Depth) * Range(0.3f, 0.6f);
-                    var a = SidePoint(left, right.Transform.localPosition) - left.Transform.forward * depth;
-                    var b = SidePoint(right, left.Transform.localPosition) - right.Transform.forward * depth;
-                    Bridge(parent, a, b, height);
-                    // Às vezes uma segunda ponte, mais baixa e mais funda, no mesmo vão.
-                    if (height - 3.5f >= 5.5f && rng.NextDouble() < 0.45)
-                        Bridge(parent, a - left.Transform.forward * 1.6f, b - right.Transform.forward * 1.6f, height - 3.5f);
+                    var a = avenue.PointAt(s, -(halfWall + BridgeInset * 2f));
+                    var b = avenue.PointAt(s, halfWall + BridgeInset * 2f);
+                    if (Bridge(parent, new Vector3(a.X, 0f, a.Y), new Vector3(b.X, 0f, b.Y), height))
+                    {
+                        made++;
+                        lastS = s;
+                    }
                 }
-            }
-
-            // 2) Atravessando a rua de trás: do fundo de um prédio do anel 1 à fachada de um do anel 2.
-            int count = 0;
-            foreach (var outer in placed)
-            {
-                if (outer.Ring != 2 || outer.Piece.Centered || count >= 8)
-                    continue;
-                Placed inner = null;
-                float best = 3f;
-                foreach (var p in placed)
-                {
-                    if (p.Ring != 1)
-                        continue;
-                    float d = Mathf.Abs(Mathf.DeltaAngle(p.Angle, outer.Angle));
-                    if (d < best) { best = d; inner = p; }
-                }
-                if (inner == null || rng.NextDouble() < 0.4)
-                    continue;
-                float height = Mathf.Min(inner.Piece.Eave, outer.Piece.Eave) - 1.2f;
-                if (height < 5.5f)
-                    continue;
-                var a = Polar(outer.Angle, Ring1Radius + inner.Piece.Depth - 0.4f);
-                var b = Polar(outer.Angle, Ring2Radius + 0.4f);
-                if (Bridge(parent, a, b, height))
-                    count++;
-            }
-
-            // 3) Do muro da arena até a fachada: a cidade alimenta a praça (Pilar 4).
-            count = 0;
-            foreach (var p in placed)
-            {
-                if (p.Ring != 1 || count >= 6)
-                    continue;
-                // Só onde a fachada tem um vão livre acima dos toldos: pilar central da CasaLarga, pilastra da Fábrica.
-                float lateral, wallBridgeHeight, widthScale;
-                if (p.Piece.Name == "CasaLarga") { lateral = 0f; wallBridgeHeight = 4.4f; widthScale = 1f; }
-                else if (p.Piece.Name == "Fabrica") { lateral = 2.3f; wallBridgeHeight = 4.0f; widthScale = 0.7f; }
-                else continue;
-                var facade = p.Transform.localPosition + p.Transform.right * lateral;
-                var dir = facade.normalized;
-                var start = dir * (WallOuterRadius - 0.6f);
-                var mid = (start + facade) * 0.5f;
-                if (AllowedHeight(mid) < wallBridgeHeight + 1.4f || AllowedHeight(start) < wallBridgeHeight + 1.4f)
-                    continue;
-                if (!Bridge(parent, start, facade + dir * 0.3f, wallBridgeHeight, widthScale))
-                    continue;
-                // Pé de ferro apoiando a ponte no topo do muro.
-                Box("PeDaPonte", parent, start + dir * 0.4f + Vector3.up * (WallHeight + wallBridgeHeight) * 0.5f,
-                    new Vector3(0.35f, wallBridgeHeight - WallHeight + 0.1f, 0.35f), ironMat);
-                count++;
             }
         }
 
-        private static Vector3 SidePoint(Placed p, Vector3 toward)
-        {
-            // A ponte entra 0,2 m na parede.
-            var right = p.Transform.right;
-            var a = p.Transform.localPosition + right * (p.Piece.Body * 0.5f - 0.2f);
-            var b = p.Transform.localPosition - right * (p.Piece.Body * 0.5f - 0.2f);
-            return (a - toward).sqrMagnitude < (b - toward).sqrMagnitude ? a : b;
-        }
+        /// <summary>Altura até onde a parede serve de apoio: o beiral dos prédios; o tanque d'água (cilindro) vale a altura dele menos o teto.</summary>
+        private static float WallHeight(PieceSpec piece) => piece.Centered ? piece.Height - 1.5f : piece.Eave;
 
-        private static bool Bridge(Transform parent, Vector3 a, Vector3 b, float height, float widthScale = 1f)
+        private static bool Bridge(Transform parent, Vector3 a, Vector3 b, float height)
         {
             a.y = b.y = 0f;
             var dir = b - a;
             float length = dir.magnitude;
-            if (length < 2.5f || length > 12f)
+            if (length < 2.5f || length > BridgeMaxLength)
                 return false;
             var mid = (a + b) * 0.5f;
-            if (AllowedHeight(mid) < height + 1.3f)
-                return false;
             var rot = Quaternion.LookRotation(dir / length) * Quaternion.Euler(0f, -90f, 0f); // X local ao longo do vão
             var bridge = Model("PonteCanos", parent, mid + Vector3.up * height, rot,
-                new Vector3(length / BridgeModelLength, 1f, widthScale));
+                new Vector3(length / BridgeModelLength, 1f, 1f));
             if (bridge == null)
                 return false;
             AddBridgeVein(bridge.transform, new Vector2(mid.x, mid.z).magnitude);
@@ -544,94 +422,81 @@ namespace Game.EditorTools
         private static bool OwnsCrystalPulse(string model)
             => model == "PonteCanos" || System.Array.IndexOf(Towers, model) >= 0;
 
-        // ---------- Rua do anel: mercado, caixotes, lampiões, bueiros ----------
+        // ---------- Vãos da borda: caixotes e bancas (bloqueio só visual) ----------
 
-        private static void BuildStreetLife(Transform parent)
+        /// <summary>
+        /// Onde nenhum prédio fecha a borda andável (cantos entre a avenida e o arco da praça, por exemplo), um monte de
+        /// caixotes ou uma banca de mercado esconde o vão. Sem collider: quem fecha de verdade é a vedação invisível da arena.
+        /// </summary>
+        private static void BuildGapProps(Transform parent, IReadOnlyList<GapSpot> gaps)
         {
-            const float streetRadius = 28.3f; // meio da faixa livre entre o muro (26,9) e os toldos (~29,4)
-
-            // Três trechos de mercado nas laterais e no norte (onde a câmera vê a rua).
-            foreach (var zone in new[] { new Vector2(68f, 102f), new Vector2(-102f, -70f), new Vector2(18f, 40f) })
+            foreach (var gap in gaps)
             {
-                for (float a = zone.x; a <= zone.y; a += Range(8f, 11f))
+                // A normal para fora da área andável (a tangente guarda o giro de 90°).
+                var normal = new Vector3(-gap.Tangent.Y, 0f, gap.Tangent.X);
+                var pos = new Vector3(gap.Position.X, 0f, gap.Position.Y);
+                if (gap.Length >= StallMinGap && rng.NextDouble() < 0.5)
                 {
-                    var pos = Polar(a, 28.4f);
-                    if (AllowedHeight(pos) < 3f || !TakeSlot(a, 2f, 28.4f))
-                        continue;
-                    // Banca de costas para o muro, virada para a rua, um pouco torta.
-                    var rot = Quaternion.LookRotation(pos.normalized) * Quaternion.Euler(0f, Range(-10f, 10f), 0f);
-                    var stall = Model("BancaMercado", parent, pos, rot, Vector3.one);
+                    // Banca com a frente para a rua, um pouco torta.
+                    var rot = Quaternion.LookRotation(-normal) * Quaternion.Euler(0f, Range(-10f, 10f), 0f);
+                    var stall = Model("BancaMercado", parent, pos + normal * 0.5f, rot, Vector3.one);
                     if (stall != null)
-                        lightRequests.Add(new Request { Target = Find(stall.transform, "LuzQuente"), Kind = 0, Priority = Visibility(pos) * 0.8f });
-                    if (rng.NextDouble() < 0.7)
-                        Crates(parent, a + 4.2f / streetRadius * Mathf.Rad2Deg, 0.9f);
+                        lightRequests.Add(new Request { Target = Find(stall.transform, "LuzQuente"), Kind = 0, Priority = Visibility(pos) * 0.7f });
+                }
+                else
+                {
+                    // Caixotes com o lado comprido ao longo da borda.
+                    var rot = Quaternion.LookRotation(normal) * Quaternion.Euler(0f, Range(-10f, 10f) + (rng.NextDouble() < 0.5 ? 180f : 0f), 0f);
+                    Model("Caixotes", parent, pos, rot, Vector3.one * Range(0.8f, 1f));
                 }
             }
-
-            // Lampiões encostados no muro, com o braço sobre a rua.
-            for (int i = 0; i < 24; i++)
-            {
-                float angle = i * 15f + 7.5f;
-                var pos = Polar(angle, WallOuterRadius + 0.45f);
-                if (AllowedHeight(pos) < 4.2f || !TakeSlot(angle, 0.6f, streetRadius))
-                    continue;
-                var lamp = Model("LampiaoRua", parent, pos, Quaternion.LookRotation(pos.normalized), Vector3.one);
-                if (lamp != null)
-                    lightRequests.Add(new Request { Target = Find(lamp.transform, "LuzCristal"), Kind = 1, Priority = Visibility(pos) });
-            }
-
-            // Caixotes e bueiros espalhados pela rua do anel.
-            for (int i = 0; i < 14; i++)
-                Crates(parent, Range(-180f, 180f), Range(0.8f, 1f));
-            for (int i = 0; i < 12; i++)
-            {
-                float a = i * 30f + Range(-8f, 8f);
-                if (TakeSlot(a, 0.7f, streetRadius))
-                    Model("BueiroVapor", parent, Polar(a, Range(28.6f, 29.1f)), Quaternion.Euler(0f, Range(0f, 360f), 0f), Vector3.one);
-            }
-
-            // Arcos na boca das ruas radiais, com os pilares nas bordas da rua (só onde não tapam a câmera).
-            foreach (var s in Streets)
-            {
-                var pos = Polar(s.x, Ring1Radius + 0.6f);
-                if (AllowedHeight(pos) < 7.5f)
-                    continue;
-                float scale = (s.y * 0.5f + 0.2f) / 2.7f; // pilar do Arco.fbx em x = ±2,7
-                Model("Arco", parent, pos, Quaternion.LookRotation(-pos.normalized), new Vector3(scale, 1f, 1f));
-            }
         }
 
-        /// <summary>Caixotes com o lado comprido ao longo da rua, sem encostar no muro.</summary>
-        private static void Crates(Transform parent, float angle, float scale)
+        /// <summary>Bueiros de vapor sobre o chão andável: ao longo das avenidas, nas praças menores e na borda da praça.</summary>
+        private static void BuildManholes(Transform parent)
         {
-            var pos = Polar(angle, 28.1f);
-            if (AllowedHeight(pos) < 1.9f || !TakeSlot(angle, 2.1f * scale, 28.1f))
-                return;
-            var rot = Quaternion.LookRotation(pos.normalized) * Quaternion.Euler(0f, Range(-10f, 10f) + (rng.NextDouble() < 0.5 ? 180f : 0f), 0f);
-            Model("Caixotes", parent, pos, rot, Vector3.one * scale);
+            for (int i = 0; i < layout.StreetCount; i++)
+            {
+                var avenue = layout.Avenues[i];
+                for (int k = 0; k < ManholesPerAvenue; k++)
+                {
+                    float s = Range(avenue.StartS + 6f, avenue.EndS - 2f);
+                    float across = Range(1.2f, 2.8f) * (rng.NextDouble() < 0.5 ? -1f : 1f);
+                    Manhole(parent, avenue.PointAt(s, across));
+                }
+                var plaza = layout.SmallPlazas[i];
+                for (int k = 0; k < ManholesPerSmallPlaza; k++)
+                {
+                    // Longe do pé da torre e dos corredores: no quarto de círculo de trás da avenida.
+                    float angle = layout.Avenues[i].AngleDeg + Range(70f, 110f) * (rng.NextDouble() < 0.5 ? -1f : 1f);
+                    Manhole(parent, plaza.Center + MapLayout.Polar(angle, plaza.Radius * 0.85f));
+                }
+            }
+            for (int k = 0; k < ManholesInPlaza; k++)
+            {
+                // Perto da fachada da praça (fora do disco de combate), fora das aberturas das avenidas.
+                for (int tries = 0; tries < 8; tries++)
+                {
+                    var p = MapLayout.Polar(Range(-180f, 180f), PlazaManholeRadius);
+                    if (layout.Region(p).Kind != MapRegionKind.Plaza)
+                        continue;
+                    Manhole(parent, p);
+                    break;
+                }
+            }
         }
 
-        /// <summary>Reserva um trecho da rua do anel (meia largura em metros); falso se já estiver ocupado.</summary>
-        private static bool TakeSlot(float angle, float halfWidth, float radius)
-        {
-            float half = halfWidth / radius * Mathf.Rad2Deg;
-            foreach (var slot in streetSlots)
-            {
-                if (Mathf.Abs(Mathf.DeltaAngle(slot.x, angle)) < slot.y + half)
-                    return false;
-            }
-            streetSlots.Add(new Vector2(angle, half));
-            return true;
-        }
+        private static void Manhole(Transform parent, Float2 p)
+            => Model("BueiroVapor", parent, new Vector3(p.X, 0f, p.Y), Quaternion.Euler(0f, Range(0f, 360f), 0f), Vector3.one);
 
         // ---------- Céu ----------
 
         private static void BuildSky(Transform parent)
         {
             // Volta grande em torno da cidade.
-            Airship(parent, Circle(Vector3.zero, 64f, 16, 24f, 2f, 0f), 3.2f);
-            // Elipse sobre o lado norte-leste.
-            var center = Polar(40f, 54f);
+            Airship(parent, Circle(Polar(0f, 22f), 62f, 16, 24f, 2f, 0f), 3.2f);
+            // Elipse sobre o lado norte, além das praças menores.
+            var center = Polar(15f, 62f);
             var ellipse = new Vector3[10];
             for (int i = 0; i < ellipse.Length; i++)
             {
@@ -640,7 +505,7 @@ namespace Game.EditorTools
             }
             Airship(parent, ellipse, 2.4f);
             // Volta lenta em torno da torre do relógio.
-            Airship(parent, Circle(Polar(0f, TowerRadius), 19f, 12, 29f, 1f, 1f), 1.8f);
+            Airship(parent, Circle(clockTowerPosition, 19f, 12, 29f, 1f, 1f), 1.8f);
         }
 
         private static Vector3[] Circle(Vector3 center, float radius, int count, float height, float wave, float phase)
@@ -777,7 +642,7 @@ namespace Game.EditorTools
             }
         }
 
-        /// <summary>Poucas luzes pontuais, priorizando as que a câmera de jogo vê e espaçadas entre si.</summary>
+        /// <summary>Poucas luzes pontuais, priorizando as perto da área andável e do lado norte e espaçadas entre si.</summary>
         private static void ApplyLights()
         {
             lightRequests.RemoveAll(r => r.Target == null);
@@ -824,63 +689,13 @@ namespace Game.EditorTools
             }
         }
 
-        // ---------- Câmera: altura permitida ----------
-
-        private static void LoadCamera()
-        {
-            var settings = AssetDatabase.LoadAssetAtPath<CameraSettings>(CameraSettingsPath);
-            float distance = settings != null ? settings.distance : 14f;
-            float pitch = (settings != null ? settings.pitch : 50f) * Mathf.Deg2Rad;
-            float yaw = (settings != null ? settings.yaw : 30f) * Mathf.Deg2Rad;
-            float focus = settings != null ? settings.focusHeight : 1f;
-            // A câmera fica atrás do foco, no sentido oposto ao giro.
-            camOffset = -new Vector2(Mathf.Sin(yaw), Mathf.Cos(yaw)) * distance * Mathf.Cos(pitch);
-            camHeight = focus + distance * Mathf.Sin(pitch);
-        }
-
         /// <summary>
-        /// Altura máxima num ponto (plano XZ) sem entrar na linha entre a câmera e um ponto da arena.
-        /// Infinito quando o ponto nunca fica entre a câmera e a praça (lado longe, ou atrás da câmera).
+        /// 0 a 1: quanto um ponto importa para a câmera de jogo: perto da área andável (cai a zero a <see cref="LightReach"/> m)
+        /// e no lado longe da câmera (norte), onde ela olha.
         /// </summary>
-        private static float AllowedHeight(Vector3 p)
-        {
-            var b = new Vector2(p.x, p.z);
-            float rr = VisibleRadius * VisibleRadius;
-            float bb = Vector2.Dot(b, b);
-            if (bb <= rr)
-                return 0f;
-            float oo = Vector2.Dot(camOffset, camOffset);
-            float bo = Vector2.Dot(b, camOffset);
-            float disc = bo * bo - oo * (bb - rr);
-            if (disc < 0f)
-                return float.PositiveInfinity;
-            float t = (bo - Mathf.Sqrt(disc)) / oo;
-            if (t < 0f || t > 1f)
-                return float.PositiveInfinity;
-            return camHeight * t * HeightMargin;
-        }
-
-        private static float FootprintAllowedHeight(Vector3 pos, Quaternion rot, Piece p)
-        {
-            float hw = p.Width * 0.5f;
-            float front = p.Centered ? p.Depth * 0.5f : 1.2f; // toldos avançam ~1,2 m
-            float back = p.Centered ? -p.Depth * 0.5f : -p.Depth;
-            float min = float.PositiveInfinity;
-            foreach (var local in new[]
-                     {
-                         new Vector3(-hw, 0f, front), new Vector3(0f, 0f, front), new Vector3(hw, 0f, front),
-                         new Vector3(-hw, 0f, (front + back) * 0.5f), new Vector3(hw, 0f, (front + back) * 0.5f),
-                         new Vector3(-hw, 0f, back), new Vector3(0f, 0f, back), new Vector3(hw, 0f, back)
-                     })
-                min = Mathf.Min(min, AllowedHeight(pos + rot * local));
-            return min;
-        }
-
-        /// <summary>0 a 1: quanto um ponto aparece na câmera de jogo (perto do muro e no lado longe ou lateral).</summary>
         private static float Visibility(Vector3 p)
         {
-            float r = new Vector2(p.x, p.z).magnitude;
-            float radial = Mathf.Clamp01(1f - (r - WallOuterRadius) / 12f);
+            float radial = Mathf.Clamp01(1f - layout.DistanceToWalkable(p.x, p.z) / LightReach);
             float angle = Mathf.Atan2(p.x, p.z) * Mathf.Rad2Deg;
             return radial * (0.55f + 0.45f * Farness(angle));
         }
@@ -919,9 +734,7 @@ namespace Game.EditorTools
 
         private static void LoadMaterials()
         {
-            stoneMat = LoadMat("Pedra", "PisoPedra");
             darkStoneMat = LoadMat("PedraEscura", "PisoPedra");
-            ironMat = LoadMat("FerroEscuro", "PedraEscura");
             crystalMat = AssetDatabase.LoadAssetAtPath<Material>($"{MaterialsFolder}/CristalArcano.mat");
             crystalSettings = AmbienceBuilder.LoadCrystalSettings();
         }
@@ -933,10 +746,6 @@ namespace Game.EditorTools
         // ---------- Utilitários ----------
 
         private static float Range(float min, float max) => min + (float)rng.NextDouble() * (max - min);
-
-        private static float HalfAngle(float halfWidth, float radius) => Mathf.Atan2(halfWidth, radius) * Mathf.Rad2Deg;
-
-        private static bool InRange(float angle, float min, float max) => angle >= min && angle <= max;
 
         private static Vector3 Polar(float angleDegrees, float radius)
         {
@@ -962,20 +771,7 @@ namespace Game.EditorTools
             return go.transform;
         }
 
-        private static GameObject Box(string name, Transform parent, Vector3 localPos, Vector3 scale, Material mat)
-        {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            go.name = name;
-            go.transform.SetParent(parent, false);
-            go.transform.localPosition = localPos;
-            go.transform.localScale = scale;
-            go.GetComponent<Renderer>().sharedMaterial = mat;
-            Object.DestroyImmediate(go.GetComponent<Collider>());
-            go.isStatic = true;
-            return go;
-        }
-
-        /// <summary>Anel plano (malha gerada, guardada na cena) com UV em metros.</summary>
+        /// <summary>Anel plano (malha gerada, guardada na cena) com UV em metros. Raio interno 0 = disco.</summary>
         private static void Annulus(string name, Transform parent, float inner, float outer, float y, Material mat)
         {
             const int segments = 128;

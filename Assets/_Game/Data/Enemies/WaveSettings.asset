@@ -23,3 +23,7 @@ MonoBehaviour:
   - counts: 040000000200000001000000
   firstWaveDelay: 3
   pauseBetweenWaves: 6
+  mouthPlayerClearance: 12
+  spawnStagger: 0.5
+  mouthSpawnSpread: 0.6
+  mouthNavSampleRadius: 2

@@ -43,6 +43,22 @@ namespace Game.EditorTools
                 follow.Apply(new Vector3(0f, 0f, -19f));
                 Render(cam, Path.Combine(dir, "arena_spawn.png"));
 
+                // Mapa novo (D-073 a D-082): avenidas, praças menores e a boca norte, pela câmera de jogo.
+                (string name, Vector3 focus)[] mapViews =
+                {
+                    ("mapa_avenida_norte", new Vector3(0f, 0f, 33f)),
+                    ("mapa_praca_menor_norte", new Vector3(0f, 0f, 47f)),
+                    ("mapa_boca_norte", new Vector3(0f, 0f, 54f)),
+                    ("mapa_avenida_nordeste", new Vector3(23.3f, 0f, 23.3f)),
+                    ("mapa_praca_menor_noroeste", new Vector3(-33.2f, 0f, 33.2f)),
+                    ("mapa_entrada_das_avenidas", new Vector3(0f, 0f, 24f)),
+                };
+                foreach (var view in mapViews)
+                {
+                    follow.Apply(view.focus);
+                    Render(cam, Path.Combine(dir, view.name + ".png"));
+                }
+
                 // Inimigos colocados só para a foto (não são salvos na cena).
                 var temp = new System.Collections.Generic.List<GameObject>();
                 string[] enemies = { "Automato", "Drone", "Constructo" };
@@ -74,6 +90,10 @@ namespace Game.EditorTools
             cam.transform.SetPositionAndRotation(new Vector3(0f, 52f, -38f), Quaternion.Euler(55f, 0f, 0f));
             cam.fieldOfView = 50f;
             Render(cam, Path.Combine(dir, "arena_geral.png"));
+            // Vista alta do norte: as avenidas, as praças menores e as bocas vistas de cima.
+            cam.transform.SetPositionAndRotation(new Vector3(0f, 78f, 22f), Quaternion.Euler(72f, 0f, 0f));
+            cam.fieldOfView = 50f;
+            Render(cam, Path.Combine(dir, "mapa_geral_norte.png"));
             cam.transform.SetPositionAndRotation(pos, rot);
             cam.fieldOfView = fov;
 

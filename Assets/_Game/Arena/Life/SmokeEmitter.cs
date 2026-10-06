@@ -8,8 +8,9 @@ namespace Game.Arena.Life
     /// <summary>
     /// Emissor de fumaça, vapor, faíscas ou motes arcanos para a cidade steampunk (D-042).
     /// Partículas grossas e poucas, para ler bem na câmera de jogo.
-    /// Configure() constrói o ParticleSystem filho na hora (funciona em modo de edição, então serializa na cena);
-    /// o Awake só reconstrói se o filho estiver faltando.
+    /// Configure() só guarda tipo e intensidade (campos simples, cena leve): o ParticleSystem filho nasce em
+    /// tempo de execução, no Awake. Em modo de edição nada de partícula é criado, então nada disso serializa na cena.
+    /// O sistema pausa quando sai da tela (cullingMode = Pause).
     /// </summary>
     [DisallowMultipleComponent]
     public class SmokeEmitter : MonoBehaviour
@@ -29,49 +30,46 @@ namespace Game.Arena.Life
 
         [SerializeField] private SmokeKind kind = SmokeKind.Chimney;
         [SerializeField, Range(MinIntensity, MaxIntensity)] private float intensity = 1f;
+        // Só referência a asset (serializa como GUID). Vazia, o Awake usa o material de reserva.
         [SerializeField] private Material material;
-        [SerializeField] private ParticleSystem system;
-        // Fração do vento global aplicada a este tipo (0 = ignora o vento).
-        [SerializeField] private float windFactor = 1f;
 
+        // Montados em jogo; não serializam.
+        private ParticleSystem system;
+        // Fração do vento global aplicada a este tipo (0 = ignora o vento).
+        private float windFactor = 1f;
         private float windTimer;
 
-        /// <summary>Define o tipo e a intensidade e (re)constrói o sistema de partículas.</summary>
+        /// <summary>Tipo de fumaça configurado.</summary>
+        public SmokeKind Kind => kind;
+
+        /// <summary>Sistema de partículas criado em jogo (null em modo de edição).</summary>
+        public ParticleSystem Particles => system;
+
+        /// <summary>
+        /// Define o tipo e a intensidade. Em modo de edição só guarda os parâmetros;
+        /// em jogo (re)constrói o sistema de partículas.
+        /// </summary>
         public void Configure(SmokeKind newKind, float newIntensity)
         {
             kind = newKind;
             intensity = Mathf.Clamp(newIntensity, MinIntensity, MaxIntensity);
-
-            // Em edição só vale referência a asset (a que serializa); em jogo vale o material criado em código.
             material = SmokeMaterials.GetPersistent(kind);
-            if (material == null && Application.isPlaying)
-                material = SmokeMaterials.Get(kind);
 
-            BuildSystem();
+            if (Application.isPlaying)
+                BuildRuntime();
         }
 
         private void Awake()
         {
-            // Cena salva já traz o sistema; só reconstrói se algo faltar.
-            if (system == null)
-                system = GetComponentInChildren<ParticleSystem>(true);
-            if (system == null)
-            {
-                if (material == null)
-                    material = SmokeMaterials.Get(kind);
-                BuildSystem();
-            }
-            else
-            {
-                // Material perdido (ex.: cena montada antes de o AmbienceBuilder criar os assets): usa o de reserva.
-                var rend = system.GetComponent<ParticleSystemRenderer>();
-                if (rend != null && rend.sharedMaterial == null)
-                {
-                    if (material == null)
-                        material = SmokeMaterials.Get(kind);
-                    rend.sharedMaterial = material;
-                }
-            }
+            BuildRuntime();
+        }
+
+        /// <summary>Cria (ou refaz) o ParticleSystem a partir dos parâmetros guardados.</summary>
+        private void BuildRuntime()
+        {
+            if (material == null)
+                material = SmokeMaterials.Get(kind);
+            BuildSystem();
         }
 
         private void OnEnable()
@@ -106,6 +104,7 @@ namespace Game.Arena.Life
             }
             else
             {
+                // Cena antiga ainda pode trazer o filho gravado: reaproveita em vez de duplicar.
                 Transform child = transform.Find(ChildName);
                 go = child != null ? child.gameObject : new GameObject(ChildName);
                 go.transform.SetParent(transform, false);
@@ -137,8 +136,7 @@ namespace Game.Arena.Life
                 default: BuildMotes(); break;
             }
 
-            if (Application.isPlaying)
-                system.Play();
+            system.Play();
         }
 
         /// <summary>Desliga os módulos opcionais, para reconfigurar um sistema existente sem sobras.</summary>
@@ -195,6 +193,8 @@ namespace Game.Arena.Life
             main.simulationSpace = space;
             main.scalingMode = ParticleSystemScalingMode.Local;
             main.maxParticles = maxParticles;
+            // Fora da tela a fumaça para de simular (retoma de onde parou).
+            main.cullingMode = ParticleSystemCullingMode.Pause;
         }
 
         private void SetupWindVelocity(float factor)

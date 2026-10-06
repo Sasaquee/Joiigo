@@ -64,7 +64,16 @@ namespace Game.EditorTools
             ["MadeiraEscura"] = new Entry("#4A3022", 0f, 0.2f),
         };
 
+        public const string LitShaderName = "Universal Render Pipeline/Lit";
+        public const string VazadoShaderName = "Game/LitVazado";
+
+        // Só aparecem em personagem e marcador: nunca em peça da cidade, ficam no Lit do URP.
+        private static readonly HashSet<string> KeepsLit = new HashSet<string> { "PersonagemNeutro", "MarcadorLocal" };
+
         public static IEnumerable<string> Names => Palette.Keys;
+
+        /// <summary>Se o material da paleta deve usar o shader vazado (testes e construtores conferem por aqui).</summary>
+        public static bool UsesVazado(string paletteName) => Palette.ContainsKey(paletteName) && !KeepsLit.Contains(paletteName);
 
         [MenuItem("Game/Setup/Aplicar Paleta Pixel")]
         public static void Apply()
@@ -72,14 +81,26 @@ namespace Game.EditorTools
             if (!AssetDatabase.IsValidFolder(MaterialsFolder))
                 AssetDatabase.CreateFolder("Assets/_Game/Art", "Materials");
 
+            var lit = Shader.Find(LitShaderName);
+            var vazado = Shader.Find(VazadoShaderName);
+            if (vazado == null)
+                Debug.LogWarning($"[PixelPalette] Shader {VazadoShaderName} não encontrado; a paleta fica no Lit do URP.");
+
             foreach (var kv in Palette)
             {
+                // Materiais da cidade usam o Lit com recorte vazado (D-076, D-079). O recorte só age em renderers com a
+                // rendering layer "Vazavel", então os mesmos materiais em máquinas/inimigos/personagem não são cortados.
+                var shader = vazado != null && !KeepsLit.Contains(kv.Key) ? vazado : lit;
                 string path = $"{MaterialsFolder}/{kv.Key}.mat";
                 var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
                 if (mat == null)
                 {
-                    mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                    mat = new Material(shader);
                     AssetDatabase.CreateAsset(mat, path);
+                }
+                else if (mat.shader != shader)
+                {
+                    mat.shader = shader;
                 }
                 Configure(mat, kv.Value);
                 EditorUtility.SetDirty(mat);

@@ -1,6 +1,6 @@
 ---
 name: artista
-description: Modelagem e arte do Joiigo — modelos por script do Blender (Tools/Blender), pixel art das cartas (Tools/Cards), shaders, paleta, efeitos visuais e conferência de capturas. Único papel que pode modelar, e só com o modelo mais competente disponível — hoje o Opus (D-042, D-044). Pode rodar vários em paralelo, um por peça.
+description: Modelagem e arte do Joiigo — modelos por script do Blender (Tools/Blender), texturas e pixel art por script (Tools/Cards, Tools/Aura), paleta e conferência de capturas. Único papel que pode modelar, e só com o modelo mais competente disponível — hoje o Opus (D-042, D-044, D-078). Código de efeito, shader e UI não é com ele: vai para o programador (Sonnet, D-078). Pode rodar vários em paralelo, um por peça.
 model: opus
 ---
 
