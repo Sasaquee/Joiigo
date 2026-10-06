@@ -63,7 +63,7 @@ D-070 (violeta 3%), D-071 (aviso do 1 aos 70%), D-072 (sem tranco), D-073 (a are
 ## 8. Pendentes
 
 - **Playtest humano** do mapa novo (ritmo das ondas com a corrida dos inimigos, carta no lugar da luta, leitura do combate nas avenidas, translucidez em movimento).
-- **Medir desempenho:** cerca de 220 renderers com `MaterialPropertyBlock` por quadro (veios, trilhos, torres) saem do SRP Batcher; sem medida no Profiler. A cena tem muito mais prédios e luzes (até ~34 pontuais).
+- **Desempenho (medido em 2026-10-05, teste explícito `DesempenhoMapaMedicao`, câmera renderizada fora da tela em 1080p com MSAA 4, neste PC):** a cena tem 1230 renderers, 411 colliders, 109 sistemas de partículas e 50 luzes pontuais ativas (55 com uma onda). Render de 1080p entre **10,1 e 12,9 ms** por quadro (p95 até 13,6 ms): cerca de 1.500 a 3.000 draw calls, 900 a 1.800 batches, 180 a 360 set-pass e 360 a 900 mil triângulos conforme o ponto. O ponto mais pesado é a onda em andamento (12,9 ms) e as avenidas (~3.000 draw calls). Não há medida do mapa antigo para comparar, e o PC de teste não é o mínimo esperado: vale remedir em uma máquina mais fraca. Se pesar, os candidatos são menos luzes pontuais (50 ativas), `trailSegmentLength` maior (menos renderers pulsando) e prefabs com batching estático.
 - **Coop:** o passe só valeu no solo; a translucidez e o spawn pelas bocas rodam por cliente/host, mas o coop está guardado (D-018). Perguntas que esperam o coop voltar: P-003, P-004 e P-009.
 - Cristais das torres e pontes de canos da cidade ficam fora da câmera de jogo (só se veem de longe); o que o jogador vê do cristal é o trilho, os lampiões, os veios e a poeira.
 
