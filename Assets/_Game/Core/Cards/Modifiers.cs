@@ -16,7 +16,15 @@ namespace Game.Core.Cards
         /// <summary>Muda a recarga das skills (fração: -0,25 = 25% mais rápido).</summary>
         CooldownChange,
         /// <summary>Depois de levar dano, o próximo golpe causa mais (fração: 0,6 = +60%).</summary>
-        HurtNextHitBonus
+        HurtNextHitBonus,
+        /// <summary>Velocidade de andar (fração: 0,1 = 10% mais rápido). Só no fim do enum: os valores são serializados nos assets (Fase 10).</summary>
+        MoveSpeed,
+        /// <summary>Vida máxima (soma, unidades de vida). A vida atual mantém a fração ao mudar.</summary>
+        MaxHealth,
+        /// <summary>Dano do golpe básico (fração somada ao multiplicador: 0,6 = +60%), por cima do BasicDamage.</summary>
+        BasicDamageMultiplier,
+        /// <summary>Vida que o jogador perde por golpe básico que acerta (soma, unidades de vida; uma vez por golpe).</summary>
+        LifeCostPerHit
     }
 
     public readonly struct Modifier
@@ -48,5 +56,11 @@ namespace Game.Core.Cards
 
         /// <summary>Multiplicador de recarga, nunca abaixo de 10% da original.</summary>
         public float CooldownMultiplier => System.MathF.Max(0.1f, 1f + Get(ModifierKind.CooldownChange));
+
+        /// <summary>Multiplicador da velocidade de andar (1 = normal), nunca abaixo de zero.</summary>
+        public float MoveSpeedMultiplier => System.MathF.Max(0f, 1f + Get(ModifierKind.MoveSpeed));
+
+        /// <summary>Multiplicador do dano do golpe básico vindo de BasicDamageMultiplier (1 = normal), nunca abaixo de zero.</summary>
+        public float BasicDamageScale => System.MathF.Max(0f, 1f + Get(ModifierKind.BasicDamageMultiplier));
     }
 }

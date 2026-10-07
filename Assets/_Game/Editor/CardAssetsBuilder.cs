@@ -10,9 +10,10 @@ using UnityEngine;
 namespace Game.EditorTools
 {
     /// <summary>
-    /// Gera os assets das 14 cartas do protótipo (Docs/Design/cartas-prototipo.md): configurações, efeitos,
-    /// cartas, banco de cartas, biblioteca de visuais e o prefab de rede da mina. Rodar de novo atualiza os
-    /// assets no lugar (os números provisórios vivem aqui só como valor inicial dos ScriptableObjects).
+    /// Gera os assets das 36 cartas do protótipo (14 das Fases 1 a 9 e 22 da Fase 10, Docs/Design/cartas-prototipo.md): configurações,
+    /// efeitos, cartas, banco de cartas, biblioteca de visuais e o prefab de rede da mina. Rodar de novo atualiza os
+    /// assets no lugar (os números provisórios vivem aqui só como valor inicial dos ScriptableObjects) e liga as faces
+    /// (Art/Cards/[id].png) que já existirem; carta sem face continua valendo (o CardView desenha a moldura de reserva).
     /// Também liga o PlayerCards ao prefab do jogador (ConfigurePlayerPrefab).
     /// </summary>
     public static class CardAssetsBuilder
@@ -134,11 +135,149 @@ namespace Game.EditorTools
                 new[] { "engrenagem", "cristal" }, false, 0f, 0f, 0f, null,
                 Mod(ModifierKind.CooldownChange, -0.25f));
 
+            // ---------- Fase 10 (D-088): 22 cartas novas, ids 14 a 35 do banco (só no fim) ----------
+            // Espadas (skills)
+            var giro = Card("giro_engrenagem", "Giro de Engrenagem", Arcana.Minor, Suit.Swords, 2, CardKind.Skill, Rarity.Common,
+                new[] { "engrenagem" }, false, 20f, 5f, 0f,
+                Effect<AreaBurstEffect>("giro_engrenagem", "giro", e =>
+                {
+                    e.damage = 28f; e.arcaneFraction = 0.3f; e.radius = 2.5f;
+                }));
+
+            var chicote = Card("chicote_corrente", "Chicote de Corrente", Arcana.Minor, Suit.Swords, 4, CardKind.Skill, Rarity.Uncommon,
+                new[] { "engrenagem", "faisca" }, false, 20f, 4f, 0f,
+                Effect<ArcSlashEffect>("chicote_corrente", "corte", e =>
+                {
+                    e.damage = 30f; e.arcaneFraction = 0.2f; e.range = 6f; e.halfAngle = 20f; e.visualId = "slash_arc";
+                }));
+
+            var tempestade = Card("tempestade_faiscas", "Tempestade de Faíscas", Arcana.Minor, Suit.Swords, 9, CardKind.Skill, Rarity.Uncommon,
+                new[] { "faisca", "cristal" }, false, 35f, 8f, 0f,
+                Effect<ChainProjectileEffect>("tempestade_faiscas", "descarga", e =>
+                {
+                    e.damage = 14f; e.arcaneFraction = 0.9f; e.jumps = 5; e.jumpRange = 5f;
+                    e.firstRange = 10f; e.firstHalfAngle = 30f;
+                }));
+
+            var martelo = Card("martelo_vapor", "Martelo a Vapor", Arcana.Minor, Suit.Swords, 10, CardKind.Skill, Rarity.Rare,
+                new[] { "vapor", "engrenagem" }, false, 40f, 10f, 0f,
+                Effect<ArcSlashEffect>("martelo_vapor", "pancada", e =>
+                {
+                    e.damage = 70f; e.arcaneFraction = 0.5f; e.range = 3.5f; e.halfAngle = 45f; e.visualId = "slash_arc";
+                }));
+
+            // Copas (itens)
+            var vaporCondensado = Card("vapor_condensado", "Vapor Condensado", Arcana.Minor, Suit.Cups, 6, CardKind.Item, Rarity.Common,
+                new[] { "vapor" }, false, 0f, 0f, 0f,
+                Effect<HealEffect>("vapor_condensado", "cura", e =>
+                {
+                    e.heal = 15f; e.energy = 50f;
+                }));
+
+            var frasco = Card("frasco_faisca", "Frasco de Faísca", Arcana.Minor, Suit.Cups, 8, CardKind.Item, Rarity.Uncommon,
+                new[] { "faisca" }, false, 0f, 0f, 0f,
+                Effect<ThrowAreaEffect>("frasco_faisca", "arremesso", e =>
+                {
+                    e.damage = 25f; e.arcaneFraction = 0.8f; e.radius = 2f; e.maxRange = 9f; e.flightTime = 0.6f;
+                }));
+
+            var calice = Card("calice_cheio", "Cálice Cheio", Arcana.Minor, Suit.Cups, 10, CardKind.Item, Rarity.Uncommon,
+                new[] { "cristal", "vapor" }, false, 0f, 0f, 0f,
+                Effect<HealEffect>("calice_cheio", "cura", e =>
+                {
+                    e.heal = 70f; e.energy = 20f;
+                }));
+
+            var tonicoFraco = Card("tonico_fraco", "Tônico Fraco", Arcana.Minor, Suit.Cups, 11, CardKind.Item, Rarity.Common,
+                new[] { "vapor" }, false, 0f, 0f, 0f,
+                Effect<HealEffect>("tonico_fraco", "cura", e =>
+                {
+                    e.heal = 15f; e.energy = 15f;
+                }));
+
+            // Paus (passivas)
+            var passoPistao = Card("passo_pistao", "Passo de Pistão", Arcana.Minor, Suit.Wands, 3, CardKind.Passive, Rarity.Common,
+                new[] { "engrenagem" }, false, 0f, 0f, 0f, null,
+                Mod(ModifierKind.MoveSpeed, 0.10f));
+
+            var coracaoCaldeira = Card("coracao_caldeira", "Coração de Caldeira", Arcana.Minor, Suit.Wands, 8, CardKind.Passive, Rarity.Uncommon,
+                new[] { "vapor" }, false, 0f, 0f, 0f, null,
+                Mod(ModifierKind.MaxHealth, 30f));
+
+            var pavioCurto = Card("pavio_curto", "Pavio Curto", Arcana.Minor, Suit.Wands, 2, CardKind.Passive, Rarity.Common,
+                new[] { "faisca" }, false, 0f, 0f, 0f, null,
+                Mod(ModifierKind.CooldownChange, -0.12f), Mod(ModifierKind.BasicDamage, -4f));
+
+            var fornalhaFaminta = Card("fornalha_faminta", "Fornalha Faminta", Arcana.Minor, Suit.Wands, 5, CardKind.Passive, Rarity.Uncommon,
+                new[] { "vapor", "faisca" }, false, 0f, 0f, 0f, null,
+                Mod(ModifierKind.EnergyOnHitBonus, 0.9f), Mod(ModifierKind.BasicDamage, -6f));
+
+            // Ouros (equipamentos)
+            var luvaCobre = Card("luva_cobre", "Luva de Cobre", Arcana.Minor, Suit.Pentacles, 2, CardKind.Equipment, Rarity.Common,
+                new[] { "engrenagem" }, false, 0f, 0f, 0f, null,
+                Mod(ModifierKind.BasicDamage, 10f), Mod(ModifierKind.BasicRange, -0.3f));
+
+            var cristalFenda = Card("cristal_fenda", "Cristal de Fenda", Arcana.Minor, Suit.Pentacles, 9, CardKind.Equipment, Rarity.Uncommon,
+                new[] { "cristal" }, false, 0f, 0f, 0f, null,
+                Mod(ModifierKind.BasicArcaneShift, 0.6f), Mod(ModifierKind.BasicDamage, 4f));
+
+            var engrenagemMestra = Card("engrenagem_mestra", "Engrenagem Mestra", Arcana.Minor, Suit.Pentacles, 14, CardKind.Equipment, Rarity.Uncommon,
+                new[] { "engrenagem", "cristal" }, false, 0f, 0f, 0f, null,
+                Mod(ModifierKind.CooldownChange, -0.10f), Mod(ModifierKind.BasicDamage, 4f));
+
+            var bracadeiraLatao = Card("bracadeira_latao", "Braçadeira de Latão", Arcana.Minor, Suit.Pentacles, 5, CardKind.Equipment, Rarity.Uncommon,
+                new[] { "engrenagem", "vapor" }, false, 0f, 0f, 0f, null,
+                Mod(ModifierKind.BasicRange, 0.9f), Mod(ModifierKind.EnergyOnHitBonus, 0.25f), Mod(ModifierKind.BasicDamage, -3f));
+
+            // Arcanos maiores
+            var carro = Card("carro_vapor", "O Carro de Vapor", Arcana.Major, Suit.None, 7, CardKind.Skill, Rarity.Rare,
+                new[] { "vapor", "engrenagem" }, false, 45f, 15f, 0f,
+                Effect<DashEffect>("carro_vapor", "investida", e =>
+                {
+                    e.distance = 9f; e.damage = 55f; e.arcaneFraction = 0.3f; e.width = 1.8f;
+                }));
+
+            var ceifadora = Card("ceifadora_engrenagens", "A Ceifadora de Engrenagens", Arcana.Major, Suit.None, 13, CardKind.Skill, Rarity.Rare,
+                new[] { "engrenagem", "faisca" }, false, 60f, 25f, 15f,
+                Effect<AreaBurstEffect>("ceifadora_engrenagens", "ceifa", e =>
+                {
+                    e.damage = 90f; e.arcaneFraction = 0.5f; e.radius = 7f;
+                }));
+
+            var estrela = Card("estrela_cristal", "A Estrela de Cristal", Arcana.Major, Suit.None, 17, CardKind.Skill, Rarity.Rare,
+                new[] { "cristal", "faisca" }, false, 50f, 18f, 0f,
+                Effect<ChainProjectileEffect>("estrela_cristal", "descarga", e =>
+                {
+                    e.damage = 25f; e.arcaneFraction = 0.95f; e.jumps = 8; e.jumpRange = 6f;
+                    e.firstRange = 10f; e.firstHalfAngle = 30f;
+                }));
+
+            var forca = Card("forca", "A Força", Arcana.Major, Suit.None, 11, CardKind.Passive, Rarity.Unique,
+                new[] { "engrenagem", "vapor" }, false, 0f, 0f, 0f, null,
+                Mod(ModifierKind.BasicDamage, 14f));
+
+            // Amaldiçoadas
+            var coroa = Card("coroa_rebites", "Coroa de Rebites", Arcana.Minor, Suit.Pentacles, 8, CardKind.Equipment, Rarity.Uncommon,
+                new[] { "engrenagem", "faisca" }, true, 0f, 0f, 0f, null,
+                Mod(ModifierKind.EnergyOnHitBonus, 1.2f), Mod(ModifierKind.MaxHealth, -30f));
+
+            var pacto = Card("pacto_cristal", "Pacto de Cristal", Arcana.Minor, Suit.Wands, 7, CardKind.Passive, Rarity.Uncommon,
+                new[] { "cristal" }, true, 0f, 0f, 0f, null,
+                Mod(ModifierKind.BasicDamageMultiplier, 0.6f), Mod(ModifierKind.LifeCostPerHit, 3f));
+
             // ---------- Banco de cartas (só acrescente no fim: a ordem são os ids da rede) ----------
             var database = LoadOrCreate<CardDatabase>(DatabasePath);
             database.cards = new List<CardData>
             {
-                pistao, sopro, arco, mina, broquel, tonico, granada, caldeira, mola, manopla, lente, lamina, chamine, artifice
+                // ids 0 a 13 (Fases 1 a 9)
+                pistao, sopro, arco, mina, broquel, tonico, granada, caldeira, mola, manopla, lente, lamina, chamine, artifice,
+                // ids 14 a 35 (Fase 10): são as cartas 15 a 36 do contrato (cartas-prototipo.md)
+                giro, chicote, tempestade, martelo,
+                vaporCondensado, frasco, calice, tonicoFraco,
+                passoPistao, coracaoCaldeira, pavioCurto, fornalhaFaminta,
+                luvaCobre, cristalFenda, engrenagemMestra, bracadeiraLatao,
+                carro, ceifadora, estrela, forca,
+                coroa, pacto
             };
             EditorUtility.SetDirty(database);
 
@@ -232,11 +371,26 @@ namespace Game.EditorTools
             if (effect != null)
                 card.effects.Add(effect);
             card.modifiers = new List<ModifierEntry>(modifiers);
-            card.face = AssetDatabase.LoadAssetAtPath<Texture2D>($"{CardArtFolder}/{id}.png");
-            card.glow = AssetDatabase.LoadAssetAtPath<Texture2D>($"{CardArtFolder}/{id}_brilho.png"); // brilho do cristal (D-041)
+            card.face = LoadCardArt($"{CardArtFolder}/{id}.png");
+            card.glow = LoadCardArt($"{CardArtFolder}/{id}_brilho.png"); // brilho do cristal (D-041)
             EditorUtility.SetDirty(card);
             AssetDatabase.SaveAssetIfDirty(card);
             return AssetDatabase.LoadAssetAtPath<CardData>(path);
+        }
+
+        /// <summary>
+        /// Face (ou brilho) da carta, ou null se o PNG ainda não existe: a carta vale sem ela. Se o arquivo já está no disco mas a
+        /// Unity ainda não o importou (as faces da Fase 10 chegam por script, fora do editor), importa na hora para ligar a face.
+        /// </summary>
+        private static Texture2D LoadCardArt(string path)
+        {
+            var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            if (texture == null && File.Exists(path))
+            {
+                AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+                texture = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            }
+            return texture;
         }
 
         // ---------- Prefab da mina ----------

@@ -157,26 +157,17 @@ namespace Game.Player
         }
 
         /// <summary>
-        /// Dano do golpe com as cartas: o deslocamento arcano (Lente) vale para o dano base; o dano extra
-        /// (Manopla) é mecânico; a Mola de Recuo multiplica o total. A bênção do 20 no coop (D-085) multiplica por cima de tudo,
-        /// sem mudar a mistura mecânico/arcano.
+        /// Dano do golpe com as cartas (BasicHitMath, no Core): o deslocamento arcano (Lente) vale para o dano base; o dano extra
+        /// (Manopla, ou negativo nas passivas que o cortam) é mecânico; a Mola de Recuo, o multiplicador percentual
+        /// (BasicDamageMultiplier) e a bênção do 20 no coop (D-085) multiplicam por cima, sem mudar a mistura
+        /// mecânico/arcano. Nunca abaixo de 1.
         /// </summary>
         private DamagePacket BuildPacket()
         {
-            float baseDamage = settings.basicDamage;
-            float arcane = settings.basicArcaneFraction;
             float blessed = blessing != null ? blessing.ServerMultiplier : 1f;
             if (cards == null)
-                return new DamagePacket(baseDamage * blessed, arcane);
-
-            ModifierSet mods = cards.Modifiers;
-            arcane = Mathf.Clamp01(arcane + mods.Get(ModifierKind.BasicArcaneShift));
-            float extra = mods.Get(ModifierKind.BasicDamage);
-            float total = Mathf.Max(0f, baseDamage + extra);
-            float arcaneAmount = baseDamage * arcane;
-            total *= (1f + cards.ServerHurtBonus) * blessed;
-            arcaneAmount *= (1f + cards.ServerHurtBonus) * blessed;
-            return new DamagePacket(total, total > 0f ? arcaneAmount / total : arcane);
+                return BasicHitMath.Compute(settings.basicDamage, settings.basicArcaneFraction, null, 0f, blessed);
+            return BasicHitMath.Compute(settings.basicDamage, settings.basicArcaneFraction, cards.Modifiers, cards.ServerHurtBonus, blessed);
         }
 
         [Rpc(SendTo.Everyone)]

@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 858f2323b15ed5d4f9b917b9ee2db399, type: 3}
+  m_Name: engrenagem_mestra
+  m_EditorClassIdentifier: Game.Runtime::Game.Cards.CardData
+  id: engrenagem_mestra
+  displayName: Engrenagem Mestra
+  arcana: 0
+  suit: 4
+  number: 14
+  kind: 3
+  tags:
+  - engrenagem
+  - cristal
+  rarity: 1
+  cursed: 0
+  energyCost: 0
+  cooldown: 0
+  healthCostOnUse: 0
+  effects: []
+  modifiers:
+  - kind: 4
+    value: -0.1
+  - kind: 0
+    value: 4
+  face: {fileID: 2800000, guid: b6af3c725d9028740a451112fc91afae, type: 3}
+  glow: {fileID: 2800000, guid: 624d1026e0abf0c4a922133307b64077, type: 3}

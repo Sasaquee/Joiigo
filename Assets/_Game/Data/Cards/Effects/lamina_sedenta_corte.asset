@@ -16,3 +16,4 @@ MonoBehaviour:
   arcaneFraction: 0.5
   range: 3
   halfAngle: 80
+  visualId: slash_wide
