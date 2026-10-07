@@ -16,7 +16,7 @@ namespace Game.Cards
         public override void Execute(ICardUser user, CardData card)
         {
             Vector3 center = user.Transform.position;
-            var packet = new DamagePacket(damage * user.Potency, arcaneFraction); // qualidade da carta (D-048)
+            var packet = new DamagePacket(damage * user.Potency * user.DamageMultiplier, arcaneFraction); // qualidade da carta (D-048) e bênção do 20 (D-085)
             foreach (IDamageable target in user.EnemiesInRadius(center, radius))
                 target.ServerApplyDamage(packet, user.ClientId);
             user.BroadcastVisual("burst", center + Vector3.up * 0.1f, Vector3.up, radius);

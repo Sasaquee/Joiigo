@@ -28,6 +28,7 @@ namespace Game.Player
         private PlayerLife life;
         private PlayerInputReader reader;
         private PlayerCards cards; // pode faltar: sem cartas o golpe usa só o CombatSettings
+        private PlayerBlessing blessing; // pode faltar: sem bênção o dano não muda (D-085)
 
         public CombatSettings Settings
         {
@@ -43,6 +44,7 @@ namespace Game.Player
             life = GetComponent<PlayerLife>();
             reader = GetComponent<PlayerInputReader>();
             cards = GetComponent<PlayerCards>();
+            blessing = GetComponent<PlayerBlessing>();
         }
 
         /// <summary>Alcance do golpe com os modificadores das cartas (Manopla Pistonada).</summary>
@@ -156,22 +158,24 @@ namespace Game.Player
 
         /// <summary>
         /// Dano do golpe com as cartas: o deslocamento arcano (Lente) vale para o dano base; o dano extra
-        /// (Manopla) é mecânico; a Mola de Recuo multiplica o total.
+        /// (Manopla) é mecânico; a Mola de Recuo multiplica o total. A bênção do 20 no coop (D-085) multiplica por cima de tudo,
+        /// sem mudar a mistura mecânico/arcano.
         /// </summary>
         private DamagePacket BuildPacket()
         {
             float baseDamage = settings.basicDamage;
             float arcane = settings.basicArcaneFraction;
+            float blessed = blessing != null ? blessing.ServerMultiplier : 1f;
             if (cards == null)
-                return new DamagePacket(baseDamage, arcane);
+                return new DamagePacket(baseDamage * blessed, arcane);
 
             ModifierSet mods = cards.Modifiers;
             arcane = Mathf.Clamp01(arcane + mods.Get(ModifierKind.BasicArcaneShift));
             float extra = mods.Get(ModifierKind.BasicDamage);
             float total = Mathf.Max(0f, baseDamage + extra);
             float arcaneAmount = baseDamage * arcane;
-            total *= 1f + cards.ServerHurtBonus;
-            arcaneAmount *= 1f + cards.ServerHurtBonus;
+            total *= (1f + cards.ServerHurtBonus) * blessed;
+            arcaneAmount *= (1f + cards.ServerHurtBonus) * blessed;
             return new DamagePacket(total, total > 0f ? arcaneAmount / total : arcane);
         }
 

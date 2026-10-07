@@ -24,6 +24,9 @@ namespace Game.Core.Cards
             }
         }
 
+        /// <summary>Esquece o caminho (queda total, D-084: o jogador recomeça sem cartas e sem histórico).</summary>
+        public void Clear() => counts.Clear();
+
         /// <summary>As n tags mais usadas, da mais usada para a menos (empate em ordem alfabética).</summary>
         public IReadOnlyList<string> Top(int n) =>
             counts.OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, System.StringComparer.Ordinal)

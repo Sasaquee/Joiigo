@@ -28,6 +28,13 @@ namespace Game.Aura
         private const float BrassMinAlpha = 0.35f;
         private const float RuneGlow = 0.95f;
         private const float RuneFullGlow = 1.6f;
+        // Levantar um aliado (D-083). aura_runas.png tem 8 runas, uma no topo (+Z), a cada 45°; cada fatia cobre uma runa.
+        private const int ReviveRuneCount = 8;
+        private const float ReviveRuneHeight = 0.032f;
+        private const float ReviveRuneGlow = 1.25f;
+        private const float ReviveLightFrom = 0.02f;
+        private const int ReviveWedgeArcSteps = 6;
+        private static Mesh[] reviveWedges; // as fatias não mudam: uma vez só, compartilhadas por todas as auras
         private const float LightGlow = 0.8f;
         private const float ShellGlow = 0.55f;
         // Pulso de energia cheia (D-067). aura_circulo.png: o anel externo do latão termina a 0,444 da largura
@@ -61,6 +68,9 @@ namespace Game.Aura
         private MeshRenderer pulseWave;
         private MeshRenderer pulseEcho;
         private MeshRenderer pulseOutline;
+        private MeshRenderer[] reviveRunes; // uma fatia do disco das runas por runa, acesa em sentido horário (D-083)
+        private MeshRenderer blessingRing; // anel dourado que respira dentro do círculo (bênção do 20, D-085)
+        private ParticleSystem goldSparks; // faíscas douradas mais fortes que as da energia (bênção do 20, D-085)
         private MaterialPropertyBlock block;
         private float noiseSeed;
         private float lightScroll;
@@ -86,8 +96,17 @@ namespace Game.Aura
         /// <summary>Fiapos da maldição saindo agora (para testes).</summary>
         public bool WispsOn => wisps != null && wisps.emission.enabled;
 
+        /// <summary>Anel dourado e faíscas da bênção do 20 aparecendo agora (D-085, para testes).</summary>
+        public bool BlessingVisible => blessingRing != null && blessingRing.enabled;
+
+        /// <summary>Cor do anel dourado no último quadro (D-085, para testes).</summary>
+        public Color BlessingColor { get; private set; }
+
         /// <summary>Quantos pulsos de energia cheia começaram (D-067, para testes).</summary>
         public int PulsesPlayed { get; private set; }
+
+        /// <summary>Quantas fatias de runa estão acesas pelo levantar de um aliado (D-083, para testes). Zero fora do levantar.</summary>
+        public int ReviveRunesLit { get; private set; }
 
         /// <summary>Onda do pulso de energia cheia correndo agora (para testes).</summary>
         public bool PulseActive => settings != null && sincePulse < settings.fullPulseDuration;
@@ -121,6 +140,15 @@ namespace Game.Aura
             Mesh quad = TexturedQuad();
             circle = Layer(spin, "Circulo", quad, Textured(FxKit.FlatAlpha, circleTexture), CircleHeight);
             runes = Layer(spin, "Runas", quad, Textured(FxKit.FlatAdditive, runesTexture), RuneHeight);
+            // Levantar um aliado (D-083): o círculo das runas em fatias, uma por runa, para acender uma a uma em anel.
+            // Giram com o círculo (filhas do giro) e ficam apagadas até haver progresso.
+            reviveRunes = new MeshRenderer[ReviveRuneCount];
+            Material reviveMaterial = Textured(FxKit.FlatAdditive, runesTexture);
+            for (int i = 0; i < ReviveRuneCount; i++)
+            {
+                reviveRunes[i] = Layer(spin, "RunaLevantar" + i, ReviveWedge(i), reviveMaterial, ReviveRuneHeight);
+                reviveRunes[i].enabled = false;
+            }
             lightColumn = Layer(root, "Luz", OpenCylinder(32), Textured(FxKit.FlatAdditive, lightTexture), 0f);
             shell = Layer(root, "Casca", Dome(24, 8), Textured(FxKit.FlatAdditive, shellTexture), 0f);
             shell.enabled = false;
@@ -134,9 +162,16 @@ namespace Game.Aura
                 PulseHeight);
             ShowPulse(false);
 
+            // Bênção do 20 (D-085): anel dourado dentro do círculo, que respira. Chapado, sem textura; a cor vai pelo
+            // MaterialPropertyBlock. Não gira (filho da raiz) e fica abaixo do pulso de energia cheia.
+            blessingRing = Layer(root, "BencaoAnel",
+                FxKit.Ring(1f - Mathf.Clamp(settings.blessingRingBand, 0.03f, 0.5f)), FxKit.FlatAdditive, RuneHeight);
+            blessingRing.enabled = false;
+
             sparks = Emitter("Faiscas", sparkTexture, 0.05f, 0.11f, 0.6f, 1.0f, 64);
             wisps = Emitter("Fiapos", wispTexture, 0.28f, 0.5f, 1.2f, 1.8f, 24);
             embers = Emitter("Brasas", emberTexture, 0.05f, 0.1f, 0.8f, 1.4f, 24);
+            goldSparks = Emitter("FaiscasOuro", sparkTexture, 0.07f, 0.14f, 0.7f, 1.1f, 48);
         }
 
         private static Material Textured(Material template, Texture2D texture)
@@ -226,6 +261,7 @@ namespace Game.Aura
 
             bool downed = (state.Signals & AuraSignals.Downed) != 0;
             bool hurtBonus = (state.Signals & AuraSignals.HurtBonus) != 0;
+            bool blessed = !downed && (state.Signals & AuraSignals.Blessing) != 0;
             float radius = settings.fullRadius * state.Radius;
             float glow = state.Intensity * FlickerFactor(state.Flicker);
 
@@ -235,10 +271,12 @@ namespace Game.Aura
 
             // Latão: o metal não some, só escurece com pouca vida (D-061).
             float brass = Mathf.Lerp(BrassMinAlpha, 1f, state.Intensity);
-            Paint(circle, new Color(brass, brass, brass), downed ? BrassMinAlpha : 1f);
+            // Caído o latão fica apagado e volta conforme o aliado levanta (D-083).
+            Paint(circle, new Color(brass, brass, brass), downed ? Mathf.Lerp(BrassMinAlpha, 1f, state.ReviveProgress) : 1f);
 
             // Runas: cristal na cor da aura, ou em brasa laranja no reforço da Mola (D-063); cheias com energia cheia (D-062).
-            Color runeColor = ToColor(hurtBonus || downed ? state.Ember : state.Base);
+            // Abençoado (D-085): runas e luz em dourado; o reforço da Mola continua piscando (forma), a cor é da bênção.
+            Color runeColor = ToColor(blessed ? state.Gold : hurtBonus || downed ? state.Ember : state.Base);
             float runeGlow = glow * (state.RunesFull ? RuneFullGlow : RuneGlow);
             // No pulso de energia cheia as runas piscam mais forte e voltam ao normal (D-067).
             if (!downed && sincePulse < settings.fullPulseRuneTime)
@@ -249,10 +287,12 @@ namespace Game.Aura
             if (hurtBonus)
                 runeGlow *= 0.75f + 0.25f * Mathf.Sin(Time.time * 9f);
             Paint(runes, runeColor * runeGlow, 1f);
+            UpdateReviveRunes(state, downed);
 
-            // Luz subindo em volta do corpo (D-060); apagada em quem caiu.
-            lightColumn.enabled = !downed;
-            if (!downed)
+            // Luz subindo em volta do corpo (D-060); apagada em quem caiu, até um aliado começar a levantá-lo (D-083).
+            bool lit = !downed || state.ReviveProgress > ReviveLightFrom;
+            lightColumn.enabled = lit;
+            if (lit)
             {
                 float r = radius * LightRadiusRatio;
                 float h = settings.lightHeight * (0.55f + 0.45f * state.Intensity);
@@ -261,7 +301,7 @@ namespace Game.Aura
                 lightColumn.GetPropertyBlock(block);
                 block.SetVector(BaseMapStId, new Vector4(1f, 1f, lightScroll, 0f));
                 // No reforço da Mola a luz também fica em brasa: só as runas laranja somem no círculo pequeno.
-                Color c = ToColor(hurtBonus ? state.Ember : state.Base) * (glow * LightGlow);
+                Color c = ToColor(blessed ? state.Gold : hurtBonus ? state.Ember : state.Base) * (glow * LightGlow);
                 block.SetColor(FxKit.BaseColorId, c);
                 block.SetColor(FxKit.ColorId, c);
                 lightColumn.SetPropertyBlock(block);
@@ -283,7 +323,10 @@ namespace Game.Aura
                 radius, ToColor(state.Base));
             Drive(wisps, (state.Signals & AuraSignals.Curse) != 0 ? settings.wispsPerSecond : 0f, 0.55f,
                 radius * 0.8f, ToColor(state.Curse));
-            Drive(embers, downed ? settings.embersPerSecond : 0f, 0.45f, radius * 0.7f, ToColor(state.Ember));
+            Drive(embers, downed ? settings.embersPerSecond * (1f - state.ReviveProgress) : 0f, 0.45f, radius * 0.7f,
+                ToColor(state.Ember));
+
+            UpdateBlessing(state, blessed, radius);
 
             UpdatePulse(state, downed);
 
@@ -351,6 +394,26 @@ namespace Game.Aura
             pulseOutline.enabled = on;
         }
 
+        /// <summary>
+        /// Bênção de dano do 20 (D-085): além da luz e das runas douradas, um anel interno luminoso que respira e faíscas
+        /// douradas mais fortes e mais rápidas que as da energia. A forma carrega o sinal quando a cor não basta (D-063, D-065).
+        /// </summary>
+        private void UpdateBlessing(AuraState state, bool blessed, float radius)
+        {
+            Color gold = ToColor(state.Gold);
+            BlessingColor = gold;
+            blessingRing.enabled = blessed;
+            if (blessed)
+            {
+                float breath = Mathf.Sin(Time.time * settings.blessingRingRate * Mathf.PI * 2f);
+                float r = Mathf.Max(0.05f, radius * settings.blessingRingRadius * (1f + settings.blessingRingBreath * breath));
+                blessingRing.transform.localScale = new Vector3(r, 1f, r);
+                float strength = Mathf.Lerp(0.5f, 1f, state.Intensity) * (0.8f + 0.2f * (breath * 0.5f + 0.5f));
+                Paint(blessingRing, gold * (settings.blessingRingGlow * strength), 1f);
+            }
+            Drive(goldSparks, blessed ? settings.blessingSparksPerSecond : 0f, settings.blessingSparkRiseSpeed, radius, gold);
+        }
+
         /// <summary>Falha de lâmpada (D-061): com Flicker alto, a aura cai quase a nada por instantes.</summary>
         private float FlickerFactor(float flicker)
         {
@@ -379,6 +442,68 @@ namespace Game.Aura
         private static Color ToColor(AuraColor c) => new Color(c.R, c.G, c.B, 1f);
 
         // ---------- Malhas ----------
+
+        /// <summary>
+        /// Levantar um aliado (D-083): as runas acendem uma a uma em sentido horário, como um anel que se completa
+        /// (cor Base da paleta, a alternativa também). Cada fatia acende por inteiro numa fração 1/8 do progresso.
+        /// Sem número nem barra: o anel e o crescer da aura são o único sinal.
+        /// </summary>
+        private void UpdateReviveRunes(AuraState state, bool downed)
+        {
+            float p = downed ? state.ReviveProgress : 0f;
+            Color color = ToColor(state.Base);
+            int lit = 0;
+            for (int i = 0; i < reviveRunes.Length; i++)
+            {
+                float a = Mathf.Clamp01(p * reviveRunes.Length - i);
+                MeshRenderer wedge = reviveRunes[i];
+                wedge.enabled = a > 0.001f;
+                if (!wedge.enabled)
+                    continue;
+                lit++;
+                wedge.transform.localScale = circle.transform.localScale;
+                Paint(wedge, color * (ReviveRuneGlow * a), 1f);
+            }
+            ReviveRunesLit = lit;
+        }
+
+        /// <summary>
+        /// Fatia i do disco das runas, centrada na runa i (0 no topo, +Z; sobe de 45° em 45° rumo a +X, sentido horário
+        /// visto de cima). Raio 0,5 e UV de 0 a 1 como o TexturedQuad, para pegar a mesma máscara de runas.
+        /// </summary>
+        private static Mesh ReviveWedge(int index)
+        {
+            reviveWedges ??= new Mesh[ReviveRuneCount];
+            if (reviveWedges[index] != null)
+                return reviveWedges[index];
+
+            float span = Mathf.PI * 2f / ReviveRuneCount;
+            float start = index * span - span * 0.5f;
+            int count = ReviveWedgeArcSteps + 2;
+            var vertices = new Vector3[count];
+            var uv = new Vector2[count];
+            var triangles = new int[ReviveWedgeArcSteps * 3];
+            vertices[0] = Vector3.zero;
+            uv[0] = new Vector2(0.5f, 0.5f);
+            for (int s = 0; s <= ReviveWedgeArcSteps; s++)
+            {
+                float a = start + span * s / ReviveWedgeArcSteps;
+                var p = new Vector3(Mathf.Sin(a) * 0.5f, 0f, Mathf.Cos(a) * 0.5f);
+                vertices[s + 1] = p;
+                uv[s + 1] = new Vector2(p.x + 0.5f, p.z + 0.5f);
+            }
+            for (int s = 0; s < ReviveWedgeArcSteps; s++)
+            {
+                triangles[s * 3] = 0;
+                triangles[s * 3 + 1] = s + 2;
+                triangles[s * 3 + 2] = s + 1;
+            }
+            var mesh = new Mesh { name = "AuraFatiaRuna" + index, vertices = vertices, uv = uv, triangles = triangles };
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            reviveWedges[index] = mesh;
+            return mesh;
+        }
 
         /// <summary>Quadrado 1 x 1 deitado no plano XZ, olhando para cima, com UV de 0 a 1.</summary>
         private static Mesh TexturedQuad()

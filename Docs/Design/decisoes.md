@@ -495,6 +495,37 @@ Pedido do dono antes das perguntas: "vamos focar em melhorar a qualidade de imag
 - **Resposta literal:** "Onde caiu o último inimigo (Recommended)"
 - **Significa:** a carta surge no lugar da luta (Pilar 2). Se esse lugar não for andável ou alcançável, usa o ponto andável mais próximo. Substitui o centro fixo de D-050.
 
+### D-083 · Levantar um aliado: segurar E por perto (resolve P-003)
+- **Pergunta:** Quando um jogador cai no coop (D-003), como um aliado o levanta?
+- **Opções:** Segurar E por perto · Só chegar perto · Gastar uma carta
+- **Resposta literal:** "Segurar E por perto (Recommended)"
+- **Significa:** o aliado chega perto e segura **E** por ~2 s; a aura de quem caiu mostra o progresso (sem número) e o aliado fica parado, exposto, enquanto levanta. O tempo de segurar e a distância ficam em dados (provisórios). O que vale quando ninguém vem continua sendo D-003 (volta no spawn).
+
+### D-084 · Todos caídos: a partida recomeça e as cartas se perdem (resolve P-004)
+- **Pergunta:** O que acontece se todos os jogadores do grupo estiverem caídos ao mesmo tempo? (e, em seguida, o que quer dizer "perder as cartas" e como fica o solo)
+- **Opções (1):** Todos voltam no spawn · A partida recomeça · Quem caiu por último decide. **Resposta literal (Outro):** "recomeca e perde das cartas"
+- **Opções (2), "perde as cartas":** Todas as cartas · Só as do inventário · Uma parte sorteada. **Resposta literal:** "Todas as cartas (Recommended)"
+- **Opções (3), solo:** Igual ao coop · Solo levanta sozinho · Solo perde menos. **Resposta literal:** "Igual ao coop (Recommended)"
+- **Significa:** quando todos os jogadores estão caídos (no solo, o único jogador), a partida **recomeça**: a arena zera, a onda volta à 1 e **todas as cartas somem** (inventário e equipadas) de todos. Vale igual no solo e no coop. Quando só alguns caem, vale D-003 e D-083. Como a queda total é mostrada e se o jogo recomeça sozinho ou pede a alavanca de novo ficam nas perguntas da Fase 9.
+
+### D-086 · A queda total escurece a tela e volta
+- **Pergunta:** Como a queda total e a perda das cartas aparecem na tela, sem texto?
+- **Opções:** Escurece e volta · Cartas viram cinza · Corte seco
+- **Resposta literal:** "Escurece e volta (Recommended)"
+- **Significa:** com todos caídos a tela escurece devagar (~2 s, com um som grave); a arena zera no escuro e todos acordam no spawn. Sem texto. O tempo e o volume do som ficam em dados (provisórios).
+
+### D-087 · Depois da queda total, o coop espera a alavanca
+- **Pergunta:** Depois de recomeçar, a partida volta direto ou espera a alavanca de novo (D-013)?
+- **Opções:** Espera a alavanca no coop · Volta direto à onda 1
+- **Resposta literal:** "Espera a alavanca no coop (Recommended)"
+- **Significa:** no coop todos acordam na sala de espera (portões apagados) e o host puxa a alavanca de novo. No solo a largada continua automática (D-018).
+
+### D-085 · O 20 do D20 no coop dá bênção de dano ao grupo (resolve P-009)
+- **Pergunta:** No coop, o 20 do D20 dá um efeito temporário para o grupo todo (visão §4.5 do prompt). Qual?
+- **Opções:** Bênção de dano · Cura e energia · Escudo de cristal
+- **Resposta literal:** "Bêpção de dano (Recommended)"
+- **Significa:** por ~30 s todos os jogadores causam mais dano, com um brilho dourado nas auras. Duração e bônus ficam em dados (provisórios). Vale só no coop (no solo o 20 continua só a carta, D-048).
+
 ### D-078 · Só a modelagem exige o Opus; quem escreve código pode ser Sonnet (ajusta D-044)
 - **Pedido (2026-10-05):** depois de o passe de ajuste usar três agentes Opus para escrever efeitos em código.
 - **Resposta literal:** "os agentes de escrita apenas nao precisa ser opus e sim sonnet, agora os de modelagem ai sim precisa"
@@ -526,13 +557,13 @@ Pedido do dono antes das perguntas: "vamos focar em melhorar a qualidade de imag
 |---|---|---|
 | ~~P-001~~ | Slots do cinto | resolvida em D-029 |
 | ~~P-002~~ | Teclas do cinto | resolvida em D-029, D-031, D-032 |
-| P-003 | Como o aliado levanta quem caiu (chegar perto, segurar uma tecla, tempo) | quando o coop voltar |
-| P-004 | O que acontece se todos os jogadores caírem | quando o coop voltar |
+| ~~P-003~~ | Como o aliado levanta quem caiu | resolvida em D-083 |
+| ~~P-004~~ | O que acontece se todos os jogadores caírem | resolvida em D-084 |
 | ~~P-005~~ | Tempo caído: número provisório 5 s em `CombatSettings` (para aprovar) | resolvida como número |
 | P-006 | Nomes finais dos 3 inimigos (comportamentos decididos em D-023 a D-026; ids internos provisórios: automato, drone, constructo) | antes do conteúdo final |
 | ~~P-007~~ | Recuperação da energia | resolvida em D-030 |
 | ~~P-008~~ | Como a carta do chão se mostra no mundo | resolvida em D-046 |
-| P-009 | Efeito temporário do 20 no coop | quando o coop voltar |
+| ~~P-009~~ | Efeito temporário do 20 no coop | resolvida em D-085 |
 | ~~P-010~~ | Forma e linguagem visual da aura | resolvida em D-060 a D-066 |
 | ~~P-012~~ | Passe de resolução (D-053): para quanto sobe o mundo (hoje 640x360: 960x540, 1280x720 ou resolução da tela); se o contorno, a luz em faixas e a paleta de D-039 ficam; se as cartas em pixel art (D-041) ganham versão em mais resolução | resolvida em D-056 a D-059 |
 | ~~P-011~~ | Arte com `kimi-k3` no DeepSeek harness | resolvida em D-043 |

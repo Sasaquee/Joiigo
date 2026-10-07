@@ -23,9 +23,11 @@ namespace Game.Aura
         private NetworkHealth health;
         private PlayerCards cards;
         private PlayerLife life;
+        private PlayerBlessing blessing; // pode faltar (prefab antigo): sem ele a aura não mostra a bênção (D-085)
         private NetworkObject netObject;
         private AuraTuning tuning;
         private AuraPulseTrigger fullPulse;
+        private bool revivePulsePending; // levantado por um aliado (D-083): o pulso sai no primeiro quadro de pé
         private readonly AuraSmoother smoother = new AuraSmoother();
 
         /// <summary>Estado mapeado no último quadro (para testes e para o visual).</summary>
@@ -52,8 +54,20 @@ namespace Game.Aura
             health = GetComponent<NetworkHealth>();
             cards = GetComponent<PlayerCards>();
             life = GetComponent<PlayerLife>();
+            blessing = GetComponent<PlayerBlessing>();
             netObject = GetComponent<NetworkObject>();
+            if (life != null)
+                life.Revived += OnRevived;
         }
+
+        private void OnDestroy()
+        {
+            if (life != null)
+                life.Revived -= OnRevived;
+        }
+
+        // O aviso do host e o "levantou" da rede chegam em ordem não garantida: o pulso espera o jogador estar de pé.
+        private void OnRevived() => revivePulsePending = true;
 
         private void LateUpdate()
         {
@@ -70,7 +84,10 @@ namespace Game.Aura
             smoother.Step(targetHealth, targetEnergy, spawned, settings.smoothing, Time.deltaTime);
 
             AuraSignals signals = ReadSignals();
-            Current = AuraMapper.Map(new AuraInput(smoother.Health, smoother.Energy, signals), tuning, AuraPaletteSwitch.Current);
+            // O progresso de levantar (D-083) vem do host em passos de 1%; sem número na tela, só a aura muda.
+            float reviveProgress = life != null ? life.ReviveProgress : 0f;
+            Current = AuraMapper.Map(new AuraInput(smoother.Health, smoother.Energy, signals, reviveProgress), tuning,
+                AuraPaletteSwitch.Current);
 
             // Energia acabou de encher (D-067): uma vez por enchida (rearma abaixo de fullPulseRearmBelow); nunca no
             // primeiro quadro em rede, nem caído, nem no primeiro quadro depois de levantar.
@@ -91,6 +108,14 @@ namespace Game.Aura
                     visual.Pulse(Current);
                 if (audioCues != null)
                     audioCues.PlayFullChime(IsLocal);
+            }
+
+            // Levantado por um aliado (D-083): um pulso curto fecha o anel de runas, igual ao da energia cheia (todos veem).
+            if (revivePulsePending && !downed)
+            {
+                revivePulsePending = false;
+                if (visual != null)
+                    visual.Pulse(Current);
             }
 
             if (visual != null)
@@ -115,6 +140,8 @@ namespace Game.Aura
                 if (cards.HurtBonusActive)
                     signals |= AuraSignals.HurtBonus;
             }
+            if (blessing != null && blessing.Active)
+                signals |= AuraSignals.Blessing;
             return signals;
         }
     }

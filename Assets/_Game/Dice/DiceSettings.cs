@@ -68,6 +68,14 @@ namespace Game.Dice
         [Tooltip("Se o ponto onde caiu o último inimigo não é andável, a carta vai para o ponto andável mais próximo dentro deste raio (m).")]
         [Min(0.1f)] public float dropNavSampleRadius = 4f;
 
+        [Header("Bênção de dano do 20 no coop (D-085, provisórios)")]
+        [Tooltip("Quanto dura a bênção que o 20 dá a todos os jogadores (s). Pegar outro 20 enquanto vale reinicia a duração.")]
+        [Min(0.1f)] public float blessingDuration = 30f;
+        [Tooltip("Multiplicador do dano causado pelos jogadores abençoados (1,5 = +50%). Multiplica junto com os bônus das cartas; renovar não empilha.")]
+        [Min(1f)] public float blessingDamageMultiplier = 1.5f;
+        [Tooltip("Quantos jogadores conectados são necessários para o 20 dar a bênção. No solo (1) o 20 continua só a carta (D-048).")]
+        [Min(1)] public int blessingMinPlayers = 2;
+
         [Header("O 1 teatral (D-068): só apresentação, a regra do 1 não muda")]
         [Tooltip("Fração da rolagem em que o dado começa a avermelhar e a tela a escurecer (0 = desde o início; 1 = só quando para).")]
         [Range(0f, 1f)] public float criticalTintStart = 0.7f;

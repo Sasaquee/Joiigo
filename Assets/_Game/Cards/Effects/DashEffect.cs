@@ -35,7 +35,7 @@ namespace Game.Cards
             if (allowed > 0.01f)
                 Teleport(self, end);
 
-            DamageAlongPath(user, start, end, user.Potency);
+            DamageAlongPath(user, start, end, user.Potency * user.DamageMultiplier); // qualidade (D-048) e bênção do 20 (D-085)
             user.BroadcastVisual("dash", start, dir, allowed);
         }
 

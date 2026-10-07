@@ -13,6 +13,7 @@ namespace Game.Player
     /// Lê o input local (WASD + mouse + F + cartas) e transforma em intenção no mundo:
     /// direção relativa à tela (D-006) e ponto de mira no chão (D-002, D-005).
     /// Teclas: 1–4 skills, Q/E/R cinto (D-029), F interagir (D-031), Tab tiragem (D-032).
+    /// O Interact (E, ver GameControls) também vale segurado: levanta um aliado caído por perto (D-083).
     /// Em rede, a intenção vai para o NetworkPlayer, que prevê e envia ao host. Fora de rede, vai direto ao motor.
     /// </summary>
     [RequireComponent(typeof(PlayerMotor))]
@@ -33,6 +34,7 @@ namespace Game.Player
         private PlayerMotor motor;
         private NetworkPlayer networkPlayer;
         private PlayerCards cards;
+        private PlayerRevive revive;
 
         /// <summary>Clique de ataque (D-002): leva o ponto de mira no chão. Só dispara no dono, com a mira válida.</summary>
         public event Action<Vector3> AttackPressed;
@@ -60,6 +62,7 @@ namespace Game.Player
             motor = GetComponent<PlayerMotor>();
             networkPlayer = GetComponent<NetworkPlayer>();
             cards = GetComponent<PlayerCards>();
+            revive = GetComponent<PlayerRevive>();
             // Clone por instância: o asset é compartilhado e desligar o mapa de outro jogador desligaria o do dono.
             runtimeActions = Instantiate(actions);
             playerMap = runtimeActions.FindActionMap("Player", throwIfNotFound: true);
@@ -76,7 +79,13 @@ namespace Game.Player
 
         private void OnEnable() => playerMap.Enable();
 
-        private void OnDisable() => playerMap.Disable();
+        private void OnDisable()
+        {
+            playerMap.Disable();
+            // Leitor desligado = E solto: o host não pode ficar achando que o aliado ainda segura (D-083).
+            if (revive != null)
+                revive.SetHolding(false);
+        }
 
         private void OnDestroy()
         {
@@ -107,6 +116,9 @@ namespace Game.Player
                 networkPlayer.SubmitLocalIntent(move, aim);
                 if (interactAction.WasPressedThisFrame())
                     networkPlayer.RequestInteract();
+                // E segurado levanta um aliado caído por perto (D-083). O toque acima continua pegando carta e alavanca.
+                if (revive != null)
+                    revive.SetHolding(interactAction.IsPressed());
 
                 if (!UiBlocksActions && aim.HasValue)
                 {

@@ -25,6 +25,10 @@ namespace Game.Aura
         [Range(0f, 1f)] public float sparkMinSpeed = 0.3f;
         [Tooltip("Força da aura de quem está caído: só brasa (D-063).")]
         [Range(0f, 1f)] public float downedIntensity = 0.08f;
+        [Tooltip("Raio da aura de quem caiu quando o aliado termina de levantá-lo, em fração do raio cheio (D-083, provisório).")]
+        [Range(0.1f, 1f)] public float reviveRadius = 0.9f;
+        [Tooltip("Força da aura de quem caiu quando o aliado termina de levantá-lo (D-083, provisório).")]
+        [Range(0f, 1f)] public float reviveIntensity = 0.8f;
 
         [Header("Visual")]
         [Tooltip("Raio do círculo com HP cheio (m). O anel branco do seu personagem fica por fora (D-066).")]
@@ -67,6 +71,22 @@ namespace Game.Aura
                  "(histerese: oscilar perto de cheia não repete o pulso).")]
         [Range(0f, 0.999f)] public float fullPulseRearmBelow = 0.95f;
 
+        [Header("Bênção de dano do 20 no coop (D-085, só visual; provisórios)")]
+        [Tooltip("Raio médio do anel dourado que respira dentro do círculo, em fração do raio atual da aura.")]
+        [Range(0.2f, 0.7f)] public float blessingRingRadius = 0.5f;
+        [Tooltip("Quanto o anel dourado respira: o raio varia esta fração do raio da aura para dentro e para fora.")]
+        [Range(0f, 0.2f)] public float blessingRingBreath = 0.07f;
+        [Tooltip("Respirações do anel por segundo.")]
+        [Min(0.1f)] public float blessingRingRate = 0.9f;
+        [Tooltip("Espessura da faixa do anel dourado, em fração do raio do anel (lida ao montar a aura).")]
+        [Range(0.03f, 0.5f)] public float blessingRingBand = 0.22f;
+        [Tooltip("Brilho do anel dourado (cor Gold da paleta multiplicada por este valor).")]
+        [Min(0f)] public float blessingRingGlow = 1.3f;
+        [Tooltip("Faíscas douradas por segundo enquanto abençoado (além das faíscas da energia).")]
+        [Min(0f)] public float blessingSparksPerSecond = 14f;
+        [Tooltip("Velocidade de subida das faíscas douradas (m/s); mais rápidas que as da energia.")]
+        [Min(0f)] public float blessingSparkRiseSpeed = 2.6f;
+
         [Header("Sons (só para o seu personagem, D-064)")]
         [Range(0f, 1f)] public float heartbeatVolume = 0.35f;
         [Range(0f, 1f)] public float hissVolume = 0.28f;
@@ -88,7 +108,9 @@ namespace Game.Aura
             HeartbeatSlowBpm = heartbeatSlowBpm,
             HeartbeatFastBpm = heartbeatFastBpm,
             SparkMinSpeed = sparkMinSpeed,
-            DownedIntensity = downedIntensity
+            DownedIntensity = downedIntensity,
+            ReviveRadius = reviveRadius,
+            ReviveIntensity = reviveIntensity
         };
     }
 

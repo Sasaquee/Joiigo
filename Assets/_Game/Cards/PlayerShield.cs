@@ -48,6 +48,9 @@ namespace Game.Cards
             this.halfAngle = halfAngle;
         }
 
+        /// <summary>Host: apaga o escudo na hora (recomeço da partida, D-084).</summary>
+        public void Deactivate() => endTime = -1f;
+
         /// <summary>Host: o ponto (um projétil de raio pointRadius) está na zona do escudo? Se sim, bloqueia e devolve o pulso.</summary>
         public bool TryBlockPoint(Vector3 point, float pointRadius)
         {

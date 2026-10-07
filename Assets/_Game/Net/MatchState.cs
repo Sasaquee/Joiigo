@@ -34,6 +34,16 @@ namespace Game.Net
                 started.Value = true;
         }
 
+        /// <summary>
+        /// Volta a partida a "não iniciada" (queda total no coop, D-087): os portões apagam e a alavanca espera o host de novo.
+        /// Só tem efeito no host.
+        /// </summary>
+        public void ServerResetStarted()
+        {
+            if (IsServer && started.Value)
+                started.Value = false;
+        }
+
         private void OnStartedChanged(bool previous, bool current)
         {
             if (current && !previous)

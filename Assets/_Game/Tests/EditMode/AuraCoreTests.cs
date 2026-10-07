@@ -288,6 +288,78 @@ namespace Game.Tests.EditMode
             AssertCores(state.Shell, AuraPalettes.Shell(AuraPalette.Alternative));
         }
 
+        // ---------- Bênção de dano do 20 no coop (D-085) ----------
+
+        [Test]
+        public void Bencao_PassaComoSinalEmPeESozinha()
+        {
+            Assert.AreEqual(AuraSignals.Blessing, Mapear(1f, 1f, AuraSignals.Blessing).Signals);
+            Assert.AreNotEqual(AuraSignals.Blessing, AuraSignals.HurtBonus, "Sinal próprio, não confunde com o reforço da Mola");
+        }
+
+        [Test]
+        public void Bencao_JuntaComOsOutrosSinais()
+        {
+            var juntos = AuraSignals.Shield | AuraSignals.Curse | AuraSignals.HurtBonus | AuraSignals.Blessing;
+            var signals = Mapear(1f, 1f, juntos).Signals;
+            Assert.AreEqual(juntos, signals);
+            Assert.AreNotEqual(0, (int)(signals & AuraSignals.Blessing));
+        }
+
+        [Test]
+        public void Bencao_CaidoApagaABencaoNaAura()
+        {
+            var state = Mapear(0f, 1f, AuraSignals.Blessing | AuraSignals.Downed);
+            Assert.AreEqual(AuraSignals.Downed, state.Signals, "Caído: aura só brasa, sem dourado (D-063)");
+        }
+
+        [Test]
+        public void Bencao_PaletaNormalEDouradaAlternativaECremePalido()
+        {
+            AssertCores(AuraPalettes.Gold(AuraPalette.Normal), 1.00f, 0.84f, 0.30f);
+            AssertCores(AuraPalettes.Gold(AuraPalette.Alternative), 1.00f, 0.95f, 0.62f);
+            AssertCoresDiferentes(AuraPalettes.Gold(AuraPalette.Normal), AuraPalettes.Gold(AuraPalette.Alternative));
+        }
+
+        [Test]
+        public void Bencao_DouradoNaoSeConfundeComBrasaNemMaldicao()
+        {
+            foreach (var palette in new[] { AuraPalette.Normal, AuraPalette.Alternative })
+            {
+                AuraColor gold = AuraPalettes.Gold(palette);
+                Assert.Greater(Distancia(gold, AuraPalettes.Ember(palette)), 0.3f, $"Dourado longe da brasa ({palette})");
+                Assert.Greater(Distancia(gold, AuraPalettes.Curse(palette)), 0.3f, $"Dourado longe da maldição ({palette})");
+                Assert.Greater(Distancia(gold, AuraPalettes.Base(palette)), 0.3f, $"Dourado longe do cristal ({palette})");
+                Assert.Greater(Distancia(gold, AuraPalettes.Shell(palette)), 0.3f, $"Dourado longe da casca do escudo ({palette})");
+            }
+        }
+
+        [Test]
+        public void Bencao_MapUsaAPaletaPedida()
+        {
+            AssertCores(Mapear(1f, 1f, AuraSignals.Blessing, palette: AuraPalette.Normal).Gold, 1.00f, 0.84f, 0.30f);
+            AssertCores(Mapear(1f, 1f, AuraSignals.Blessing, palette: AuraPalette.Alternative).Gold, 1.00f, 0.95f, 0.62f);
+            AssertCores(Mapear(0f, 0f, AuraSignals.Downed, palette: AuraPalette.Alternative).Gold,
+                AuraPalettes.Gold(AuraPalette.Alternative));
+        }
+
+        [Test]
+        public void Bencao_NaoMudaOsParametrosDeHpEEnergia()
+        {
+            var sem = Mapear(0.5f, 0.5f, AuraSignals.None);
+            var com = Mapear(0.5f, 0.5f, AuraSignals.Blessing);
+            Assert.AreEqual(sem.Radius, com.Radius, Tol);
+            Assert.AreEqual(sem.Intensity, com.Intensity, Tol);
+            Assert.AreEqual(sem.SparkRate, com.SparkRate, Tol);
+            Assert.AreEqual(sem.HeartbeatBpm, com.HeartbeatBpm, Tol);
+        }
+
+        private static float Distancia(AuraColor a, AuraColor b)
+        {
+            float dr = a.R - b.R, dg = a.G - b.G, db = a.B - b.B;
+            return (float)Math.Sqrt(dr * dr + dg * dg + db * db);
+        }
+
         // ---------- Entrada fora de faixa ----------
 
         [Test]
@@ -505,6 +577,101 @@ namespace Game.Tests.EditMode
             smoother.Step(0f, 0f, true, 6f, 0f);
             Assert.AreEqual(1f, smoother.Health, Tol);
             Assert.AreEqual(1f, smoother.Energy, Tol);
+        }
+
+        // ---------- Levantar um aliado (D-083) ----------
+
+        private static AuraState MapearLevantando(float reviveProgress, AuraPalette palette = AuraPalette.Normal,
+            AuraSignals signals = AuraSignals.Downed) =>
+            AuraMapper.Map(new AuraInput(0f, 0f, signals, reviveProgress), AjustePadrao(), palette);
+
+        [Test]
+        public void Levantar_SemProgressoFicaIgualAoCaidoDeSempre()
+        {
+            var estado = MapearLevantando(0f);
+            Assert.AreEqual(0.55f, estado.Radius, Tol);     // MinRadius
+            Assert.AreEqual(0.08f, estado.Intensity, Tol);  // DownedIntensity
+            Assert.AreEqual(0f, estado.ReviveProgress, Tol);
+            Assert.AreEqual(AuraSignals.Downed, estado.Signals);
+        }
+
+        [Test]
+        public void Levantar_ProgressoDaLuzERaioAoCaido()
+        {
+            var meio = MapearLevantando(0.5f);
+            var cheio = MapearLevantando(1f);
+
+            Assert.AreEqual(0.5f, meio.ReviveProgress, Tol);
+            Assert.Greater(meio.Radius, 0.55f, "Ganha raio");
+            Assert.Greater(meio.Intensity, 0.08f, "Ganha luz");
+            Assert.Greater(cheio.Radius, meio.Radius);
+            Assert.Greater(cheio.Intensity, meio.Intensity);
+            Assert.AreEqual(0.9f, cheio.Radius, Tol);     // ReviveRadius
+            Assert.AreEqual(0.8f, cheio.Intensity, Tol);  // ReviveIntensity
+        }
+
+        [Test]
+        public void Levantar_ContinuaCaidoSemBatimentoNemFaiscas()
+        {
+            var estado = MapearLevantando(0.7f);
+            Assert.AreEqual(AuraSignals.Downed, estado.Signals, "Segue caído até completar");
+            Assert.AreEqual(0f, estado.HeartbeatBpm, Tol);
+            Assert.AreEqual(0f, estado.SparkRate, Tol);
+            Assert.IsFalse(estado.RunesFull);
+        }
+
+        [Test]
+        public void Levantar_ProgressoEmQuemNaoCaiuNaoMudaNada()
+        {
+            var normal = Mapear(0.6f, 0.4f, AuraSignals.None);
+            var comProgresso = AuraMapper.Map(new AuraInput(0.6f, 0.4f, AuraSignals.None, 0.9f), AjustePadrao(),
+                AuraPalette.Normal);
+            Assert.AreEqual(normal.Radius, comProgresso.Radius, Tol);
+            Assert.AreEqual(normal.Intensity, comProgresso.Intensity, Tol);
+            Assert.AreEqual(0f, comProgresso.ReviveProgress, Tol, "De pé: não há progresso de levantar");
+        }
+
+        [Test]
+        public void Levantar_ProgressoInvalidoELimitado()
+        {
+            Assert.AreEqual(0f, new AuraInput(0f, 0f, AuraSignals.Downed, float.NaN).ReviveProgress, Tol);
+            Assert.AreEqual(1f, new AuraInput(0f, 0f, AuraSignals.Downed, 7f).ReviveProgress, Tol);
+            Assert.AreEqual(0f, new AuraInput(0f, 0f, AuraSignals.Downed, -3f).ReviveProgress, Tol);
+        }
+
+        [Test]
+        public void Levantar_ProgressoSobeMonotonicamente()
+        {
+            float raio = -1f;
+            float forca = -1f;
+            for (int i = 0; i <= 20; i++)
+            {
+                var estado = MapearLevantando(i / 20f);
+                Assert.GreaterOrEqual(estado.Radius, raio - Tol);
+                Assert.GreaterOrEqual(estado.Intensity, forca - Tol);
+                raio = estado.Radius;
+                forca = estado.Intensity;
+            }
+        }
+
+        [Test]
+        public void Levantar_RespeitaAPaletaAlternativaNaCorBase()
+        {
+            var normal = MapearLevantando(0.5f);
+            var alternativa = MapearLevantando(0.5f, AuraPalette.Alternative);
+            AssertCores(normal.Base, AuraPalettes.Base(AuraPalette.Normal));
+            AssertCores(alternativa.Base, AuraPalettes.Base(AuraPalette.Alternative));
+            AssertCoresDiferentes(normal.Base, alternativa.Base);
+            Assert.AreEqual(normal.ReviveProgress, alternativa.ReviveProgress, Tol, "A forma é a mesma nas duas paletas");
+        }
+
+        [Test]
+        public void Levantar_RaioNuncaFicaAbaixoDoMinimoMesmoComAjusteTorto()
+        {
+            var torto = new AuraTuning { ReviveRadius = 0.1f, ReviveIntensity = 0f };
+            var estado = AuraMapper.Map(new AuraInput(0f, 0f, AuraSignals.Downed, 1f), torto, AuraPalette.Normal);
+            Assert.GreaterOrEqual(estado.Radius, torto.MinRadius - Tol, "Levantar nunca encolhe a aura");
+            Assert.GreaterOrEqual(estado.Intensity, torto.DownedIntensity - Tol, "Levantar nunca apaga a aura");
         }
     }
 }

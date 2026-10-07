@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using Game.Cards;
+using Game.Combat;
 using Game.Core.Cards;
 using Game.Core.Dice;
 using Game.Enemies;
@@ -40,6 +41,9 @@ namespace Game.Dice
         /// surgimento duas vezes.
         /// </summary>
         public event Action<Vector3[]> Ambushed;
+
+        /// <summary>Só no host: o 20 deu a bênção de dano ao grupo (D-085); o argumento é quantos jogadores a receberam. Para testes e debug.</summary>
+        public event Action<int> Blessed;
 
         private D20 dice;
         private DiceTable table;
@@ -124,6 +128,25 @@ namespace Game.Dice
             return card;
         }
 
+        /// <summary>
+        /// Host: recomeço da partida depois da queda total (D-084). Some com as cartas do chão e cancela o que ainda esperava
+        /// a rolagem acabar (cartas a entregar, bênção do 20, emboscada), para nada chegar a quem já recomeçou sem cartas.
+        /// </summary>
+        public void ServerResetForRestart()
+        {
+            if (!IsServer)
+                return;
+
+            StopAllCoroutines();
+            foreach (var card in FindObjectsByType<FloorCard>(FindObjectsSortMode.None))
+            {
+                if (card != null && card.IsSpawned)
+                    card.NetworkObject.Despawn(true);
+            }
+            cardsOnFloor.Clear();
+            LastRoll = 0;
+        }
+
         /// <summary>Host: o jogador apertou F perto da carta. Rola, mostra a todos e entrega depois da rolagem.</summary>
         public void ServerPickUp(FloorCard card, ulong clientId)
         {
@@ -155,17 +178,52 @@ namespace Game.Dice
             float duration = settings != null ? settings.rollDuration : 2.2f;
             ShowRollRpc(clientId, roll, duration);
             float delay = duration + (settings != null ? settings.grantDelay : 0.6f);
-            StartCoroutine(GrantAfter(player, grants, outcome.Danger, delay));
+            // D-085: o 20 puro do dado (não a faixa da tabela) dá a bênção ao grupo no coop; o dado e o tema não mudam.
+            StartCoroutine(GrantAfter(player, grants, outcome.Danger, roll == D20.Faces, delay));
         }
 
-        private IEnumerator GrantAfter(PlayerCards player, List<CardGrant> grants, bool danger, float delay)
+        private IEnumerator GrantAfter(PlayerCards player, List<CardGrant> grants, bool danger, bool blessGroup, float delay)
         {
             yield return new WaitForSeconds(delay);
+
+            // D-085: a bênção chega junto com a carta, depois que o dado parou (D-047). Dar antes (no clique) acenderia as
+            // auras douradas enquanto o dado ainda rola e entregaria o 20 antes da revelação. Vale mesmo que quem pegou tenha saído.
+            if (blessGroup)
+                ServerBlessGroup();
+
             if (player == null || !player.IsSpawned)
                 yield break;
             player.ServerApplyGrants(grants);
             if (danger)
                 ServerAmbush(player.transform.position);
+        }
+
+        /// <summary>
+        /// Host, D-085: dá a bênção de dano a TODOS os jogadores conectados (vivos ou caídos) se há pelo menos blessingMinPlayers
+        /// (2 no coop; no solo o 20 continua só a carta, D-048). Renova a bênção de quem já a tem, sem empilhar.
+        /// </summary>
+        private void ServerBlessGroup()
+        {
+            var manager = NetworkManager.Singleton;
+            if (!IsServer || settings == null || manager == null)
+                return;
+
+            var blessed = new List<PlayerBlessing>();
+            foreach (NetworkClient client in manager.ConnectedClientsList)
+            {
+                if (client.PlayerObject == null || !client.PlayerObject.IsSpawned)
+                    continue;
+                if (client.PlayerObject.TryGetComponent(out PlayerBlessing blessing))
+                    blessed.Add(blessing);
+                else
+                    Debug.LogWarning("Jogador sem PlayerBlessing: reconstruir o prefab (Game > Setup > Construir Arena).");
+            }
+
+            if (blessed.Count < Mathf.Max(1, settings.blessingMinPlayers))
+                return;
+            foreach (PlayerBlessing blessing in blessed)
+                blessing.ServerGrant(settings.blessingDuration, settings.blessingDamageMultiplier);
+            Blessed?.Invoke(blessed.Count);
         }
 
         /// <summary>Host: D-049 — 2 ou 3 inimigos surgem em volta do jogador.</summary>

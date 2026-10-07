@@ -73,6 +73,9 @@ Ao fim de cada fase: compila sem erros, testes passam, commit e relatório (§7)
 - **Passe de resolução** (D-053, pedido do dono) ✅ · Melhorar a resolução do jogo em tudo (mundo, personagem, inimigos, efeitos, cartas, D20, interface), que está pixelado demais. Começa perguntando P-012 com imagens de comparação; números de resolução em ScriptableObject.
 - **Fase 7** · Aura: mapeamento, visual, sons, paleta alternativa; remover qualquer número da tela no jogo normal. ✅
 - **Fase 8** · Ciclo completo e playtest: debug finalizado, fluxo arena → combate → carta → dado → equipar → usar, e `Docs/Playtest/roteiro.md`. ✅ (falta playtest humano)
+- **Passe de ajuste pós-playtest** (D-067 a D-069, D-070 a D-072) ✅ · Pulso de energia cheia, o 1 do D20 mais teatral, cristal no mundo.
+- **Passe do mapa** (D-073 a D-082) ✅ · A arena se abre para a cidade: praça, avenidas, praças menores, prédios como limite e translúcidos, inimigos pelas bocas, NavMesh. Aprovado pelo dono em playtest (`Docs/Playtest/sessao-2026-10-05-2.md`).
+- **Fase 9** · Coop de volta (D-083 a D-087) ✅ (falta playtest humano em LAN): levantar aliado segurando E, queda total recomeça a partida e apaga as cartas, bênção de dano do 20 no coop. Relatório em `Docs/Tecnico/relatorio-fase9.md`.
 
 ### 7. Relatório de cada fase
 

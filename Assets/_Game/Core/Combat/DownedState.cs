@@ -8,7 +8,7 @@ namespace Game.Core.Combat
 
     /// <summary>
     /// HP zero não mata: o jogador cai (D-003). Sem ninguém para levantar, volta no spawn
-    /// depois de downedDuration (D-022). Levantar por um aliado fica para quando o coop voltar (P-003).
+    /// depois de downedDuration (D-022). Um aliado levanta quem caiu segurando E por perto (D-083, ReviveProgress).
     /// </summary>
     public class DownedState
     {

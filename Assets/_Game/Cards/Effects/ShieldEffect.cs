@@ -26,7 +26,7 @@ namespace Game.Cards
             if (shield == null)
                 shield = user.Transform.gameObject.AddComponent<PlayerShield>();
 
-            shield.Activate(user, duration, pulseDamage * user.Potency, arcaneFraction, radius, blockReach, blockHalfAngle);
+            shield.Activate(user, duration, pulseDamage * user.Potency * user.DamageMultiplier,arcaneFraction, radius, blockReach, blockHalfAngle);
             user.BroadcastVisual("shield", user.Transform.position, user.Transform.forward, duration);
         }
     }

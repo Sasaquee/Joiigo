@@ -20,7 +20,8 @@ namespace Game.Core.Aura
         Shield = 1,
         Curse = 2,
         Downed = 4,
-        HurtBonus = 8
+        HurtBonus = 8,
+        Blessing = 16   // bênção de dano do 20 no coop (D-085)
     }
 
     /// <summary>Cor RGB linear de 0 a 1 (o Core não conhece UnityEngine.Color).</summary>
@@ -47,12 +48,14 @@ namespace Game.Core.Aura
         public readonly float Health;   // fração do HP (0 a 1)
         public readonly float Energy;   // fração da energia (0 a 1)
         public readonly AuraSignals Signals;
+        public readonly float ReviveProgress; // 0 a 1: um aliado levantando quem caiu (D-083); só vale com o sinal Downed
 
-        public AuraInput(float health, float energy, AuraSignals signals)
+        public AuraInput(float health, float energy, AuraSignals signals, float reviveProgress = 0f)
         {
             Health = Limit(health);
             Energy = Limit(energy);
             Signals = signals;
+            ReviveProgress = Limit(reviveProgress);
         }
 
         private static float Limit(float value)
@@ -77,6 +80,8 @@ namespace Game.Core.Aura
         public float HeartbeatFastBpm = 140f;  // batimento com HP 0
         public float SparkMinSpeed = 0.3f;     // velocidade das faíscas com energia 0
         public float DownedIntensity = 0.08f;  // força da aura de quem está caído (só brasa)
+        public float ReviveRadius = 0.9f;      // raio da aura de quem caiu com o levantar completo (fração do raio cheio, D-083)
+        public float ReviveIntensity = 0.8f;   // força da aura de quem caiu com o levantar completo (D-083)
     }
 
     /// <summary>Saída do mapeamento: os parâmetros visuais da aura, prontos para a apresentação.</summary>
@@ -94,11 +99,15 @@ namespace Game.Core.Aura
         public readonly AuraColor Curse;     // fiapos da maldição
         public readonly AuraColor Ember;     // brasa: runas do bônus de dano e aura de quem caiu
         public readonly AuraColor Shell;     // casca de cristal do escudo
+        public readonly AuraColor Gold;      // luz, runas, anel e faíscas da bênção de dano (D-085)
+        public readonly float ReviveProgress; // 0..1: quem caiu sendo levantado; as runas acendem em anel (D-083)
 
         public AuraState(float radius, float intensity, float flicker, float sparkRate, float sparkSpeed,
             bool runesFull, AuraSignals signals, float heartbeatBpm,
-            AuraColor baseColor, AuraColor curse, AuraColor ember, AuraColor shell)
+            AuraColor baseColor, AuraColor curse, AuraColor ember, AuraColor shell, AuraColor gold = default, float reviveProgress = 0f)
         {
+            Gold = gold;
+            ReviveProgress = reviveProgress;
             Radius = radius;
             Intensity = intensity;
             Flicker = flicker;
@@ -118,6 +127,10 @@ namespace Game.Core.Aura
     /// Cores de cada paleta (D-065).
     /// Normal: Base (0.43, 0.94, 1.00) ciano · Curse (0.78, 0.50, 1.00) violeta · Ember (1.00, 0.48, 0.13) laranja · Shell (0.80, 1.00, 1.00).
     /// Alternative: Base (0.15, 0.40, 1.00) azul forte · Curse (1.00, 1.00, 1.00) branco · Ember (1.00, 0.85, 0.10) amarelo · Shell (0.75, 0.85, 1.00).
+    /// Bênção de dano (D-085), Gold: Normal (1.00, 0.84, 0.30) dourado, claro e mais verde que a brasa laranja do reforço da Mola e longe do
+    /// violeta da maldição · Alternative (1.00, 0.95, 0.62) amarelo-creme pálido: mais claro e menos saturado que o amarelo da brasa e
+    /// quente demais para o branco puro da maldição. No lugar da cor, a forma carrega o sinal (D-063): anel interno que respira e faíscas
+    /// douradas mais fortes.
     /// </summary>
     public static class AuraPalettes
     {
@@ -144,5 +157,11 @@ namespace Game.Core.Aura
             palette == AuraPalette.Normal
                 ? new AuraColor(0.80f, 1.00f, 1.00f)
                 : new AuraColor(0.75f, 0.85f, 1.00f);
+
+        /// <summary>Bênção de dano do 20 no coop (D-085): dourado na Normal, amarelo-creme pálido na Alternativa.</summary>
+        public static AuraColor Gold(AuraPalette palette) =>
+            palette == AuraPalette.Normal
+                ? new AuraColor(1.00f, 0.84f, 0.30f)
+                : new AuraColor(1.00f, 0.95f, 0.62f);
     }
 }

@@ -101,6 +101,35 @@ namespace Game.Enemies
             SpawnReady(0f); // o primeiro de cada boca nasce já
         }
 
+        /// <summary>
+        /// Host: recomeço da partida depois da queda total (D-084). Tira todos os inimigos da arena (vivos, em queda e a fila
+        /// das bocas) e volta o diretor à primeira onda. A próxima onda só sai quando a partida estiver iniciada de novo e
+        /// passar o atraso da primeira (o Update recria o diretor).
+        /// </summary>
+        public void ServerResetForRestart()
+        {
+            var manager = NetworkManager.Singleton;
+            if (manager == null || !manager.IsServer)
+                return;
+
+            // Todos os EnemyController da cena, não só a lista: os que já caíram e viram sucata saíram dela, mas ainda estão na rede.
+            foreach (var enemy in FindObjectsByType<EnemyController>(FindObjectsSortMode.None))
+            {
+                if (enemy != null && enemy.IsSpawned)
+                    enemy.NetworkObject.Despawn(true);
+            }
+
+            enemies.Clear();
+            lastPositions.Clear();
+            requested.Clear();
+            ready.Clear();
+            queue = null;
+            director = null;
+            nextMouth = 0;
+            clearedSeen = 0;
+            hasDeathPosition = false;
+        }
+
         /// <summary>Host: gera um inimigo. Também serve para debug e testes.</summary>
         public EnemyController ServerSpawn(EnemyDefinition def, Vector3 position)
         {

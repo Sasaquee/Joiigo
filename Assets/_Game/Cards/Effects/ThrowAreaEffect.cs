@@ -36,7 +36,7 @@ namespace Game.Cards
             // No visual "grenade_throw", a direção é o vetor até o ponto de queda e o tamanho é o tempo de voo.
             Vector3 start = origin + Vector3.up * HandHeight;
             user.BroadcastVisual("grenade_throw", start, landing - start, flightTime);
-            user.Run(Land(user, landing, user.Potency)); // a qualidade é a do momento do arremesso (D-048)
+            user.Run(Land(user, landing, user.Potency * user.DamageMultiplier)); // a qualidade (D-048) e a bênção do 20 (D-085) são as do momento do arremesso
         }
 
         private IEnumerator Land(ICardUser user, Vector3 landing, float potency)

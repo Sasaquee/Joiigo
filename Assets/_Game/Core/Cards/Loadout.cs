@@ -128,6 +128,18 @@ namespace Game.Core.Cards
             return id;
         }
 
+        /// <summary>Perde tudo: inventário, espaços equipados e cinto (queda total, D-084).</summary>
+        public void Clear()
+        {
+            inventory.Clear();
+            Fill(skills);
+            Fill(passives);
+            Fill(equipment);
+            Fill(belt);
+            System.Array.Clear(beltCounts, 0, beltCounts.Length);
+            Version++;
+        }
+
         /// <summary>Passivas e equipamentos em uso (para somar modificadores).</summary>
         public IEnumerable<int> EquippedModifierCards()
         {
@@ -161,6 +173,12 @@ namespace Game.Core.Cards
             SlotType.Equipment => equipment,
             _ => belt
         };
+
+        private static void Fill(int[] slots)
+        {
+            for (int i = 0; i < slots.Length; i++)
+                slots[i] = Empty;
+        }
 
         private static int[] Filled(int n)
         {
