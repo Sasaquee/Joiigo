@@ -1808,7 +1808,17 @@ def il_artifice(t):
 ILUSTRACOES = {}
 
 
+def _carregar_novas():
+    """Fase 10 (D-088): as ilustrações em alta das cartas novas ficam em Tools/Cards/novas/hd_*.py, uma por grupo
+    de artista, executadas neste espaço de nomes (veem R, E, P, cil_x, esfera, t.pintar etc.) e definindo `il_<id>(t)`."""
+    import glob
+    for caminho in sorted(glob.glob(os.path.join(AQUI, "novas", "hd_*.py"))):
+        with open(caminho, encoding="utf-8") as f:
+            exec(compile(f.read(), caminho, "exec"), globals())
+
+
 def _registrar():
+    _carregar_novas()
     for k, v in list(globals().items()):
         if k.startswith("il_"):
             ILUSTRACOES[k[3:]] = v

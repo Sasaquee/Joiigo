@@ -22,6 +22,7 @@ namespace Game.Cards
     ///  grenade_throw: ponto de saída, VETOR até o ponto de queda (não normalizado), tempo de voo.
     ///  grenade_explode / burst / pulse: centro, qualquer direção, raio (pulse: a direção é para onde o escudo olha).
     ///  slash_wide: posição do jogador, direção do corte, alcance (arco fixo de 160°).
+    ///  slash_arc: posição do jogador, direção do corte (o Y carrega a meia-abertura em graus), alcance (arco com a abertura dada).
     /// </summary>
     public static class CardVisuals
     {
@@ -29,7 +30,7 @@ namespace Game.Cards
         public static readonly string[] Ids =
         {
             "dash", "cone_vapor", "arc_chain", "mine_place", "mine_explode", "shield", "heal",
-            "grenade_throw", "grenade_explode", "burst", "slash_wide", "pulse"
+            "grenade_throw", "grenade_explode", "burst", "slash_wide", "pulse", "slash_arc"
         };
 
         /// <summary>Materiais do projeto (latão e cristal das peças em malha). Definido pelo PlayerCards ao nascer.</summary>
@@ -81,6 +82,7 @@ namespace Game.Cards
                     case "burst": PlayBurst(position, size); break;
                     case "slash_wide": PlaySlash(position, direction, size); break;
                     case "pulse": PlayPulse(position, direction, size); break;
+                    case "slash_arc": PlaySlashArc(position, direction, size); break;
                 }
             }
             catch (System.Exception e)
@@ -629,6 +631,25 @@ namespace Game.Cards
             Sparks(Root("Fx_CorteFaiscas", position, Quaternion.identity, 0.6f).transform, position + forward * (range * 0.7f) + Vector3.up * 0.8f,
                 12, 2f, 6f, 0.12f, 0.22f, CursedCore, CursedEdge, 0.25f, 0.5f, 1.2f, 0.5f);
             Flash(position + forward * (range * 0.5f) + Vector3.up, CursedEdge, 4.5f, range * 2f, 0.22f);
+            CameraShake.AddAt(position, CameraShake.Small * 1.5f, 0.2f);
+        }
+
+        /// <summary>
+        /// Chicote de Corrente e Martelo a Vapor: o mesmo crescente do golpe, nas cores quentes do latão e com a abertura e o alcance
+        /// do efeito (o Y da direção é a meia-abertura em graus). Sem a abertura (Y não positivo) usa o arco de 160° da Lâmina.
+        /// </summary>
+        private static void PlaySlashArc(Vector3 position, Vector3 dir, float range)
+        {
+            Vector3 forward = Flat(dir);
+            range = Mathf.Max(range, 0.5f);
+            float halfAngle = dir.y > 0f ? Mathf.Clamp(dir.y, 5f, 180f) : SlashHalfAngle;
+            // Arco estreito (chicote) fica mais fino; arco largo (martelo) mais grosso.
+            float thickness = Mathf.Clamp(0.3f + halfAngle / 180f, 0.3f, 0.62f);
+
+            SwingVisual.Play(position, forward, range, halfAngle, EmberOrange, WhiteHot, CyanBright, thickness);
+            Sparks(Root("Fx_CorteArco", position, Quaternion.identity, 0.6f).transform, position + forward * (range * 0.7f) + Vector3.up * 0.8f,
+                12, 2f, 6f, 0.12f, 0.22f, EmberHot, EmberOrange, 0.25f, 0.5f, 1.2f, 0.5f);
+            Flash(position + forward * (range * 0.5f) + Vector3.up, EmberHot, 4.5f, range * 2f, 0.22f);
             CameraShake.AddAt(position, CameraShake.Small * 1.5f, 0.2f);
         }
 

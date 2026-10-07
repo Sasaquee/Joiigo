@@ -102,6 +102,20 @@ namespace Game.Combat
             Publish();
         }
 
+        /// <summary>
+        /// Host: muda a vida máxima (cartas de vida máxima, Fase 10) mantendo a fração da vida atual; nunca abaixo de 1
+        /// e nunca mata. Sem mudança no valor, não publica nada.
+        /// </summary>
+        public void ServerSetMax(float newMax)
+        {
+            if (!IsServer || model == null)
+                return;
+            float before = model.Max;
+            model.SetMax(newMax);
+            if (model.Max != before)
+                Publish();
+        }
+
         public void ServerRestore()
         {
             if (!IsServer || model == null)

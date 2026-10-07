@@ -1,3 +1,4 @@
+using Game.Cards;
 using Game.Core.Math;
 using Game.Core.Movement;
 using UnityEngine;
@@ -14,6 +15,7 @@ namespace Game.Player
         [SerializeField] private MovementSettings settings;
 
         private CharacterController controller;
+        private PlayerCards cards; // pode faltar: sem cartas a velocidade é a do MovementSettings
         private Float2 velocity;
         private float verticalSpeed;
         private Vector3 moveDirection;
@@ -32,6 +34,7 @@ namespace Game.Player
         private void Awake()
         {
             controller = GetComponent<CharacterController>();
+            cards = GetComponent<PlayerCards>();
         }
 
         /// <summary>Direção de movimento no mundo (XZ, comprimento até 1) e ponto de mira no mundo.</summary>
@@ -55,8 +58,10 @@ namespace Game.Player
             }
 
             float dt = Time.deltaTime;
+            // Passo de Pistão: o host e o dono (que prevê o movimento) somam os mesmos modificadores equipados.
+            float maxSpeed = settings.moveSpeed * (cards != null ? cards.Modifiers.MoveSpeedMultiplier : 1f);
             velocity = MovementMath.StepVelocity(velocity, new Float2(moveDirection.x, moveDirection.z),
-                settings.moveSpeed, settings.acceleration, settings.deceleration, dt);
+                maxSpeed, settings.acceleration, settings.deceleration, dt);
 
             verticalSpeed = controller.isGrounded ? -1f : verticalSpeed - settings.gravity * dt;
 

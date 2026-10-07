@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 858f2323b15ed5d4f9b917b9ee2db399, type: 3}
+  m_Name: ceifadora_engrenagens
+  m_EditorClassIdentifier: Game.Runtime::Game.Cards.CardData
+  id: ceifadora_engrenagens
+  displayName: A Ceifadora de Engrenagens
+  arcana: 1
+  suit: 0
+  number: 13
+  kind: 0
+  tags:
+  - engrenagem
+  - faisca
+  rarity: 2
+  cursed: 0
+  energyCost: 60
+  cooldown: 25
+  healthCostOnUse: 15
+  effects:
+  - {fileID: 11400000, guid: 623ff72be9ab2bc4c98a3088cd209d00, type: 2}
+  modifiers: []
+  face: {fileID: 2800000, guid: e9f354e852ad45147820f8c099ecc092, type: 3}
+  glow: {fileID: 2800000, guid: b629f027303ed5e4eafd41e4b6ba5547, type: 3}

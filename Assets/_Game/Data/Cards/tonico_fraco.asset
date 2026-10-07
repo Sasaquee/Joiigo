@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 858f2323b15ed5d4f9b917b9ee2db399, type: 3}
+  m_Name: tonico_fraco
+  m_EditorClassIdentifier: Game.Runtime::Game.Cards.CardData
+  id: tonico_fraco
+  displayName: "T\xF4nico Fraco"
+  arcana: 0
+  suit: 2
+  number: 11
+  kind: 1
+  tags:
+  - vapor
+  rarity: 0
+  cursed: 0
+  energyCost: 0
+  cooldown: 0
+  healthCostOnUse: 0
+  effects:
+  - {fileID: 11400000, guid: bed91db57530c6e42b126771de056dc3, type: 2}
+  modifiers: []
+  face: {fileID: 2800000, guid: b7f7437aecc99c547b1483090fb6dbb0, type: 3}
+  glow: {fileID: 2800000, guid: 7e97949ced4bb794381fabdda461cc57, type: 3}

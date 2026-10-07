@@ -508,6 +508,17 @@ Pedido do dono antes das perguntas: "vamos focar em melhorar a qualidade de imag
 - **Opções (3), solo:** Igual ao coop · Solo levanta sozinho · Solo perde menos. **Resposta literal:** "Igual ao coop (Recommended)"
 - **Significa:** quando todos os jogadores estão caídos (no solo, o único jogador), a partida **recomeça**: a arena zera, a onda volta à 1 e **todas as cartas somem** (inventário e equipadas) de todos. Vale igual no solo e no coop. Quando só alguns caem, vale D-003 e D-083. Como a queda total é mostrada e se o jogo recomeça sozinho ou pede a alavanca de novo ficam nas perguntas da Fase 9.
 
+### D-088 · Fase 10: mais cartas e arcanos (22 cartas novas)
+- **Pergunta:** Qual a próxima fase? E, depois, quais cartas entram em cada naipe, nos arcanos maiores e entre as amaldiçoadas?
+- **Opções (fase):** Mais cartas e arcanos · A carta proibida (o dilema) · Aura e rotas (identidade) · Morte e polimento gráfico. **Resposta literal:** "Mais cartas e arcanos (Recommended)"
+- **Espadas (skills), resposta literal:** "Dois de Espadas · Giro de Engrenagem, Quatro de Espadas · Chicote de Corrente, Nove de Espadas · Tempestade de Faíscas, Dez de Espadas · Golpe de Martelo a Vapor"
+- **Copas (itens), resposta literal:** "Seis de Copas · Vapor Condensado, Oito de Copas · Frasco de Faísca, Dez de Copas · Cálice Cheio, Pajem de Copas · Tônico Fraco"
+- **Paus (passivas), resposta literal:** "Três de Paus · Passo de Pistão, Oito de Paus · Coração de Caldeira, Dois de Paus · Pavio Curto, Cinco de Paus · Fornalha Faminta"
+- **Ouros (equipamentos), resposta literal:** "Dois de Ouros · Luva de Cobre, Nove de Ouros · Cristal de Fenda, Rei de Ouros · Engrenagem Mestra, Cinco de Ouros · Braçadeira de Latão"
+- **Arcanos maiores, resposta literal:** "VII · O Carro de Vapor, XIII · A Ceifadora de Engrenagens, XVII · A Estrela de Cristal, XI · A Força"
+- **Amaldiçoadas, resposta literal:** "Coroa de Rebites (equipamento), Pacto de Cristal (passiva), Nenhuma por enquanto" e, para resolver a contradição: "As duas (Recommended)"
+- **Significa:** entram as **22 cartas** marcadas (4 skills, 4 itens, 4 passivas, 4 equipamentos, 4 arcanos maiores e 2 amaldiçoadas), o que leva o baralho de 14 para 36. Nomes, efeitos e mistura mecânico/arcano em `Docs/Design/cartas-prototipo.md`; números, raridade e temas são provisórios (ScriptableObjects). Pede 4 modificadores novos (velocidade, vida máxima, dano percentual do golpe e custo de vida por golpe) e as 22 faces novas (arte, só Opus, D-078).
+
 ### D-086 · A queda total escurece a tela e volta
 - **Pergunta:** Como a queda total e a perda das cartas aparecem na tela, sem texto?
 - **Opções:** Escurece e volta · Cartas viram cinza · Corte seco

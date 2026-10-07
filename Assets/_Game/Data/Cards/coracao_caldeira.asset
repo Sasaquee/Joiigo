@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 858f2323b15ed5d4f9b917b9ee2db399, type: 3}
+  m_Name: coracao_caldeira
+  m_EditorClassIdentifier: Game.Runtime::Game.Cards.CardData
+  id: coracao_caldeira
+  displayName: "Cora\xE7\xE3o de Caldeira"
+  arcana: 0
+  suit: 3
+  number: 8
+  kind: 2
+  tags:
+  - vapor
+  rarity: 1
+  cursed: 0
+  energyCost: 0
+  cooldown: 0
+  healthCostOnUse: 0
+  effects: []
+  modifiers:
+  - kind: 7
+    value: 30
+  face: {fileID: 2800000, guid: 5933ed4649662d54ebd86ba9073111f7, type: 3}
+  glow: {fileID: 2800000, guid: 7df0c42f9d878bd48a90c24d2489f024, type: 3}

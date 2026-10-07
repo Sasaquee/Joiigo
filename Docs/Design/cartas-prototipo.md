@@ -38,7 +38,38 @@ Usados na Fase 6 para o tema da carta (lugar + caminho do jogador). **Nunca apar
 | 13 | **XVI · A Chaminé Partida** *(arcano maior, teste)* | Skill | Explosão de vapor arcano em volta do jogador, com recarga longa. | 50 / 50 | vapor |
 | 14 | **I · O Artífice** *(arcano maior, teste)* | Passiva | Todas as skills recarregam mais rápido. | — | engrenagem, cristal |
 
-## Números provisórios (em `Data/Cards/*.asset`)
+## Cartas da Fase 10 (D-088): 22 novas, ids 15 a 36
+
+Todas aprovadas pelo dono (D-088). Raridade, temas e números são provisórios e vão para o relatório da fase. Os 4 modificadores novos (`MoveSpeed`, `MaxHealth`, `BasicDamageMultiplier`, `LifeCostPerHit`) pedem código; o resto usa os efeitos que já existem. Os rótulos e nomes são os do desenho da face (`Tools/Cards/card_pixel.py`, lista `CARDS`).
+
+| # | id | Rótulo · Nome | Tipo | Raridade | Temas | Efeito e números provisórios |
+|---|---|---|---|---|---|---|
+| 15 | `giro_engrenagem` | II DE ESPADAS · GIRO DE ENGRENAGEM | Skill | Comum | engrenagem | Golpe giratório em volta (`AreaBurst`): raio 2,5 m, dano 28, 30% arcano; energia 20, recarga 5 s |
+| 16 | `chicote_corrente` | IV DE ESPADAS · CHICOTE DE CORRENTE | Skill | Incomum | engrenagem, faisca | Corte estreito e comprido (`ArcSlash`): alcance 6 m, meia-abertura 20°, dano 30, 20% arcano; energia 20, recarga 4 s |
+| 17 | `tempestade_faiscas` | IX DE ESPADAS · TEMPESTADE DE FAÍSCAS | Skill | Incomum | faisca, cristal | Descarga que salta (`ChainProjectile`): 5 saltos, dano 14 por salto, 90% arcano; energia 35, recarga 8 s |
+| 18 | `martelo_vapor` | X DE ESPADAS · MARTELO A VAPOR | Skill | Rara | vapor, engrenagem | Pancada pesada à frente (`ArcSlash`): alcance 3,5 m, meia-abertura 45°, dano 70, 50% arcano; energia 40, recarga 10 s |
+| 19 | `vapor_condensado` | VI DE COPAS · VAPOR CONDENSADO | Item | Comum | vapor | `Heal`: +15 vida, +50 energia |
+| 20 | `frasco_faisca` | VIII DE COPAS · FRASCO DE FAÍSCA | Item | Incomum | faisca | `ThrowArea`: dano 25 em raio 2 m, 80% arcano, alcance 9 m |
+| 21 | `calice_cheio` | X DE COPAS · CÁLICE CHEIO | Item | Incomum | cristal, vapor | `Heal`: +70 vida, +20 energia |
+| 22 | `tonico_fraco` | PAJEM DE COPAS · TÔNICO FRACO | Item | Comum | vapor | `Heal`: +15 vida, +15 energia |
+| 23 | `passo_pistao` | III DE PAUS · PASSO DE PISTÃO | Passiva | Comum | engrenagem | `MoveSpeed` +0,10 (10% mais rápido) |
+| 24 | `coracao_caldeira` | VIII DE PAUS · CORAÇÃO DE CALDEIRA | Passiva | Incomum | vapor | `MaxHealth` +30 |
+| 25 | `pavio_curto` | II DE PAUS · PAVIO CURTO | Passiva | Comum | faisca | `CooldownChange` -0,12 e `BasicDamage` -4 |
+| 26 | `fornalha_faminta` | V DE PAUS · FORNALHA FAMINTA | Passiva | Incomum | vapor, faisca | `EnergyOnHitBonus` +0,9 e `BasicDamage` -6 |
+| 27 | `luva_cobre` | II DE OUROS · LUVA DE COBRE | Equipamento | Comum | engrenagem | `BasicDamage` +10 e `BasicRange` -0,3 |
+| 28 | `cristal_fenda` | IX DE OUROS · CRISTAL DE FENDA | Equipamento | Incomum | cristal | `BasicArcaneShift` +0,6 e `BasicDamage` +4 |
+| 29 | `engrenagem_mestra` | REI DE OUROS · ENGRENAGEM MESTRA | Equipamento | Incomum | engrenagem, cristal | `CooldownChange` -0,10 e `BasicDamage` +4 |
+| 30 | `bracadeira_latao` | V DE OUROS · BRAÇADEIRA DE LATÃO | Equipamento | Incomum | engrenagem, vapor | `BasicRange` +0,9, `EnergyOnHitBonus` +0,25 e `BasicDamage` -3 |
+| 31 | `carro_vapor` | VII · O CARRO DE VAPOR | Skill (arcano maior) | Rara | vapor, engrenagem | Investida longuíssima (`Dash`): 9 m, dano 55, 30% arcano, largura 1,8 m; energia 45, recarga 15 s |
+| 32 | `ceifadora_engrenagens` | XIII · A CEIFADORA DE ENGRENAGENS | Skill (arcano maior) | Rara | engrenagem, faisca | Ceifa em área enorme (`AreaBurst`): raio 7 m, dano 90, 50% arcano; energia 60, recarga 25 s, **custa 15 de vida** |
+| 33 | `estrela_cristal` | XVII · A ESTRELA DE CRISTAL | Skill (arcano maior) | Rara | cristal, faisca | Descarga que salta (`ChainProjectile`): 8 saltos, dano 25 por salto, 95% arcano, alcance entre saltos 6 m; energia 50, recarga 18 s |
+| 34 | `forca` | XI · A FORÇA | Passiva (arcano maior) | Única | engrenagem, vapor | `BasicDamage` +14 |
+| 35 | `coroa_rebites` | VIII DE OUROS (amaldiçoada) · COROA DE REBITES | Equipamento | Incomum | engrenagem, faisca | **Amaldiçoada.** `EnergyOnHitBonus` +1,2 e `MaxHealth` -30 |
+| 36 | `pacto_cristal` | VII DE PAUS (amaldiçoada) · PACTO DE CRISTAL | Passiva | Incomum | cristal | **Amaldiçoada.** `BasicDamageMultiplier` +0,6 e `LifeCostPerHit` 3 (cada golpe que acerta tira 3 da vida de quem usa; se a vida chegar a zero, vale a queda normal, como na Lâmina Sedenta) |
+
+Modificadores novos: `MoveSpeed` (fração somada à velocidade de andar), `MaxHealth` (soma à vida máxima; a vida atual mantém a fração), `BasicDamageMultiplier` (fração somada ao multiplicador do dano do golpe básico) e `LifeCostPerHit` (vida perdida por golpe básico que acerta). O dano do golpe básico nunca fica abaixo de 1.
+
+## Números provisórios das cartas da Fase 1 a 9 (em `Data/Cards/*.asset`)
 
 | Carta | Custo de energia | Recarga | Dano / valor |
 |---|---|---|---|

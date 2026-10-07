@@ -76,6 +76,7 @@ Ao fim de cada fase: compila sem erros, testes passam, commit e relatório (§7)
 - **Passe de ajuste pós-playtest** (D-067 a D-069, D-070 a D-072) ✅ · Pulso de energia cheia, o 1 do D20 mais teatral, cristal no mundo.
 - **Passe do mapa** (D-073 a D-082) ✅ · A arena se abre para a cidade: praça, avenidas, praças menores, prédios como limite e translúcidos, inimigos pelas bocas, NavMesh. Aprovado pelo dono em playtest (`Docs/Playtest/sessao-2026-10-05-2.md`).
 - **Fase 9** · Coop de volta (D-083 a D-087) ✅ (falta playtest humano em LAN): levantar aliado segurando E, queda total recomeça a partida e apaga as cartas, bênção de dano do 20 no coop. Relatório em `Docs/Tecnico/relatorio-fase9.md`.
+- **Fase 10** · Mais cartas e arcanos (D-088) ✅: 22 cartas novas (baralho de 14 para 36), 4 modificadores novos e 22 faces. Relatório em `Docs/Tecnico/relatorio-fase10.md`.
 
 ### 7. Relatório de cada fase
 

@@ -1681,6 +1681,21 @@ CARDS = [
 ]
 
 
+def _carregar_novas():
+    """Fase 10 (D-088): cartas novas ficam em Tools/Cards/novas/px_*.py, uma por grupo de artista.
+    Cada arquivo é executado neste mesmo espaço de nomes (vê as formas e a paleta daqui), define funções
+    `il_<id>(t)` e acrescenta as suas linhas a CARDS: (id, rótulo, nome, "minor"|"cursed"|"major", raio do halo)."""
+    import glob
+    pasta = os.path.join(os.path.dirname(os.path.abspath(__file__)), "novas")
+    for caminho in sorted(glob.glob(os.path.join(pasta, "px_*.py"))):
+        with open(caminho, encoding="utf-8") as f:
+            exec(compile(f.read(), caminho, "exec"), globals())
+    ILUSTRACOES.update({k[3:]: v for k, v in globals().items() if k.startswith("il_")})
+
+
+_carregar_novas()
+
+
 def desenhar(card):
     cid, rotulo, nome, kind, rh = card
     t = Tela(kind)
