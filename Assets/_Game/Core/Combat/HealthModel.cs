@@ -36,5 +36,15 @@ namespace Game.Core.Combat
         }
 
         public void Restore() => Current = Max;
+
+        /// <summary>
+        /// Volta com uma fração da vida máxima (quem foi levantado por um aliado, D-083). Nunca deixa zero:
+        /// quem levanta está vivo, então o mínimo é 1 de vida.
+        /// </summary>
+        public void RestoreTo(float fraction)
+        {
+            float f = float.IsNaN(fraction) ? 0f : MathF.Min(1f, MathF.Max(0f, fraction));
+            Current = MathF.Max(MathF.Min(1f, Max), Max * f);
+        }
     }
 }

@@ -8,6 +8,8 @@ namespace Game.Player
     /// <summary>
     /// Cair e voltar (D-003, D-022). HP zero não mata: o jogador fica caído por downedDuration
     /// e volta no spawn com a vida cheia. Só o host decide; todos veem o corpo deitar.
+    /// Um aliado pode levantar quem caiu antes disso, no lugar da queda (D-083): quem decide é o PlayerRevive,
+    /// que usa ServerRevive e publica aqui o progresso (a aura mostra) e se o aliado está parado levantando.
     /// </summary>
     public class PlayerLife : NetworkBehaviour
     {
@@ -22,6 +24,12 @@ namespace Game.Player
         private readonly NetworkVariable<bool> downed = new NetworkVariable<bool>(false,
             NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
+        // D-083: progresso (0 a 100, em passos de 1% para a rede falar pouco) de quem caiu e aliado parado levantando.
+        private readonly NetworkVariable<byte> reviveProgress = new NetworkVariable<byte>(0,
+            NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<bool> reviving = new NetworkVariable<bool>(false,
+            NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
         private NetworkHealth health;
         private PlayerMotor motor;
         private CharacterController controller;
@@ -32,8 +40,17 @@ namespace Game.Player
 
         public bool IsDowned => downed.Value;
 
-        /// <summary>Pode andar e atacar? O host ignora as intenções de quem está caído.</summary>
-        public bool CanAct => !downed.Value;
+        /// <summary>Pode andar e atacar? O host ignora as intenções de quem está caído ou parado levantando um aliado (D-083).</summary>
+        public bool CanAct => !downed.Value && !reviving.Value;
+
+        /// <summary>Este jogador está parado levantando um aliado (D-083).</summary>
+        public bool IsReviving => reviving.Value;
+
+        /// <summary>Progresso de 0 a 1 de um aliado levantando este jogador caído (D-083). Sem número na tela: é a aura que mostra.</summary>
+        public float ReviveProgress => reviveProgress.Value / 100f;
+
+        /// <summary>Em todos: este jogador foi levantado por um aliado (D-083). A aura dá o pulso de fechamento.</summary>
+        public event System.Action Revived;
 
         public CombatSettings Settings
         {
@@ -56,6 +73,8 @@ namespace Game.Player
                 spawnRotation = transform.rotation;
                 downedState = null;
                 downed.Value = false;
+                reviving.Value = false;
+                reviveProgress.Value = 0;
                 // Se o NetworkHealth ainda não nasceu (ordem dos componentes), inicializa no primeiro Update.
                 pendingHealthInit = true;
                 TryInitializeHealth();
@@ -102,8 +121,66 @@ namespace Game.Player
             downedState = new DownedState(settings != null ? settings.downedDuration : 5f);
             downedState.Fall();
             downed.Value = true;
+            reviving.Value = false; // quem cai deixa de levantar o outro
             if (motor != null)
                 motor.SetIntent(Vector3.zero, null);
+        }
+
+        /// <summary>
+        /// Host: um aliado terminou de levantar este jogador (D-083). Fica de pé NO LUGAR da queda, com a fração de vida
+        /// dada, e o tempo de queda deixa de valer. Devolve false se não estava caído.
+        /// </summary>
+        public bool ServerRevive(float healthFraction)
+        {
+            if (!IsServer || downedState == null || downedState.State != LifeState.Downed)
+                return false;
+
+            downedState.Revive();
+            health.ServerRestoreFraction(healthFraction);
+            downed.Value = false;
+            reviveProgress.Value = 0;
+            RevivedRpc();
+            return true;
+        }
+
+        /// <summary>Host: progresso de quem caiu sendo levantado (0 a 1), publicado em passos de 1%.</summary>
+        public void ServerSetReviveProgress(float progress)
+        {
+            if (!IsServer)
+                return;
+            float p = float.IsNaN(progress) ? 0f : Mathf.Clamp01(progress);
+            byte percent = (byte)Mathf.RoundToInt(p * 100f);
+            if (reviveProgress.Value != percent)
+                reviveProgress.Value = percent;
+        }
+
+        /// <summary>Host: este jogador está parado levantando um aliado (D-083); o host ignora a intenção dele.</summary>
+        public void ServerSetReviving(bool value)
+        {
+            if (!IsServer || reviving.Value == value)
+                return;
+            reviving.Value = value;
+            if (value && motor != null)
+                motor.SetIntent(Vector3.zero, null); // para na hora, sem esperar a próxima intenção do dono
+        }
+
+        [Rpc(SendTo.Everyone)]
+        private void RevivedRpc() => Revived?.Invoke();
+
+        /// <summary>
+        /// Host: recomeço da partida depois da queda total (D-084). Volta ao spawn de pé, com a vida cheia, sem tempo de queda
+        /// pendente nem levantada em andamento. Quem chama (MatchReset) limpa as cartas e o resto.
+        /// </summary>
+        public void ServerResetForRestart()
+        {
+            if (!IsServer || !IsSpawned)
+                return;
+
+            downedState = null;
+            reviving.Value = false;
+            if (motor != null)
+                motor.SetIntent(Vector3.zero, null);
+            Respawn(); // spawn, vida cheia, de pé e progresso de levantar zerado
         }
 
         private void Respawn()
@@ -114,6 +191,7 @@ namespace Game.Player
 
             health.ServerRestore();
             downed.Value = false;
+            reviveProgress.Value = 0;
         }
     }
 }

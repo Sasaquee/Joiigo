@@ -106,6 +106,7 @@ namespace Game.EditorTools
             PlayerCombatSetup.AddSoloBootstrap(netSession, matchState); // entra direto, solo (D-018)
             var spawner = EnemyPrefabBuilder.AddWaveSpawner(matchState, waves);
             CardDropBuilder.AddToScene(session, spawner); // carta no fim da onda, D20 na tela (D-046 a D-052)
+            MatchResetSetup.Apply(arena); // queda total: recomeço da partida (D-084, D-086, D-087)
 
             SetupCamera(cameraSettings, spawnPoints.transform);
 
@@ -402,6 +403,8 @@ namespace Game.EditorTools
             PlayerCombatSetup.ConfigurePlayerPrefab(root, combatSettings);
             CardAssetsBuilder.ConfigurePlayerPrefab(root, cardDb);
             AuraBuilder.ConfigurePlayerPrefab(root, marker.transform); // aura (Fase 7) e anel local por fora dela (D-066)
+            ReviveSetup.Apply(root); // levantar aliado segurando E (D-083)
+            BlessingSetup.Apply(root); // bênção de dano do 20 no coop (D-085)
 
             var prefab = PrefabUtility.SaveAsPrefabAsset(root, PlayerPrefabPath);
             Object.DestroyImmediate(root);

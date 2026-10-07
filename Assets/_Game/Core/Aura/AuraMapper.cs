@@ -32,12 +32,15 @@ namespace Game.Core.Aura
             bool runesFull;
             AuraSignals signals;
             float heartbeatBpm;
+            float reviveProgress = 0f;
 
             if (downed)
             {
-                // Caído: aura apagada, só brasa (D-063); os outros sinais somem.
-                radius = tuning.MinRadius;
-                intensity = tuning.DownedIntensity;
+                // Caído: aura apagada, só brasa (D-063); os outros sinais somem. Com um aliado levantando (D-083), a aura
+                // ganha luz e raio conforme o progresso; as runas acendem em anel no visual (ReviveProgress).
+                reviveProgress = input.ReviveProgress;
+                radius = Lerp(tuning.MinRadius, System.Math.Max(tuning.MinRadius, tuning.ReviveRadius), reviveProgress);
+                intensity = Lerp(tuning.DownedIntensity, System.Math.Max(tuning.DownedIntensity, tuning.ReviveIntensity), reviveProgress);
                 flicker = 0f;
                 sparkRate = 0f;
                 sparkSpeed = 0f;
@@ -68,7 +71,7 @@ namespace Game.Core.Aura
 
             return new AuraState(radius, intensity, flicker, sparkRate, sparkSpeed, runesFull, signals, heartbeatBpm,
                 AuraPalettes.Base(palette), AuraPalettes.Curse(palette),
-                AuraPalettes.Ember(palette), AuraPalettes.Shell(palette));
+                AuraPalettes.Ember(palette), AuraPalettes.Shell(palette), AuraPalettes.Gold(palette), reviveProgress);
         }
     }
 }

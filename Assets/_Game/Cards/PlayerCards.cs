@@ -42,6 +42,7 @@ namespace Game.Cards
         private const byte AuraFlagShield = 1;
         private const byte AuraFlagHurtBonus = 2;
         private PlayerShield shield;
+        private PlayerBlessing blessing; // pode faltar (prefab antigo): sem bênção o dano não muda (D-085)
 
         // Host
         private readonly ModifierSet modifiers = new ModifierSet();
@@ -120,6 +121,7 @@ namespace Game.Cards
         {
             health = GetComponent<NetworkHealth>();
             life = GetComponent<PlayerLife>();
+            blessing = GetComponent<PlayerBlessing>();
         }
 
         public override void OnNetworkSpawn()
@@ -140,10 +142,7 @@ namespace Game.Cards
                     qualityNet.Add((int)CardQuality.Good); // cartas dadas sem dado (debug) são boas
 
                 loadout = new Loadout(id => database != null ? database.KindOf(id) : CardKind.Skill);
-                float max = settings != null ? settings.maxEnergy : 100f;
-                float regen = settings != null ? settings.regenPerSecond : 4f;
-                float start = settings != null ? settings.startEnergyFraction : 1f;
-                energy = new EnergyModel(max, regen, start);
+                energy = CreateStartEnergy();
                 cooldownState = default;
                 lastPublishedEnergy = -1f;
                 hurtArmed = false;
@@ -385,6 +384,51 @@ namespace Game.Cards
             Sync();
         }
 
+        /// <summary>
+        /// Host: queda total (D-084). Todas as cartas somem (inventário, espaços equipados e cinto), as qualidades voltam ao padrão,
+        /// o caminho de tags é esquecido, a energia volta ao valor de início e escudo, recargas e efeitos em andamento acabam.
+        /// </summary>
+        public void ServerClearAll()
+        {
+            if (!IsServer || loadout == null)
+                return;
+
+            StopAllCoroutines(); // sopros e arremessos de carta ainda no ar (ICardUser.Run)
+            if (shield == null)
+                shield = GetComponent<PlayerShield>();
+            if (shield != null)
+                shield.Deactivate();
+
+            loadout.Clear();
+            path.Clear();
+            for (int i = 0; i < qualityNet.Count; i++)
+            {
+                if (qualityNet[i] != (int)CardQuality.Good)
+                    qualityNet[i] = (int)CardQuality.Good; // o padrão de quem nasce (cartas dadas sem dado são boas)
+            }
+
+            energy = CreateStartEnergy();
+            for (int i = 0; i < cooldowns.Length; i++)
+                cooldowns[i].Reset();
+            cooldownState = default;
+            cooldownNet.Value = cooldownState;
+            hurtArmed = false;
+            lastHurtTime = -999f;
+            Potency = 1f;
+
+            PublishEnergy(true);
+            Sync(); // publica inventário e espaços vazios e refaz os modificadores
+        }
+
+        /// <summary>Energia de quem acabou de nascer: cheia (ou a fração de início do CardsSettings).</summary>
+        private EnergyModel CreateStartEnergy()
+        {
+            float max = settings != null ? settings.maxEnergy : 100f;
+            float regen = settings != null ? settings.regenPerSecond : 4f;
+            float start = settings != null ? settings.startEnergyFraction : 1f;
+            return new EnergyModel(max, regen, start);
+        }
+
         /// <summary>Host: o golpe básico acertou. Gera energia (com o bônus da Caldeira Interna) e gasta o reforço da Mola de Recuo.</summary>
         public void ServerOnBasicHit()
         {
@@ -617,6 +661,9 @@ namespace Game.Cards
 
         /// <summary>Multiplicador da qualidade da carta em uso (1 fora de um uso). Os efeitos multiplicam seus números por ele.</summary>
         public float Potency { get; private set; } = 1f;
+
+        /// <summary>Host: multiplicador do dano da bênção do 20 no coop (D-085); 1 sem bênção. Os efeitos de dano multiplicam por ele.</summary>
+        public float DamageMultiplier => blessing != null ? blessing.ServerMultiplier : 1f;
 
         public void AddEnergy(float amount)
         {

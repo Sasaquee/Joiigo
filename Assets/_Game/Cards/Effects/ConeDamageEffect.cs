@@ -26,7 +26,7 @@ namespace Game.Cards
 
         public override void Execute(ICardUser user, CardData card)
         {
-            user.Run(Routine(user, user.AimDirection, user.Potency)); // a qualidade vale para o sopro inteiro (D-048)
+            user.Run(Routine(user, user.AimDirection, user.Potency * user.DamageMultiplier)); // a qualidade (D-048) e a bênção do 20 (D-085) valem para o sopro inteiro
         }
 
         private IEnumerator Routine(ICardUser user, Vector3 aim, float potency)

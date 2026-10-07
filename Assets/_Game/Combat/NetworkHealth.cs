@@ -110,6 +110,15 @@ namespace Game.Combat
             Publish();
         }
 
+        /// <summary>Host: volta com uma fração da vida máxima (levantado por um aliado, D-083).</summary>
+        public void ServerRestoreFraction(float fraction)
+        {
+            if (!IsServer || model == null)
+                return;
+            model.RestoreTo(fraction);
+            Publish();
+        }
+
         private void Publish()
         {
             max.Value = model.Max;

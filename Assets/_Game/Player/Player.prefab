@@ -22,6 +22,8 @@ GameObject:
   - component: {fileID: 5901521866847280960}
   - component: {fileID: 9145829291030180733}
   - component: {fileID: 8567337150716826108}
+  - component: {fileID: 8679929864803923203}
+  - component: {fileID: 524175861082309950}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -260,6 +262,33 @@ MonoBehaviour:
   settings: {fileID: 11400000, guid: c9abe87af417501478807977b51a6400, type: 2}
   visual: {fileID: 5901521866847280960}
   audioCues: {fileID: 9145829291030180733}
+--- !u!114 &8679929864803923203
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4850298204558110084}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9db7f5c3cc932e045a64557c2684e85a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Runtime::Game.Player.PlayerRevive
+  ShowTopMostFoldoutHeaderGroup: 1
+  settings: {fileID: 11400000, guid: e5ebb860665236b48ba58e285fcec1a1, type: 2}
+--- !u!114 &524175861082309950
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4850298204558110084}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fa251221a56c80e4f9742f55013a370e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Runtime::Game.Combat.PlayerBlessing
+  ShowTopMostFoldoutHeaderGroup: 1
 --- !u!1001 &2996398330266624804
 PrefabInstance:
   m_ObjectHideFlags: 0

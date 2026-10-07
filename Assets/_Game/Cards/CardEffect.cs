@@ -25,6 +25,12 @@ namespace Game.Cards
         /// </summary>
         float Potency { get; }
 
+        /// <summary>
+        /// Multiplicador do dano causado por quem usa a carta agora (bênção do 20 no coop, D-085; 1 sem bênção). Só os efeitos que
+        /// causam dano multiplicam por ele, junto com o Potency, no momento do uso (como a qualidade); cura e energia não.
+        /// </summary>
+        float DamageMultiplier { get; }
+
         void AddEnergy(float amount);
 
         /// <summary>Inimigos vivos (IDamageable que não são jogadores) dentro do raio.</summary>
