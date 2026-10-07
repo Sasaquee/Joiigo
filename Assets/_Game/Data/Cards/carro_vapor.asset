@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 858f2323b15ed5d4f9b917b9ee2db399, type: 3}
+  m_Name: carro_vapor
+  m_EditorClassIdentifier: Game.Runtime::Game.Cards.CardData
+  id: carro_vapor
+  displayName: O Carro de Vapor
+  arcana: 1
+  suit: 0
+  number: 7
+  kind: 0
+  tags:
+  - vapor
+  - engrenagem
+  rarity: 2
+  cursed: 0
+  energyCost: 45
+  cooldown: 15
+  healthCostOnUse: 0
+  effects:
+  - {fileID: 11400000, guid: 6f74dfc0dc87dd846811d302a6e1329c, type: 2}
+  modifiers: []
+  face: {fileID: 2800000, guid: e4aa6442c9bad034687246d69c8eb118, type: 3}
+  glow: {fileID: 2800000, guid: a986843d70eaa4a46a3925e24ababe83, type: 3}

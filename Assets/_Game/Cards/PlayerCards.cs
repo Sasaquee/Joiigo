@@ -55,6 +55,7 @@ namespace Game.Cards
         private float lastPublishedEnergy = -1f;
         private float lastHurtTime = -999f;
         private bool hurtArmed;
+        private bool selfInflictedDamage;
 
         // Todos
         private List<int> inventoryView = new List<int>();
@@ -239,6 +240,10 @@ namespace Game.Cards
             double remaining = state.EndOf(skillIndex) - NetworkManager.ServerTime.Time;
             return remaining <= 0d ? 0f : Mathf.Clamp01((float)(remaining / duration));
         }
+
+        /// <summary>Duração (s) da última recarga do espaço de skill, já com os modificadores de recarga; 0 se nunca usou. Para testes e debug.</summary>
+        public float SkillCooldownDuration(int skillIndex) =>
+            skillIndex < 0 || skillIndex >= CardRules.SkillSlots ? 0f : cooldownNet.Value.DurationOf(skillIndex);
 
         /// <summary>Id de uma carta pelo identificador de texto (ex.: "pistao_runico"), ou -1.</summary>
         public int FindCardId(string cardId)
@@ -434,6 +439,24 @@ namespace Game.Cards
         {
             if (!IsServer || energy == null)
                 return;
+
+            // Pacto de Cristal: o golpe que acerta custa vida (uma vez por golpe), pelo mesmo caminho da Lâmina Sedenta.
+            // O custo é dano que o jogador causa a si mesmo, mas não arma a Mola de Recuo (senão o próprio golpe viraria reforço
+            // grátis no golpe seguinte): OnPlayerDamaged ignora o dano marcado aqui (o evento Damaged chega na hora, no host).
+            float lifeCost = modifiers.Get(ModifierKind.LifeCostPerHit);
+            if (lifeCost > 0f && health != null)
+            {
+                selfInflictedDamage = true;
+                try
+                {
+                    health.ServerApplyDamage(new DamagePacket(lifeCost, 0f), OwnerClientId);
+                }
+                finally
+                {
+                    selfInflictedDamage = false;
+                }
+            }
+
             float perHit = settings != null ? settings.energyPerHit : 8f;
             energy.Add(perHit * (1f + modifiers.Get(ModifierKind.EnergyOnHitBonus)));
             PublishEnergy(true);
@@ -551,6 +574,8 @@ namespace Game.Cards
 
         private void OnPlayerDamaged(float applied)
         {
+            if (selfInflictedDamage)
+                return; // custo de vida do próprio golpe (Pacto de Cristal): não arma a Mola de Recuo
             lastHurtTime = Time.time;
             hurtArmed = true;
         }
@@ -638,6 +663,8 @@ namespace Game.Cards
             {
                 foreach (int id in loadout.EquippedModifierCards())
                     AddModifiersOf(id);
+                if (life != null)
+                    life.ServerSetMaxHealthBonus(modifiers.Get(ModifierKind.MaxHealth)); // a vida máxima só é decidida no host
                 return;
             }
 

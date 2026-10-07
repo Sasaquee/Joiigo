@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 858f2323b15ed5d4f9b917b9ee2db399, type: 3}
+  m_Name: tempestade_faiscas
+  m_EditorClassIdentifier: Game.Runtime::Game.Cards.CardData
+  id: tempestade_faiscas
+  displayName: "Tempestade de Fa\xEDscas"
+  arcana: 0
+  suit: 1
+  number: 9
+  kind: 0
+  tags:
+  - faisca
+  - cristal
+  rarity: 1
+  cursed: 0
+  energyCost: 35
+  cooldown: 8
+  healthCostOnUse: 0
+  effects:
+  - {fileID: 11400000, guid: 926d7c67c1c2f924b85375606dd45264, type: 2}
+  modifiers: []
+  face: {fileID: 2800000, guid: 24a6af8a4d9f4f1498a9a1a434f90c28, type: 3}
+  glow: {fileID: 2800000, guid: 8465d8b489390844bbf56f9526386e57, type: 3}

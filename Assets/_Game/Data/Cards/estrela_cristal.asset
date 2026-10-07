@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 858f2323b15ed5d4f9b917b9ee2db399, type: 3}
+  m_Name: estrela_cristal
+  m_EditorClassIdentifier: Game.Runtime::Game.Cards.CardData
+  id: estrela_cristal
+  displayName: A Estrela de Cristal
+  arcana: 1
+  suit: 0
+  number: 17
+  kind: 0
+  tags:
+  - cristal
+  - faisca
+  rarity: 2
+  cursed: 0
+  energyCost: 50
+  cooldown: 18
+  healthCostOnUse: 0
+  effects:
+  - {fileID: 11400000, guid: f4c80f5dfdf64ec439b0d7b5d394d8f9, type: 2}
+  modifiers: []
+  face: {fileID: 2800000, guid: 701c80ec66b01f2409ec3c8bbc9c399e, type: 3}
+  glow: {fileID: 2800000, guid: b54e041b202af14498b241fdf0c7dd2f, type: 3}

@@ -37,6 +37,7 @@ namespace Game.Player
         private Vector3 spawnPosition;
         private Quaternion spawnRotation;
         private bool pendingHealthInit;
+        private float maxHealthBonus; // das cartas (MaxHealth); o PlayerCards avisa
 
         public bool IsDowned => downed.Value;
 
@@ -96,7 +97,22 @@ namespace Game.Player
             if (!pendingHealthInit || settings == null || !health.IsSpawned)
                 return;
             pendingHealthInit = false;
-            health.ServerInitialize(settings.maxHealth, Resistances.None, settings.bodyRadius);
+            health.ServerInitialize(MaxHealthWithCards(), Resistances.None, settings.bodyRadius);
+        }
+
+        private float MaxHealthWithCards() => Mathf.Max(1f, settings.maxHealth + maxHealthBonus);
+
+        /// <summary>
+        /// Host: soma das cartas de vida máxima (MaxHealth) em uso. A vida máxima vira CombatSettings.maxHealth + bônus (nunca abaixo de 1)
+        /// e a vida atual mantém a fração: equipar com a vida cheia deixa cheia, desequipar não mata.
+        /// </summary>
+        public void ServerSetMaxHealthBonus(float bonus)
+        {
+            if (!IsServer)
+                return;
+            maxHealthBonus = float.IsNaN(bonus) ? 0f : bonus;
+            if (!pendingHealthInit && settings != null && health != null && health.IsSpawned)
+                health.ServerSetMax(MaxHealthWithCards());
         }
 
         private void Update()

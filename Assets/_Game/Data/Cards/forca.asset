@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 858f2323b15ed5d4f9b917b9ee2db399, type: 3}
+  m_Name: forca
+  m_EditorClassIdentifier: Game.Runtime::Game.Cards.CardData
+  id: forca
+  displayName: "A For\xE7a"
+  arcana: 1
+  suit: 0
+  number: 11
+  kind: 2
+  tags:
+  - engrenagem
+  - vapor
+  rarity: 3
+  cursed: 0
+  energyCost: 0
+  cooldown: 0
+  healthCostOnUse: 0
+  effects: []
+  modifiers:
+  - kind: 0
+    value: 14
+  face: {fileID: 2800000, guid: a6c67e9ad7cfb9d45886b9e2c3d0cf16, type: 3}
+  glow: {fileID: 2800000, guid: 3da08bb18fc2ebb4e9a9afcf226bcb66, type: 3}
